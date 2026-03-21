@@ -1,0 +1,158 @@
+basePath: /
+definitions:
+  handler.AuthData:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/handler.UserDTO'
+    type: object
+  handler.AuthEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handler.AuthData'
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  handler.ErrorEnvelope:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  handler.UserDTO:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  handler.UserData:
+    properties:
+      user:
+        $ref: '#/definitions/handler.UserDTO'
+    type: object
+  handler.UserEnvelope:
+    properties:
+      data:
+        $ref: '#/definitions/handler.UserData'
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  handler.loginReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.registerReq:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Clean Architecture Go API (register/login) with JWT.
+  title: IT4409 API
+  version: "1.0"
+paths:
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.loginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuthEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorEnvelope'
+      summary: Login
+      tags:
+      - auth
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.registerReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.AuthEnvelope'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorEnvelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorEnvelope'
+      summary: Register new user
+      tags:
+      - auth
+  /api/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.UserEnvelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorEnvelope'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: Nhập JWT token (có thể nhập "Bearer <token>" hoặc chỉ "<token>")
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
