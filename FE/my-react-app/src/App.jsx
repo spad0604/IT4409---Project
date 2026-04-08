@@ -1,133 +1,127 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import './App.css'
 
 function App() {
   const { t, i18n } = useTranslation()
+  const [activeTopTab, setActiveTopTab] = useState('projects')
+  const [activeSideItem, setActiveSideItem] = useState('overview')
 
   const activeLang = useMemo(() => {
     const current = i18n.resolvedLanguage || i18n.language || 'vi'
     return current.startsWith('vi') ? 'vi' : 'en'
   }, [i18n.language, i18n.resolvedLanguage])
 
-  const metricCards = t('metrics.cards', { returnObjects: true })
-  const tasks = t('tasks', { returnObjects: true })
-  const focusItems = t('focus.items', { returnObjects: true })
+  const topTabs = t('boardShell.topTabs', { returnObjects: true })
+  const sideLinks = t('boardShell.sideLinks', { returnObjects: true })
 
   const handleLanguageChange = (lang) => {
     i18n.changeLanguage(lang)
   }
 
   return (
-    <div className="page-shell">
-      <header className="glass-nav" data-enter>
-        <div className="brand-block">
-          <p className="brand-kicker">{t('nav.systemName')}</p>
-          <p className="brand-name">{t('nav.projectName')}</p>
-        </div>
-        <div className="nav-actions">
-          <button type="button" className="action-chip">
-            {t('nav.newBoard')}
-          </button>
-          <div className="language-switch" role="group" aria-label={t('nav.language')}>
-            <button
-              type="button"
-              className={`lang-button ${activeLang === 'vi' ? 'is-active' : ''}`}
-              onClick={() => handleLanguageChange('vi')}
-            >
-              VI
-            </button>
-            <button
-              type="button"
-              className={`lang-button ${activeLang === 'en' ? 'is-active' : ''}`}
-              onClick={() => handleLanguageChange('en')}
-            >
-              EN
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="screen-wrap">
+      <p className="screen-caption">{t('boardShell.screenLabel')}</p>
 
-      <main className="editorial-layout">
-        <section className="lead-column panel-low" data-enter>
-          <p className="kicker">{t('hero.kicker')}</p>
-          <h1>{t('hero.title')}</h1>
-          <p className="hero-description">{t('hero.description')}</p>
+      <section className="kanban-shell" data-enter>
+        <header className="kanban-topbar">
+          <p className="workspace-name">{t('boardShell.workspaceName')}</p>
 
-          <div className="metric-strip">
-            {metricCards.map((item) => (
-              <article key={item.label} className="metric-card">
-                <p className="metric-label">{item.label}</p>
-                <p className="metric-value">{item.value}</p>
-                <p className="metric-delta">{item.delta}</p>
-              </article>
+          <nav className="top-tabs" aria-label={t('boardShell.topNavLabel')}>
+            {topTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`top-tab ${activeTopTab === tab.id ? 'is-active' : ''}`}
+                onClick={() => setActiveTopTab(tab.id)}
+              >
+                {tab.label}
+              </button>
             ))}
-          </div>
+          </nav>
 
-          <div className="quick-add-bar" data-enter>
-            <div>
-              <p className="quick-add-title">{t('quickAdd.title')}</p>
-              <p className="quick-add-subtitle">{t('quickAdd.subtitle')}</p>
-            </div>
-            <span className="tooltip-chip">{t('quickAdd.hint')}</span>
-            <div className="quick-add-form">
-              <input type="text" placeholder={t('quickAdd.placeholder')} aria-label={t('quickAdd.placeholder')} />
-              <button type="button" className="primary-button">
-                {t('quickAdd.button')}
+          <div className="topbar-tools">
+            <label className="search-box" htmlFor="issue-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="issue-search" type="search" placeholder={t('boardShell.searchPlaceholder')} />
+            </label>
+            <button type="button" className="icon-button" aria-label={t('boardShell.notifications')}>
+              ●
+            </button>
+            <button type="button" className="icon-button" aria-label={t('boardShell.settings')}>
+              ●
+            </button>
+            <button type="button" className="create-issue-button">
+              {t('boardShell.createIssue')}
+            </button>
+
+            <div className="language-switch" role="group" aria-label={t('nav.language')}>
+              <button
+                type="button"
+                className={`lang-button ${activeLang === 'vi' ? 'is-active' : ''}`}
+                onClick={() => handleLanguageChange('vi')}
+              >
+                VI
+              </button>
+              <button
+                type="button"
+                className={`lang-button ${activeLang === 'en' ? 'is-active' : ''}`}
+                onClick={() => handleLanguageChange('en')}
+              >
+                EN
               </button>
             </div>
           </div>
-        </section>
+        </header>
 
-        <aside className="focus-rail panel-paper" data-enter>
-          <p className="kicker">{t('focus.kicker')}</p>
-          <h2>{t('focus.title')}</h2>
-          <ul className="focus-list">
-            {focusItems.map((item) => (
-              <li key={item.title} className="focus-item">
-                <p className="focus-item-title">{item.title}</p>
-                <p className="focus-item-meta">{item.meta}</p>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      </main>
-
-      <section className="workbench panel-mid" data-enter>
-        <div className="workbench-header">
-          <div>
-            <p className="kicker">{t('board.kicker')}</p>
-            <h2>{t('board.title')}</h2>
-            <p className="board-subtitle">{t('board.subtitle')}</p>
-          </div>
-          <div className="filters">
-            <button type="button" className="filter-chip is-active">{t('filters.active')}</button>
-            <button type="button" className="filter-chip">{t('filters.upcoming')}</button>
-            <button type="button" className="filter-chip">{t('filters.review')}</button>
-          </div>
-        </div>
-
-        <div className="task-grid">
-          {tasks.map((task) => (
-            <article key={task.title} className={`task-card ${task.priority === 'high' ? 'priority-high' : ''}`}>
-              <div className="task-top-row">
-                <p className="task-title">{task.title}</p>
-                <span className="task-chip">{task.tag}</span>
+        <div className="kanban-body">
+          <aside className="side-nav" aria-label={t('boardShell.sideNavLabel')}>
+            <div className="team-card">
+              <div className="team-badge">CP</div>
+              <div>
+                <p className="team-name">{t('boardShell.teamName')}</p>
+                <p className="team-type">{t('boardShell.teamType')}</p>
               </div>
+            </div>
 
-              <p className="task-meta">{task.owner}</p>
+            <nav className="side-links">
+              {sideLinks.map((link) => (
+                <button
+                  key={link.id}
+                  type="button"
+                  className={`side-link ${activeSideItem === link.id ? 'is-active' : ''}`}
+                  onClick={() => setActiveSideItem(link.id)}
+                >
+                  <span className="side-icon" aria-hidden="true"></span>
+                  {link.label}
+                </button>
+              ))}
+            </nav>
 
-              <div className="progress-block">
-                <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={task.progress}>
-                  <span className="progress-fill" style={{ width: `${task.progress}%` }}></span>
-                </div>
-                <p className="progress-label">{task.progress}%</p>
-              </div>
+            <button type="button" className="invite-button">
+              {t('boardShell.inviteMember')}
+            </button>
 
-              <p className="task-due">{task.due}</p>
-            </article>
-          ))}
+            <div className="side-footer-links">
+              <button type="button" className="footer-link">{t('boardShell.help')}</button>
+              <button type="button" className="footer-link">{t('boardShell.feedback')}</button>
+            </div>
+          </aside>
+
+          <section className="content-region">
+            <header className="content-header">
+              <h1>{t('boardShell.contentTitle')}</h1>
+              <p>{t('boardShell.contentSubtitle')}</p>
+            </header>
+
+            <section className="content-placeholder" aria-label={t('boardShell.pagePlaceholder')}>
+              <p>{t('boardShell.pagePlaceholder')}</p>
+            </section>
+          </section>
         </div>
+        <button type="button" className="floating-action">
+          {t('boardShell.quickActions')}
+        </button>
       </section>
     </div>
   )
