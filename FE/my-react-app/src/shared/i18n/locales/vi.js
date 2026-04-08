@@ -1,0 +1,84 @@
+export const vi = {
+  translation: {
+    nav: {
+      systemName: 'Hệ thống thiết kế',
+      projectName: 'Architectural Ledger',
+      newBoard: 'Bảng mới',
+      language: 'Ngôn ngữ',
+    },
+    hero: {
+      kicker: 'Dashboard biên tập',
+      title: 'Không gian điều phối dự án với nhịp độ và chiều sâu thị giác',
+      description:
+        'Bố cục ưu tiên khoảng trắng, phân cấp typography và tonal layering để dữ liệu dày đặc vẫn thoáng mắt. Mỗi module là một lớp giấy được đặt đúng vị trí, không cần divider 1px.',
+    },
+    metrics: {
+      cards: [
+        { label: 'Công việc mở', value: '28', delta: '+4 hôm nay' },
+        { label: 'Tiến độ sprint', value: '74%', delta: '+9% tuần này' },
+        { label: 'Rủi ro cao', value: '03', delta: 'Cần xử lý sớm' },
+      ],
+    },
+    quickAdd: {
+      title: 'Thanh thêm nhanh',
+      subtitle: 'Lớp giao diện đang nổi để cập nhật kế hoạch ngay tại ngữ cảnh hiện tại.',
+      hint: 'Glass mode',
+      placeholder: 'Nhập tên công việc ưu tiên...',
+      button: 'Thêm vào sprint',
+    },
+    focus: {
+      kicker: 'Vùng tập trung',
+      title: 'Tín hiệu cần chú ý',
+      items: [
+        { title: 'Backend auth gateway', meta: '2 block cần review trong 45 phút tới' },
+        { title: 'Milestone release R2', meta: 'Cần confirm QA trước 16:30' },
+        { title: 'Dependency watch', meta: '3 package cần cập nhật bảo mật' },
+      ],
+    },
+    board: {
+      kicker: 'Bảng điều phối',
+      title: 'Execution Ledger',
+      subtitle:
+        'Danh sách sử dụng khoảng cách và thay đổi nền để tách thông tin. Ưu tiên cao được đánh dấu bằng tab đỏ 4px ở cạnh trái.',
+    },
+    filters: {
+      active: 'Đang thực thi',
+      upcoming: 'Sắp tới',
+      review: 'Cần review',
+    },
+    tasks: [
+      {
+        title: 'Hoàn thiện login flow + token refresh',
+        owner: 'Owner: Nhân - Auth team',
+        due: 'Deadline: Thứ Sáu, 17:00',
+        tag: 'Auth',
+        priority: 'high',
+        progress: 61,
+      },
+      {
+        title: 'Đồng bộ schema API cho FE và BE',
+        owner: 'Owner: Khoa - Platform',
+        due: 'Deadline: Thứ Năm, 14:00',
+        tag: 'API',
+        priority: 'normal',
+        progress: 42,
+      },
+      {
+        title: 'Refactor bộ lọc task theo trạng thái',
+        owner: 'Owner: Linh - Frontend',
+        due: 'Deadline: Thứ Sáu, 11:30',
+        tag: 'UI',
+        priority: 'normal',
+        progress: 78,
+      },
+      {
+        title: 'Kiểm thử regression sau khi merge',
+        owner: 'Owner: Minh - QA',
+        due: 'Deadline: Thứ Bảy, 10:00',
+        tag: 'QA',
+        priority: 'high',
+        progress: 35,
+      },
+    ],
+  },
+}

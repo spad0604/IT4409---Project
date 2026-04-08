@@ -90,3 +90,18 @@ Token được lưu trong `localStorage` qua:
 
 HTTP client tự động attach header:
 - `Authorization: Bearer <token>`
+
+## 7) Đa ngôn ngữ (Tiếng Việt / English)
+
+Project tích hợp `i18next` + `react-i18next`:
+- `src/shared/i18n/i18n.js`
+
+Tài nguyên ngôn ngữ tách riêng theo file:
+- `src/shared/i18n/locales/vi.js`
+- `src/shared/i18n/locales/en.js`
+
+Điểm bootstrap i18n trong app:
+- `src/main.jsx`
+
+Ngôn ngữ hiện tại được lưu vào `localStorage` với key:
+- `it4409_lang`
