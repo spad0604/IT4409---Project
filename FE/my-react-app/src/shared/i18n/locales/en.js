@@ -1,5 +1,37 @@
 export const en = {
   translation: {
+    boardShell: {
+      screenLabel: 'Task Board (Kanban Board)',
+      workspaceName: 'Ledger Project',
+      topNavLabel: 'Main navigation',
+      topTabs: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'projects', label: 'Projects' },
+        { id: 'backlog', label: 'Backlog' },
+        { id: 'team', label: 'Team' },
+      ],
+      searchPlaceholder: 'Search issues...',
+      notifications: 'Notifications',
+      settings: 'Settings',
+      createIssue: 'Create issue',
+      sideNavLabel: 'Sidebar navigation',
+      teamName: 'Core Platform',
+      teamType: 'Product Team',
+      sideLinks: [
+        { id: 'overview', label: 'Overview' },
+        { id: 'board', label: 'Board' },
+        { id: 'issues', label: 'Issues' },
+        { id: 'reports', label: 'Reports' },
+        { id: 'archive', label: 'Archive' },
+      ],
+      inviteMember: 'Invite Member',
+      help: 'Help',
+      feedback: 'Feedback',
+      contentTitle: 'Engineering Sprint #42',
+      contentSubtitle: 'Managing core infrastructure upgrades and frontend refactoring.',
+      pagePlaceholder: 'Page content is intentionally blank for now',
+      quickActions: 'Quick Actions',
+    },
     nav: {
       systemName: 'Design system',
       projectName: 'Architectural Ledger',
