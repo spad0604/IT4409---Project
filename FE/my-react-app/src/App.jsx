@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./features/auth/pages/Login";
 
-function App() {
+function Kanban() {
   const { t, i18n } = useTranslation()
   const [activeTopTab, setActiveTopTab] = useState('projects')
   const [activeSideItem, setActiveSideItem] = useState('overview')
@@ -125,6 +127,26 @@ function App() {
       </section>
     </div>
   )
+
+}
+
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Redirect từ / → /login */}
+        <Route path="/" element={<Navigate to="/login" />} />
+
+        {/* Login */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Main app */}
+        <Route path="/home" element={<Kanban />} />
+      </Routes>
+    </BrowserRouter>
+  );
+
 }
 
 export default App
