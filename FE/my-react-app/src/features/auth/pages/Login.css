@@ -1,0 +1,131 @@
+/* Reset */
+* {
+    box-sizing: border-box;
+}
+
+.login-container {
+    display: flex;
+    height: 100vh;
+    background: #0f172a;
+    padding: 20px;
+}
+
+/* LEFT */
+.login-left {
+    flex: 1;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    border-radius: 16px 0 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    position: relative;
+}
+
+.overlay {
+    max-width: 400px;
+}
+
+.logo {
+    opacity: 0.8;
+    margin-bottom: 20px;
+}
+
+.login-left h1 {
+    font-size: 42px;
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+
+.desc {
+    opacity: 0.8;
+    font-size: 14px;
+}
+
+/* RIGHT */
+.login-right {
+    flex: 1;
+    background: #f8fafc;
+    border-radius: 0 16px 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-box {
+    width: 320px;
+}
+
+.form-box h2 {
+    margin-bottom: 8px;
+}
+
+.sub {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 20px;
+}
+
+/* Divider */
+.divider {
+    text-align: center;
+    font-size: 12px;
+    margin: 15px 0;
+    color: #9ca3af;
+}
+
+/* Inputs */
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+/* Login button */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.login-btn:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+}
+
+.login-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.4);
+}
+
+.social-btn {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #e5e7eb;
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.social-btn:hover {
+    background: #d1d5db;
+}
