@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap');
 
 :root {
   --primary: #001ed2;
@@ -26,8 +26,8 @@
   --radius-lg: 1rem;
   --ambient-shadow: 0 4px 32px rgb(25 28 29 / 6%);
 
-  --font-display: 'Manrope', 'Segoe UI', sans-serif;
-  --font-body: 'Inter', 'Segoe UI', sans-serif;
+  --font-display: 'Sora', 'Segoe UI', sans-serif;
+  --font-body: 'Outfit', 'Segoe UI', sans-serif;
 }
 
 * {
@@ -45,9 +45,10 @@ body {
   font-family: var(--font-body);
   color: var(--on-surface-variant);
   background:
-    radial-gradient(circle at 1px 1px, rgb(255 255 255 / 17%) 1.1px, transparent 0),
-    linear-gradient(180deg, #111422, #151826);
-  background-size: 16px 16px, 100% 100%;
+    radial-gradient(circle at 14% 18%, rgb(135 156 224 / 20%), transparent 32%),
+    radial-gradient(circle at 82% 88%, rgb(113 131 196 / 16%), transparent 38%),
+    linear-gradient(180deg, #f5f7fc 0%, #edf1f8 100%);
+  background-attachment: fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

@@ -1,0 +1,202 @@
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 1.1rem;
+}
+
+.stats-card {
+  position: relative;
+  min-height: 220px;
+  border-radius: 1.1rem;
+  border: 1px solid #e7eaf0;
+  background: #fbfbfc;
+  padding: 1.3rem 1.45rem 1.4rem;
+  box-shadow: 0 14px 35px rgb(11 18 35 / 6%);
+  overflow: hidden;
+  animation: card-reveal 420ms cubic-bezier(0.23, 0.79, 0.24, 1) both;
+}
+
+.stats-card:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.stats-card:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.stats-card:nth-child(4) {
+  animation-delay: 160ms;
+}
+
+.stats-card.variant-alert {
+  border-left: 5px solid #db2030;
+  padding-left: 1.2rem;
+}
+
+.stats-card.variant-highlight {
+  border: 0;
+  background: linear-gradient(145deg, #0726d7 0%, #1332e8 55%, #2449ff 100%);
+  color: #ffffff;
+}
+
+.stats-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.card-icon {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon svg {
+  width: 1.52rem;
+  height: 1.52rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-check {
+  background: #e6e5fa;
+  color: #2f4de0;
+}
+
+.icon-alert {
+  background: #f9dfdf;
+  color: #d42934;
+}
+
+.icon-spark {
+  background: #e4e4f8;
+  color: #4a57cc;
+}
+
+.icon-rocket {
+  background: rgb(255 255 255 / 16%);
+  color: #ffffff;
+}
+
+.card-badge {
+  border-radius: 999px;
+  padding: 0.33rem 0.72rem;
+  font-size: 1.38rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.badge-success {
+  color: #09935d;
+  background: #d6f4e8;
+}
+
+.badge-danger {
+  color: #cc3a44;
+  background: #f8d6d8;
+}
+
+.badge-info {
+  color: #2740b8;
+  background: #d8dcfb;
+}
+
+.badge-neutral {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.card-label {
+  margin-top: 1.2rem;
+  color: #2a3144;
+  font-size: 2.2rem;
+  line-height: 1.18;
+  font-weight: 500;
+}
+
+.card-value {
+  margin-top: 0.82rem;
+  color: #0f172a;
+  font-family: var(--font-display);
+  font-size: clamp(2.45rem, 3.2vw, 2.95rem);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.variant-highlight .card-label,
+.variant-highlight .card-value {
+  color: #ffffff;
+}
+
+.card-decor {
+  position: absolute;
+  right: -0.55rem;
+  bottom: -0.42rem;
+  width: 7.8rem;
+  height: 4.1rem;
+  opacity: 0.2;
+  border: 7px solid #b8d0ff;
+  border-radius: 0.8rem;
+  transform: rotate(34deg);
+}
+
+.card-decor::before,
+.card-decor::after {
+  content: '';
+  position: absolute;
+  border: inherit;
+  border-radius: inherit;
+}
+
+.card-decor::before {
+  inset: 0.82rem;
+}
+
+.card-decor::after {
+  inset: 1.65rem;
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1200px) {
+  .stats-overview {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-card {
+    min-height: 190px;
+  }
+
+  .card-label {
+    font-size: 1.34rem;
+  }
+
+  .card-value {
+    font-size: 2.2rem;
+  }
+}
