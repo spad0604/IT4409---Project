@@ -68,11 +68,11 @@ function StatsCard({ card }) {
   )
 }
 
-export function StatsOverview({ cards, label }) {
+export function StatsOverview({ cards, label, className = '' }) {
   const metricCards = Array.isArray(cards) ? cards : []
 
   return (
-    <section className="stats-overview" aria-label={label}>
+    <section className={`stats-overview ${className}`.trim()} aria-label={label}>
       {metricCards.map((card) => (
         <StatsCard key={card.id} card={card} />
       ))}
