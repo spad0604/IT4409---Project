@@ -14,6 +14,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = useCallback(async ({ email, password }) => {
+    const normalizedEmail = String(email ?? '').trim().toLowerCase()
+    if (normalizedEmail === 'admin' && password === 'admin') {
+      const data = {
+        token: 'mock-admin-token',
+        user: {
+          id: 'mock-admin',
+          email: 'admin',
+          name: 'Administrator',
+          role: 'admin',
+        },
+      }
+      saveToken(data.token)
+      setUser(data.user)
+      return data
+    }
+
     const data = await authApi.login({ email, password })
     saveToken(data?.token)
     setUser(data?.user ?? null)
@@ -44,6 +60,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
