@@ -153,5 +153,63 @@ export const en = {
         progress: 35,
       },
     ],
+    login: {
+      projectName: "Ledger Project",
+      titleLine1: "Architecture for",
+      titleLine2: "Deep Focus",
+      description: "A workspace designed with editorial precision to anchor your most ambitious projects.",
+      socialProof: "Joined by 12k+ architects",
+      welcome: "Welcome Back",
+      subtitle: "Enter your details to access your workspace.",
+      google: "Continue with Google",
+      github: "Continue with GitHub",
+      or: "OR LOGIN WITH EMAIL",
+      email: "Email Address",
+      emailPlaceholder: "name@company.com",
+      password: "Password",
+      passwordPlaceholder: "Password",
+      forgot: "Forgot password?",
+      show: "Show",
+      hide: "Hide",
+      remember: "Keep me signed in for 30 days",
+      signIn: "Sign In to Workspace",
+      signingIn: "Signing in...",
+      noAccount: "New to Ledger Project?",
+      create: "Create an account",
+      mock: "Mock account: admin/admin",
+      error: "Sign in failed. Please check your credentials.",
+    },
+    register: {
+      projectName: 'Ledger Project',
+      title: 'Join the next generation of architectural project management.',
+      description: 'Move beyond rigid lines. Experience a workspace designed for tonal depth and editorial precision.',
+      socialProof: 'Over 2,000+ teams onboarded',
+
+      create: 'Create Account',
+      subtitle: 'Start your 14-day free trial. No credit card required.',
+
+      google: 'Google',
+      github: 'GitHub',
+      or: 'OR CONTINUE WITH EMAIL',
+
+      name: 'Full Name',
+      namePlaceholder: 'Full Name',
+
+      email: 'Email',
+      emailPlaceholder: 'Email',
+
+      password: 'Password',
+      passwordPlaceholder: 'Password',
+
+      show: "Show",
+      hide: "Hide",
+
+      terms: 'I agree to the Terms of Service and Privacy Policy',
+
+      submit: 'Create Account',
+
+      haveAccount: 'Already have an account?',
+      signin: 'Sign In',
+    },
   },
 }

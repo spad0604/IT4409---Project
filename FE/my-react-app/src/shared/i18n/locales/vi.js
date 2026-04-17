@@ -153,5 +153,64 @@ export const vi = {
         progress: 35,
       },
     ],
+    login: {
+      projectName: "Ledger Project",
+      titleLine1: "Kiến trúc cho",
+      titleLine2: "sự tập trung sâu",
+      description: "Một workspace được thiết kế tinh chỉnh để hỗ trợ các dự án tham vọng.",
+      socialProof: "Hơn 12k người đã tham gia",
+      welcome: "Chào mừng trở lại",
+      subtitle: "Nhập thông tin để truy cập workspace",
+      google: "Tiếp tục với Google",
+      github: "Tiếp tục với GitHub",
+      or: "HOẶC ĐĂNG NHẬP BẰNG EMAIL",
+      email: "Email",
+      emailPlaceholder: "Email",
+      password: "Mật khẩu",
+      passwordPlaceholder: "Mật khẩu",
+      forgot: "Quên mật khẩu?",
+      show: "Hiện",
+      hide: "Ẩn",
+      remember: "Ghi nhớ đăng nhập 30 ngày",
+      signIn: "Đăng nhập",
+      signingIn: "Đang đăng nhập...",
+      noAccount: "Chưa có tài khoản?",
+      create: "Tạo tài khoản",
+      mock: "Tài khoản test: admin/admin",
+      error: "Đăng nhập thất bại. Vui lòng kiểm tra lại.",
+    },
+    register: {
+      projectName: 'Ledger Project',
+      title: 'Tham gia thế hệ quản lý dự án kiến trúc mới',
+      description: 'Trải nghiệm workspace được thiết kế tối ưu cho chiều sâu và sự tập trung.',
+      socialProof: 'Hơn 2,000 team đã tham gia',
+
+      create: 'Tạo tài khoản',
+      subtitle: 'Dùng thử 14 ngày miễn phí. Không cần thẻ.',
+
+      google: 'Tiếp tục với Google',
+      github: 'Tiếp tục với GitHub',
+      or: 'HOẶC ĐĂNG KÝ BẰNG EMAIL',
+
+      name: 'Họ và tên',
+      namePlaceholder: 'Họ và tên',
+
+      email: 'Email',
+      emailPlaceholder: 'Email',
+
+      password: 'Mật khẩu',
+      passwordPlaceholder: "Mật khẩu",
+
+
+      show: "Hiện",
+      hide: "Ẩn",
+
+      terms: 'Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật',
+
+      submit: 'Tạo tài khoản',
+
+      haveAccount: 'Đã có tài khoản?',
+      signin: 'Đăng nhập',
+    },
   },
 }
