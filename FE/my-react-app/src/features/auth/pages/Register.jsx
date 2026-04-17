@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../model/AuthContext'
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Auth.css'
@@ -24,35 +23,16 @@ function GithubIcon() {
     )
 }
 
-export default function Login() {
+
+export default function Register() {
     const { t } = useTranslation()
     const navigate = useNavigate()
-    const { signIn } = useAuth()
 
+    const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [keepSignedIn, setKeepSignedIn] = useState(true)
-    const [error, setError] = useState('')
-    const [submitting, setSubmitting] = useState(false)
-
-    const handleSubmit = async (event) => {
-        event.preventDefault()
-        if (submitting) return
-
-        setError('')
-        setSubmitting(true)
-
-        try {
-            await signIn({ email, password })
-            navigate('/home', { replace: true, state: { keepSignedIn } })
-        } catch (err) {
-            const apiMessage = err?.response?.data?.message
-            setError(apiMessage || t('login.error'))
-        } finally {
-            setSubmitting(false)
-        }
-    }
+    const [agree, setAgree] = useState(false)
 
     return (
         <div className="auth-page">
@@ -64,49 +44,74 @@ export default function Login() {
                     }}
                 >
                     <div className="visual-content">
-                        <p className="visual-logo">{t('login.projectName')}</p>
-                        <h1>
-                            {t('login.titleLine1')} <br />
-                            {t('login.titleLine2')}
-                        </h1>
-                        <p className="visual-desc">{t('login.description')}</p>
-                    </div>
+                        <p className="visual-logo">{t('register.projectName')}</p>
 
-                    <div className="social-proof">
-                        <div className="avatar-stack">
-                            <span>A</span>
-                            <span>N</span>
-                            <span>T</span>
+                        <h1 className="register-title">
+                            {t('register.title')}
+                        </h1>
+
+                        <p className="visual-desc">
+                            {t('register.description')}
+                        </p>
+
+                        <div className="register-card">
+                            <div className='social-proof'>
+                                <div className="avatar-stack">
+                                    <span>N</span>
+                                    <span>M</span>
+                                    <span>H</span>
+                                </div>
+                                <p>{t('register.socialProof')}</p>
+                            </div>
+                            <div className="progress-bar">
+                                <span style={{ width: '70%' }} />
+                            </div>
                         </div>
-                        <p>{t('login.socialProof')}</p>
                     </div>
                 </section>
 
                 <section className="auth-form-wrap">
-                    <form className="form-box" onSubmit={handleSubmit}>
-                        <h2>{t('login.welcome')}</h2>
-                        <p className="sub">{t('login.subtitle')}</p>
+                    <form className="form-box">
+                        <h2>{t('register.create')}</h2>
+                        <p className="sub">{t('register.subtitle')}</p>
 
+                        {/* SOCIAL */}
                         <button type="button" className="social-btn">
                             <GoogleIcon />
-                            {t('login.google')}
+                            {t('register.google')}
                         </button>
 
                         <button type="button" className="social-btn">
                             <GithubIcon />
-                            {t('login.github')}
+                            {t('register.github')}
                         </button>
 
-                        <div className="divider">{t('login.or')}</div>
+                        <div className="divider">{t('register.or')}</div>
 
-                        <label className="field-label">{t('login.email')}</label>
+                        {/* NAME */}
+                        <label className="field-label">
+                            {t('register.name')}
+                        </label>
                         <input
                             type="text"
-                            placeholder={t('login.emailPlaceholder')}
+                            placeholder={t('register.namePlaceholder')}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                        />
+
+                        {/* EMAIL */}
+                        <label className="field-label">
+                            {t('register.email')}
+                        </label>
+                        <input
+                            type="email"
+                            placeholder={t('register.emailPlaceholder')}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
+
 
                         <div className="password-row">
                             <label className="field-label">{t('login.password')}</label>
@@ -116,7 +121,7 @@ export default function Login() {
                         <div className="password-input-wrap">
                             <input
                                 type={showPassword ? 'text' : 'password'}
-                                placeholder={t('login.passwordPlaceholder')}
+                                placeholder={t('register.passwordPlaceholder')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -126,37 +131,32 @@ export default function Login() {
                                 className="password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
-                                {showPassword ? t('login.hide') : t('login.show')}
+                                {showPassword ? t('register.hide') : t('register.show')}
                             </button>
                         </div>
 
-                        <button type="button" className="text-link">
-                            {t('login.forgot')}
-                        </button>
 
-                        <label className="remember-me">
+                        <label className="terms">
                             <input
                                 type="checkbox"
-                                checked={keepSignedIn}
-                                onChange={(e) => setKeepSignedIn(e.target.checked)}
+                                checked={agree}
+                                onChange={(e) => setAgree(e.target.checked)}
                             />
-                            {t('login.remember')}
+                            <span className="custom-checkbox"></span>
+                            <span>{t('register.terms')}</span>
                         </label>
 
-                        {error && <p className="form-error">{error}</p>}
-
-                        <button className="login-btn" type="submit">
-                            {submitting ? t('login.signingIn') : t('login.signIn')}
+                        <button className="register-btn">
+                            {t('register.submit')}
                         </button>
 
                         <p className="register-link">
-                            {t('login.noAccount')}{' '}
-                            <Link to="/register" className="link">
-                                {t('login.create')}
+                            {t('register.haveAccount')}{' '}
+                            <Link to="/login" className="link">
+                                {t('register.signin')}
                             </Link>
                         </p>
 
-                        <p className="mock-note">{t('login.mock')}</p>
                     </form>
                 </section>
             </div>

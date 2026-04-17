@@ -1,10 +1,10 @@
-.login-page {
+.auth-page {
     min-height: 100vh;
     padding: clamp(10px, 2vw, 22px);
     background: linear-gradient(180deg, #f2f3f5 0%, #e8ecef 100%);
 }
 
-.login-shell {
+.auth-shell {
     max-width: 1320px;
     min-height: calc(100vh - 2 * clamp(10px, 2vw, 22px));
     margin: 0 auto;
@@ -16,7 +16,7 @@
     box-shadow: 0 24px 70px rgb(16 24 40 / 14%);
 }
 
-.login-visual {
+.auth-visual {
     position: relative;
     color: #f7f9ff;
     background-size: cover;
@@ -27,7 +27,7 @@
     padding: 3.2rem 3.2rem 2rem;
 }
 
-.login-visual::before {
+.auth-visual::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -127,7 +127,7 @@
     font-size: 1.22rem;
 }
 
-.login-form-wrap {
+.auth-form-wrap {
     position: relative;
     background: #f4f5f7;
     display: grid;
@@ -250,13 +250,19 @@
 
 .password-toggle {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    border: 0;
-    background: transparent;
+    border: none;
+    background: none;
     cursor: pointer;
-    line-height: 1;
+    font-size: 16px;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.password-toggle:hover {
+    opacity: 1;
 }
 
 .remember-me {
@@ -280,6 +286,7 @@
     font-size: 1.05rem;
 }
 
+/*======= LOGIN ========*/
 .login-btn {
     width: 100%;
     height: 52px;
@@ -395,7 +402,7 @@
     }
 
     .form-box h2 {
-        font-size: 2rem;
+        white-space: nowrap;
     }
 
     .sub,
@@ -410,4 +417,204 @@
     .login-btn {
         font-size: 1.12rem;
     }
+}
+
+/*======= REGISTER ========*/
+/* ===== LAYOUT ===== */
+
+.register-title {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: white;
+}
+
+.register-card {
+    margin-top: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+    font-size: 14px;
+}
+
+.progress-bar {
+    margin-top: 10px;
+    height: 4px;
+    background: white;
+    border-radius: 4px;
+    width: 70%;
+}
+
+.progress-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #4f46e5, #6366f1);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* ===== FORM ===== */
+
+.form-box h2 {
+    font-size: 26px;
+    font-weight: 600;
+}
+
+.sub {
+    margin-bottom: 16px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* ===== SOCIAL ===== */
+
+.social-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.social-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.social-btn:hover {
+    background: #f8fafc;
+}
+
+/* ===== DIVIDER ===== */
+
+.divider {
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 14px 0;
+}
+
+/* ===== INPUT WITH ICON ===== */
+
+.input-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+    transition: 0.2s;
+}
+
+.input-with-icon:focus-within {
+    border-color: #4f46e5;
+    background: #fff;
+}
+
+.input-with-icon input {
+    border: none;
+    background: transparent;
+    flex: 1;
+    outline: none;
+    font-size: 14px;
+}
+
+
+/* ===== TERMS ===== */
+
+/* Ẩn checkbox gốc */
+.terms input {
+    display: none;
+}
+
+/* Container */
+.terms {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #475569;
+    margin-top: 12px;
+}
+
+/* Box custom */
+.custom-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #cbd5f5;
+    border-radius: 4px;
+    background: white;
+    display: inline-block;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Hover */
+.terms:hover .custom-checkbox {
+    border-color: #4f46e5;
+}
+
+/* Checked state */
+.terms input:checked+.custom-checkbox {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
+/* Tick */
+.terms input:checked+.custom-checkbox::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* ===== BUTTON ===== */
+
+.register-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.register-btn:hover {
+    background: #4338ca;
+}
+
+/* ===== FOOTER ===== */
+
+.register-link {
+    margin-top: 16px;
+    font-size: 14px;
+    text-align: center;
+    color: #64748b;
+}
+
+.link {
+    color: #4f46e5;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.link:hover {
+    text-decoration: underline;
 }

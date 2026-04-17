@@ -4,6 +4,7 @@ import { StatsOverview } from './shared/components/stats-overview/StatsOverview.
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
+import Register from './features/auth/pages/Register'
 import { useAuth } from './features/auth/model/AuthContext'
 
 function Kanban() {
@@ -316,6 +317,15 @@ function App() {
           element={(
             <PublicOnly>
               <Login />
+            </PublicOnly>
+          )}
+        />
+
+        <Route
+          path="/register"
+          element={(
+            <PublicOnly>
+              <Register />
             </PublicOnly>
           )}
         />
