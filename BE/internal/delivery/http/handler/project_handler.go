@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"it4409/internal/delivery/http/middleware"
 	"it4409/internal/domain"
 	"it4409/internal/usecase"
 )
@@ -33,10 +34,11 @@ func (h *ProjectHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
+// getUserID lấy userID từ JWT context (do middleware set vào).
+// Nếu không có JWT, fallback sang header X-User-ID (dùng cho test thủ công).
 func getUserID(r *http.Request) string {
-	userID, ok := r.Context().Value("userID").(string)
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok || userID == "" {
-		// Mock hỗ trợ cho Tester
 		return r.Header.Get("X-User-ID")
 	}
 	return userID

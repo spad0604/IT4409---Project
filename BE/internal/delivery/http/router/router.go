@@ -16,6 +16,8 @@ type Deps struct {
 	AuthHandler    *handler.AuthHandler
 	UserHandler    *handler.UserHandler
 	ProjectHandler *handler.ProjectHandler
+	BoardHandler   *handler.BoardHandler
+	LabelHandler   *handler.LabelHandler
 	JWTAuth        middleware.JWTAuth
 }
 
@@ -41,24 +43,26 @@ func New(deps Deps) http.Handler {
 		})
 	})
 
-	// Public routes (no auth required)
 	r.Route("/api", func(r chi.Router) {
+		// Các route công khai (không cần đăng nhập)
 		deps.AuthHandler.RegisterRoutes(r) // /auth/register, /auth/login
-	})
 
-	// Protected routes (JWT required)
-	r.Route("/api", func(r chi.Router) {
-		r.Use(deps.JWTAuth.Middleware)
+		// Các route yêu cầu xác thực JWT
+		r.Group(func(r chi.Router) {
+			r.Use(deps.JWTAuth.Middleware)
 
-		// ★ Backward compatible: keep /api/me for existing FE
-		r.Get("/me", deps.AuthHandler.Me)
+			// Tương thích ngược: giữ /api/me cho FE cũ
+			r.Get("/me", deps.AuthHandler.Me)
 
-		// Người A: Auth (protected) + User
-		deps.AuthHandler.RegisterProtectedRoutes(r) // /auth/logout, /auth/change-password, /auth/refresh
-		deps.UserHandler.RegisterRoutes(r)           // /users/me, /users/{userID}, /users?search=
+			// Người A: Auth (protected) + User
+			deps.AuthHandler.RegisterProtectedRoutes(r)
+			deps.UserHandler.RegisterRoutes(r)
 
-		// Người B: Project + Members
-		deps.ProjectHandler.RegisterRoutes(r) // /projects/...
+			// Người B: Project + Members + Boards + Labels
+			deps.ProjectHandler.RegisterRoutes(r)
+			deps.BoardHandler.RegisterRoutes(r)
+			deps.LabelHandler.RegisterRoutes(r)
+		})
 	})
 
 	return r
