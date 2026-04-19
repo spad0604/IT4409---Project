@@ -13,8 +13,10 @@ import (
 )
 
 type Deps struct {
-	AuthHandler *handler.AuthHandler
-	JWTAuth     middleware.JWTAuth
+	AuthHandler    *handler.AuthHandler
+	UserHandler    *handler.UserHandler
+	ProjectHandler *handler.ProjectHandler
+	JWTAuth        middleware.JWTAuth
 }
 
 func New(deps Deps) http.Handler {
@@ -23,6 +25,7 @@ func New(deps Deps) http.Handler {
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(middleware.CORSMiddleware())
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -38,14 +41,24 @@ func New(deps Deps) http.Handler {
 		})
 	})
 
-	r.Route("/api/auth", func(r chi.Router) {
-		r.Post("/register", deps.AuthHandler.Register)
-		r.Post("/login", deps.AuthHandler.Login)
+	// Public routes (no auth required)
+	r.Route("/api", func(r chi.Router) {
+		deps.AuthHandler.RegisterRoutes(r) // /auth/register, /auth/login
 	})
 
-	r.Group(func(r chi.Router) {
+	// Protected routes (JWT required)
+	r.Route("/api", func(r chi.Router) {
 		r.Use(deps.JWTAuth.Middleware)
-		r.Get("/api/me", deps.AuthHandler.Me)
+
+		// ★ Backward compatible: keep /api/me for existing FE
+		r.Get("/me", deps.AuthHandler.Me)
+
+		// Người A: Auth (protected) + User
+		deps.AuthHandler.RegisterProtectedRoutes(r) // /auth/logout, /auth/change-password, /auth/refresh
+		deps.UserHandler.RegisterRoutes(r)           // /users/me, /users/{userID}, /users?search=
+
+		// Người B: Project + Members
+		deps.ProjectHandler.RegisterRoutes(r) // /projects/...
 	})
 
 	return r

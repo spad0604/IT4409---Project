@@ -27,7 +27,8 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 - BE/internal/repository/postgres: triển khai SQL thực tế
 - BE/internal/usecase: business logic và permission checks
 - BE/internal/delivery/http/handler: parse request, call usecase, trả response
-- BE/internal/delivery/http/middleware: JWT middleware
+- BE/internal/delivery/http/handler/response.go: shared response helpers dùng chung
+- BE/internal/delivery/http/middleware: JWT middleware + CORS middleware
 - BE/internal/delivery/http/router: register routes
 - BE/internal/infra/db: tạo pgx pool
 - BE/internal/pkg/jwtutil: sign/parse JWT
@@ -35,28 +36,39 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 
 ## 4) Runtime Wiring (Current State)
 
-API server chính đang wiring auth module:
+API server đang wiring auth + user + project modules:
 
 1. config.Load
 2. db.NewPostgres
-3. postgres.NewUserRepo
-4. usecase.NewAuthUsecase
-5. handler.NewAuthHandler
-6. router.New với AuthHandler và JWT middleware
+3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewPgTxManager
+4. usecase.NewAuthUsecase + usecase.NewUserUsecase
+5. usecase.NewPermissionChecker + usecase.NewProjectUsecase
+6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler
+7. router.New với tất cả handlers + JWT + CORS middleware
 
-Routes active trong entrypoint chính:
+Routes active:
 
 - GET /api/health
 - POST /api/auth/register
 - POST /api/auth/login
-- GET /api/me
+- POST /api/auth/logout (protected)
+- POST /api/auth/change-password (protected)
+- POST /api/auth/refresh (protected)
+- GET /api/me (protected, backward compat cho FE cũ)
+- GET /api/users/me (protected)
+- PATCH /api/users/me (protected)
+- GET /api/users/{userID} (protected)
+- GET /api/users?search=keyword (protected)
+- POST /api/projects (protected, Người B)
+- GET /api/projects (protected, Người B)
+- GET /api/projects/{id} (protected, Người B)
+- PATCH /api/projects/{id} (protected, Người B)
+- DELETE /api/projects/{id} (protected, Người B)
+- GET /api/projects/{id}/members (protected, Người B)
+- POST /api/projects/{id}/members (protected, Người B)
+- PUT /api/projects/{id}/members/{userID} (protected, Người B)
+- DELETE /api/projects/{id}/members/{userID} (protected, Người B)
 - GET /swagger/*
-
-Lưu ý:
-
-- Project module (handler/usecase/repo) đã có code.
-- Chưa được mount vào router của API entrypoint hiện tại.
-- Luồng project đang được exercise trong BE/cmd/tester/main.go.
 
 ## 5) Response Contract
 
@@ -69,6 +81,19 @@ BE dùng envelope JSON:
 }
 
 FE đang phụ thuộc vào việc lấy payload.data ở nhánh success.
+
+Shared helpers trong handler/response.go:
+
+- writeJSON(w, status, body): encode JSON
+- writeSuccess(w, status, data): envelope success
+- writeError(w, status, message): envelope error
+- writeDomainError(w, err): map domain error → HTTP status
+- parseBody(r, dst): decode JSON body
+- parseUUID(w, raw): validate UUID format
+- parsePagination(r): extract page/per_page → limit/offset
+- requireUserID(w, r): extract userID from JWT context
+
+Lưu ý: Project handler (Người B) hiện chưa dùng shared helpers này, vẫn dùng http.Error() và json trực tiếp.
 
 ## 6) Auth Data Flow (HTTP -> DB)
 
@@ -96,11 +121,50 @@ FE đang phụ thuộc vào việc lấy payload.data ở nhánh success.
 1. JWT middleware đọc Authorization
 2. Hỗ trợ cả "Bearer <token>" và "<token>"
 3. Parse token và lấy subject làm user id
-4. Gắn user id vào request context
+4. Gắn user id vào request context (struct key ctxKeyUserID{})
 5. Handler gọi usecase.Me
 6. Repo.GetByID và trả envelope 200
 
-## 7) Project/Permission Flow (Usecase Level)
+### Change Password (Protected)
+
+1. POST /api/auth/change-password
+2. requireUserID lấy userID từ context
+3. Usecase verify old password bằng bcrypt
+4. Validate new password >= 6 chars
+5. Hash new password và update DB
+6. Trả envelope 200
+
+### Refresh Token (Protected)
+
+1. POST /api/auth/refresh
+2. requireUserID lấy userID từ context
+3. Usecase verify user exists
+4. Ký JWT mới
+5. Trả envelope 200 (token)
+
+## 7) User Profile Flow
+
+### Get Profile
+
+1. GET /api/users/me
+2. requireUserID lấy userID
+3. UserUsecase.GetProfile → UserRepo.GetByID
+4. Clear PasswordHash
+5. Trả envelope 200 với avatar_url, updated_at
+
+### Update Profile
+
+1. PATCH /api/users/me với body { name, avatar_url }
+2. UserUsecase.UpdateProfile → merge fields → UserRepo.Update
+3. Trả envelope 200
+
+### Search Users
+
+1. GET /api/users?search=keyword&page=1&per_page=20
+2. UserUsecase.SearchUsers → UserRepo.Search (ILIKE trên name và email)
+3. Trả envelope 200
+
+## 8) Project/Permission Flow (Usecase Level)
 
 CreateProject dùng transaction gộp:
 
@@ -114,7 +178,20 @@ Permission model:
 - Hierarchy: admin > member > viewer
 - PermissionChecker xác minh role trước khi update/delete/manage members
 
-## 8) Environment Contract (BE)
+## 9) Handler Route Registration Pattern
+
+Mỗi handler tự đăng ký routes qua method RegisterRoutes:
+
+```
+AuthHandler.RegisterRoutes(r)           // public: /auth/register, /auth/login
+AuthHandler.RegisterProtectedRoutes(r)  // protected: /auth/logout, /auth/change-password, /auth/refresh
+UserHandler.RegisterRoutes(r)           // protected: /users/me, /users/{userID}, /users?search=
+ProjectHandler.RegisterRoutes(r)        // protected: /projects/...
+```
+
+router.go chỉ gọi các method này, không khai báo route trực tiếp.
+
+## 10) Environment Contract (BE)
 
 - PORT
 - DATABASE_URL
@@ -122,8 +199,25 @@ Permission model:
 - JWT_ISSUER
 - JWT_TTL_MINUTES
 
-## 9) Coding Notes For Copilot (BE)
+## 11) Domain Errors
+
+Defined trong domain/errors.go:
+
+- ErrNotFound → 404
+- ErrConflict → 409
+- ErrUnauthorized → 401
+- ErrForbidden → 403
+- ErrInvalidInput → 400
+- ErrInternal → 500
+- ErrSprintActive (cho sprint module sau)
+- ErrSprintNotActive (cho sprint module sau)
+- ErrInvalidStatus (cho issue status transition sau)
+
+## 12) Coding Notes For Copilot (BE)
 
 - Khi sửa auth, giữ response envelope tương thích FE parser.
-- Khi mount project APIs vào runtime chính, cần wiring repo/usecase/handler trong main.go và register route trong router.
+- Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ response.go.
+- Dùng requireUserID(w, r) thay vì tự đọc context — đảm bảo dùng đúng struct key.
 - Không đưa logic nghiệp vụ vào repository layer; giữ usecase là nơi điều phối transaction và permission.
+- GET /api/me giữ backward compat cho FE cũ. Sau khi FE chuyển sang /api/users/me thì xóa.
+- Migration 002_user_extend tạo hàm update_updated_at() dùng chung — các migration sau chỉ cần CREATE TRIGGER, không cần tạo lại function.

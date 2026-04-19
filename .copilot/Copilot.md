@@ -22,5 +22,7 @@
 ## Quick Notes
 
 - FE hiện đang tích hợp auth flow với route guard /login và /home.
-- BE runtime chính hiện đang wiring auth APIs; project module đã có code nhưng chưa mount route ở entrypoint API.
+- BE đang wiring đầy đủ auth + user + project modules. Tất cả routes đã active.
 - FE parse response theo envelope payload.data từ BE.
+- GET /api/me giữ backward compat. Endpoint chính là GET /api/users/me.
+- Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ handler/response.go.

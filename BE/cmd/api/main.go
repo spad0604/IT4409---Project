@@ -50,13 +50,27 @@ func main() {
 
 	jwtSvc := jwtutil.Service{Secret: []byte(cfg.JWTSecret), Issuer: cfg.JWTIssuer, TTL: cfg.JWTTTL}
 
+	// ── Repositories ────────────────────────────────────────────
 	userRepo := postgres.NewUserRepo(pg.Pool)
+	projectRepo := postgres.NewProjectRepo(pg.Pool)
+	txManager := postgres.NewPgTxManager(pg.Pool)
+
+	// ── Usecases ────────────────────────────────────────────────
 	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
+	userUC := usecase.NewUserUsecase(userRepo)
+	permChecker := usecase.NewPermissionChecker(projectRepo)
+	projectUC := usecase.NewProjectUsecase(projectRepo, txManager, permChecker)
+
+	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
+	userHandler := handler.NewUserHandler(userUC)
+	projectHandler := handler.NewProjectHandler(projectUC)
 
 	h := router.New(router.Deps{
-		AuthHandler: authHandler,
-		JWTAuth:     middleware.JWTAuth{JWT: jwtSvc},
+		AuthHandler:    authHandler,
+		UserHandler:    userHandler,
+		ProjectHandler: projectHandler,
+		JWTAuth:        middleware.JWTAuth{JWT: jwtSvc},
 	})
 
 	srv := &http.Server{
