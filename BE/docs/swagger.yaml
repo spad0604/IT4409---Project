@@ -1,158 +1,896 @@
+swagger: "2.0"
+info:
+  title: IT4409 Jira-Clone API
+  description: |
+    Backend API cho hệ thống quản lý dự án kiểu Jira.
+    Clean Architecture (Go) + PostgreSQL (Supabase).
+    
+    **Hướng dẫn xác thực:**
+    1. Gọi `/api/auth/register` hoặc `/api/auth/login` để lấy JWT token.
+    2. Nhấn nút "Authorize" ở góc trên, nhập: `Bearer <token>`.
+    3. Tất cả API có khóa 🔒 đều yêu cầu JWT.
+  version: "2.0"
+  contact:
+    name: IT4409 Team
 basePath: /
+schemes:
+  - http
+
+securityDefinitions:
+  BearerAuth:
+    description: "Nhập JWT token. Ví dụ: Bearer eyJhbGciOiJI..."
+    type: apiKey
+    name: Authorization
+    in: header
+
+# ════════════════════════════════════════════════
+#  DEFINITIONS (Cấu trúc dữ liệu)
+# ════════════════════════════════════════════════
 definitions:
-  handler.AuthData:
+  Envelope:
+    type: object
+    properties:
+      status:
+        type: integer
+      message:
+        type: string
+      data: {}
+
+  AuthData:
+    type: object
     properties:
       token:
         type: string
       user:
-        $ref: '#/definitions/handler.UserDTO'
+        $ref: "#/definitions/UserDTO"
+
+  UserDTO:
     type: object
-  handler.AuthEnvelope:
     properties:
-      data:
-        $ref: '#/definitions/handler.AuthData'
-      message:
-        type: string
-      status:
-        type: integer
-    type: object
-  handler.ErrorEnvelope:
-    properties:
-      data: {}
-      message:
-        type: string
-      status:
-        type: integer
-    type: object
-  handler.UserDTO:
-    properties:
-      created_at:
+      id:
         type: string
       email:
         type: string
+      name:
+        type: string
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+
+  Project:
+    type: object
+    properties:
       id:
         type: string
       name:
         type: string
-    type: object
-  handler.UserData:
-    properties:
-      user:
-        $ref: '#/definitions/handler.UserDTO'
-    type: object
-  handler.UserEnvelope:
-    properties:
-      data:
-        $ref: '#/definitions/handler.UserData'
-      message:
+      key:
         type: string
-      status:
-        type: integer
-    type: object
-  handler.loginReq:
-    properties:
-      email:
+      description:
         type: string
-      password:
+      type:
         type: string
+        enum: [kanban, scrum]
+      lead_id:
+        type: string
+      icon:
+        type: string
+      created_by:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      updated_at:
+        type: string
+        format: date-time
+
+  ProjectMember:
     type: object
-  handler.registerReq:
     properties:
-      email:
+      project_id:
+        type: string
+      user_id:
+        type: string
+      role:
+        type: string
+        enum: [admin, member, viewer]
+      joined_at:
+        type: string
+        format: date-time
+
+  Board:
+    type: object
+    properties:
+      id:
+        type: string
+      projectId:
         type: string
       name:
         type: string
-      password:
+      isDefault:
+        type: boolean
+      createdAt:
         type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  BoardColumn:
     type: object
-info:
-  contact: {}
-  description: Clean Architecture Go API (register/login) with JWT.
-  title: IT4409 API
-  version: "1.0"
+    properties:
+      id:
+        type: string
+      boardId:
+        type: string
+      name:
+        type: string
+      position:
+        type: integer
+      statusMap:
+        type: string
+        enum: [todo, in_progress, in_review, done]
+      createdAt:
+        type: string
+        format: date-time
+
+  BoardDetail:
+    type: object
+    properties:
+      board:
+        $ref: "#/definitions/Board"
+      columns:
+        type: array
+        items:
+          $ref: "#/definitions/BoardColumn"
+
+  Label:
+    type: object
+    properties:
+      id:
+        type: string
+      projectId:
+        type: string
+      name:
+        type: string
+      color:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+
+# ════════════════════════════════════════════════
+#  PATHS (API Endpoints)
+# ════════════════════════════════════════════════
 paths:
-  /api/auth/login:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Login payload
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/handler.loginReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.AuthEnvelope'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ErrorEnvelope'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorEnvelope'
-      summary: Login
-      tags:
-      - auth
+
+  # ── AUTH (Người A) ─────────────────────────────
   /api/auth/register:
     post:
-      consumes:
-      - application/json
+      tags: [Auth]
+      summary: Đăng ký tài khoản mới
+      consumes: [application/json]
+      produces: [application/json]
       parameters:
-      - description: Register payload
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/handler.registerReq'
-      produces:
-      - application/json
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [email, password, name]
+            properties:
+              email:
+                type: string
+                example: user@example.com
+              password:
+                type: string
+                example: MyPassword123
+              name:
+                type: string
+                example: Nguyễn Văn A
       responses:
-        "201":
-          description: Created
+        201:
+          description: Đăng ký thành công
           schema:
-            $ref: '#/definitions/handler.AuthEnvelope'
-        "400":
-          description: Bad Request
+            allOf:
+              - $ref: "#/definitions/Envelope"
+              - properties:
+                  data:
+                    $ref: "#/definitions/AuthData"
+        400:
+          description: Dữ liệu không hợp lệ
+        409:
+          description: Email đã tồn tại
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập
+      consumes: [application/json]
+      produces: [application/json]
+      parameters:
+        - in: body
+          name: body
+          required: true
           schema:
-            $ref: '#/definitions/handler.ErrorEnvelope'
-        "409":
-          description: Conflict
+            type: object
+            required: [email, password]
+            properties:
+              email:
+                type: string
+                example: user@example.com
+              password:
+                type: string
+                example: MyPassword123
+      responses:
+        200:
+          description: Đăng nhập thành công, trả về JWT token
           schema:
-            $ref: '#/definitions/handler.ErrorEnvelope'
-      summary: Register new user
-      tags:
-      - auth
-  /api/me:
+            allOf:
+              - $ref: "#/definitions/Envelope"
+              - properties:
+                  data:
+                    $ref: "#/definitions/AuthData"
+        401:
+          description: Sai email hoặc mật khẩu
+
+  /api/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Đổi mật khẩu
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              old_password:
+                type: string
+              new_password:
+                type: string
+      responses:
+        200:
+          description: Đổi mật khẩu thành công
+        401:
+          description: Mật khẩu cũ sai
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Làm mới JWT token
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      responses:
+        200:
+          description: Token mới
+        401:
+          description: Token hết hạn
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Đăng xuất
+      security: [{BearerAuth: []}]
+      responses:
+        200:
+          description: Đăng xuất thành công
+
+  # ── USERS (Người A) ────────────────────────────
+  /api/users/me:
     get:
-      produces:
-      - application/json
+      tags: [Users]
+      summary: Xem hồ sơ cá nhân
+      security: [{BearerAuth: []}]
+      produces: [application/json]
       responses:
-        "200":
-          description: OK
+        200:
+          description: Thông tin người dùng hiện tại
           schema:
-            $ref: '#/definitions/handler.UserEnvelope'
-        "401":
-          description: Unauthorized
+            allOf:
+              - $ref: "#/definitions/Envelope"
+              - properties:
+                  data:
+                    $ref: "#/definitions/UserDTO"
+        401:
+          description: Chưa đăng nhập
+    patch:
+      tags: [Users]
+      summary: Cập nhật hồ sơ cá nhân
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - in: body
+          name: body
           schema:
-            $ref: '#/definitions/handler.ErrorEnvelope'
-      security:
-      - BearerAuth: []
-      summary: Get current user
-      tags:
-      - auth
-schemes:
-- http
-securityDefinitions:
-  BearerAuth:
-    description: Nhập JWT token (có thể nhập "Bearer <token>" hoặc chỉ "<token>")
-    in: header
-    name: Authorization
-    type: apiKey
-swagger: "2.0"
+            type: object
+            properties:
+              name:
+                type: string
+              avatar_url:
+                type: string
+      responses:
+        200:
+          description: Cập nhật thành công
+
+  /api/users/{userID}:
+    get:
+      tags: [Users]
+      summary: Xem thông tin người dùng khác
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: userID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Thông tin người dùng
+        404:
+          description: Không tìm thấy
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: Tìm kiếm người dùng
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: query
+          name: search
+          type: string
+          required: true
+          description: Từ khóa tìm kiếm (tên hoặc email)
+        - in: query
+          name: page
+          type: integer
+          default: 1
+        - in: query
+          name: per_page
+          type: integer
+          default: 20
+      responses:
+        200:
+          description: Danh sách người dùng phù hợp
+
+  # ── PROJECTS (Người B) ─────────────────────────
+  /api/projects:
+    post:
+      tags: [Projects]
+      summary: Tạo dự án mới
+      description: Tạo dự án + khởi tạo counter + thêm người tạo làm admin.
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name, key]
+            properties:
+              name:
+                type: string
+                example: Dự án Kanban
+              key:
+                type: string
+                example: KANBAN
+              description:
+                type: string
+                example: Quản lý công việc theo phương pháp Kanban
+              type:
+                type: string
+                enum: [kanban, scrum]
+                default: kanban
+      responses:
+        201:
+          description: Tạo dự án thành công
+          schema:
+            $ref: "#/definitions/Project"
+        401:
+          description: Chưa đăng nhập
+    get:
+      tags: [Projects]
+      summary: Liệt kê dự án của tôi
+      security: [{BearerAuth: []}]
+      responses:
+        200:
+          description: Danh sách dự án mà người dùng là thành viên
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Project"
+
+  /api/projects/{projectID}:
+    get:
+      tags: [Projects]
+      summary: Chi tiết dự án
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Thông tin dự án
+          schema:
+            $ref: "#/definitions/Project"
+        403:
+          description: Không có quyền
+        404:
+          description: Không tìm thấy
+    patch:
+      tags: [Projects]
+      summary: Cập nhật dự án
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              icon:
+                type: string
+      responses:
+        200:
+          description: Cập nhật thành công
+        403:
+          description: Không có quyền admin
+    delete:
+      tags: [Projects]
+      summary: Xóa dự án (xóa mềm)
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Xóa thành công
+        403:
+          description: Không có quyền admin
+
+  # ── PROJECT MEMBERS (Người B) ──────────────────
+  /api/projects/{projectID}/members:
+    get:
+      tags: [Project Members]
+      summary: Liệt kê thành viên
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Danh sách thành viên
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/ProjectMember"
+    post:
+      tags: [Project Members]
+      summary: Thêm thành viên
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              userId:
+                type: string
+              role:
+                type: string
+                enum: [admin, member, viewer]
+      responses:
+        201:
+          description: Thêm thành viên thành công
+        403:
+          description: Không có quyền admin
+
+  /api/projects/{projectID}/members/{userID}:
+    put:
+      tags: [Project Members]
+      summary: Đổi vai trò thành viên
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: path
+          name: userID
+          type: string
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [admin, member, viewer]
+      responses:
+        200:
+          description: Đổi vai trò thành công
+    delete:
+      tags: [Project Members]
+      summary: Xóa thành viên khỏi dự án
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: path
+          name: userID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Xóa thành viên thành công
+
+  # ── BOARDS (Người B) ───────────────────────────
+  /api/projects/{projectID}/boards:
+    post:
+      tags: [Boards]
+      summary: Tạo bảng Kanban mới
+      description: Tự động tạo 4 cột mặc định (To Do, In Progress, In Review, Done). Yêu cầu quyền member+.
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                example: Sprint Board
+      responses:
+        201:
+          description: Tạo bảng thành công
+          schema:
+            $ref: "#/definitions/Board"
+    get:
+      tags: [Boards]
+      summary: Liệt kê bảng trong dự án
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Danh sách bảng
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Board"
+
+  /api/boards/{boardID}:
+    get:
+      tags: [Boards]
+      summary: Chi tiết bảng + danh sách cột
+      description: Trả về bảng kèm tất cả cột, dùng để render giao diện Kanban.
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Bảng + cột
+          schema:
+            $ref: "#/definitions/BoardDetail"
+    patch:
+      tags: [Boards]
+      summary: Cập nhật bảng
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+      responses:
+        200:
+          description: Cập nhật thành công
+    delete:
+      tags: [Boards]
+      summary: Xóa bảng
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Xóa thành công
+
+  # ── COLUMNS (Người B) ──────────────────────────
+  /api/boards/{boardID}/columns:
+    post:
+      tags: [Board Columns]
+      summary: Thêm cột vào bảng
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name, statusMap]
+            properties:
+              name:
+                type: string
+                example: Testing
+              position:
+                type: integer
+                example: 3
+              statusMap:
+                type: string
+                enum: [todo, in_progress, in_review, done]
+      responses:
+        201:
+          description: Thêm cột thành công
+          schema:
+            $ref: "#/definitions/BoardColumn"
+
+  /api/boards/{boardID}/columns/{columnID}:
+    patch:
+      tags: [Board Columns]
+      summary: Sửa tên/trạng thái cột
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+        - in: path
+          name: columnID
+          type: string
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              statusMap:
+                type: string
+                enum: [todo, in_progress, in_review, done]
+      responses:
+        200:
+          description: Sửa cột thành công
+    delete:
+      tags: [Board Columns]
+      summary: Xóa cột
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+        - in: path
+          name: columnID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Xóa cột thành công
+
+  /api/boards/{boardID}/columns/reorder:
+    put:
+      tags: [Board Columns]
+      summary: Sắp xếp lại thứ tự cột (kéo thả)
+      description: Gửi mảng columnIds theo thứ tự mới. Yêu cầu quyền member+.
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: boardID
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              columnIds:
+                type: array
+                items:
+                  type: string
+                example: ["col-uuid-3", "col-uuid-1", "col-uuid-2", "col-uuid-4"]
+      responses:
+        200:
+          description: Sắp xếp lại thành công
+
+  # ── LABELS (Người B) ───────────────────────────
+  /api/projects/{projectID}/labels:
+    post:
+      tags: [Labels]
+      summary: Tạo nhãn cho dự án
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                example: Bug
+              color:
+                type: string
+                example: "#ef4444"
+                default: "#6366f1"
+      responses:
+        201:
+          description: Tạo nhãn thành công
+          schema:
+            $ref: "#/definitions/Label"
+    get:
+      tags: [Labels]
+      summary: Liệt kê nhãn của dự án
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: projectID
+          type: string
+          required: true
+      responses:
+        200:
+          description: Danh sách nhãn
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Label"
+
+  /api/labels/{labelID}:
+    patch:
+      tags: [Labels]
+      summary: Sửa nhãn
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: labelID
+          type: string
+          required: true
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              color:
+                type: string
+      responses:
+        200:
+          description: Sửa nhãn thành công
+    delete:
+      tags: [Labels]
+      summary: Xóa nhãn
+      description: "Yêu cầu quyền: admin"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: labelID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Xóa nhãn thành công
+
+  /api/issues/{issueKey}/labels:
+    post:
+      tags: [Labels]
+      summary: Gắn nhãn vào công việc
+      description: "Yêu cầu quyền: member+"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: issueKey
+          type: string
+          required: true
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              labelId:
+                type: string
+      responses:
+        201:
+          description: Gắn nhãn thành công
+
+  /api/issues/{issueKey}/labels/{labelID}:
+    delete:
+      tags: [Labels]
+      summary: Gỡ nhãn khỏi công việc
+      description: "Yêu cầu quyền: member+"
+      security: [{BearerAuth: []}]
+      parameters:
+        - in: path
+          name: issueKey
+          type: string
+          required: true
+        - in: path
+          name: labelID
+          type: string
+          required: true
+      responses:
+        204:
+          description: Gỡ nhãn thành công
+
+  # ── HEALTH ─────────────────────────────────────
+  /api/health:
+    get:
+      tags: [System]
+      summary: Kiểm tra sức khỏe hệ thống
+      produces: [application/json]
+      responses:
+        200:
+          description: Hệ thống hoạt động bình thường

@@ -3,6 +3,7 @@ package router
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"it4409/internal/delivery/http/handler"
 	"it4409/internal/delivery/http/middleware"
@@ -10,6 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+
+	// Import docs để đăng ký swagger template
+	_ "it4409/docs"
 )
 
 type Deps struct {
@@ -29,8 +33,18 @@ func New(deps Deps) http.Handler {
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORSMiddleware())
 
+	// Phục vụ Swagger UI — đọc từ file swagger.yaml tĩnh
+	r.Get("/swagger/swagger.yaml", func(w http.ResponseWriter, r *http.Request) {
+		data, err := os.ReadFile("docs/swagger.yaml")
+		if err != nil {
+			http.Error(w, "swagger.yaml not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-yaml")
+		w.Write(data)
+	})
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.URL("/swagger/swagger.yaml"),
 	))
 
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
