@@ -36,14 +36,14 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 
 ## 4) Runtime Wiring (Current State)
 
-API server đang wiring auth + user + project modules:
+API server đang wiring auth + user + project + board + label modules:
 
 1. config.Load
 2. db.NewPostgres
-3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewPgTxManager
+3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewPgTxManager
 4. usecase.NewAuthUsecase + usecase.NewUserUsecase
-5. usecase.NewPermissionChecker + usecase.NewProjectUsecase
-6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler
+5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase
+6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler
 7. router.New với tất cả handlers + JWT + CORS middleware
 
 Routes active:
@@ -68,6 +68,21 @@ Routes active:
 - POST /api/projects/{id}/members (protected, Người B)
 - PUT /api/projects/{id}/members/{userID} (protected, Người B)
 - DELETE /api/projects/{id}/members/{userID} (protected, Người B)
+- POST /api/projects/{projectID}/boards (protected, Người B)
+- GET /api/projects/{projectID}/boards (protected, Người B)
+- GET /api/boards/{boardID} (protected, Người B)
+- PATCH /api/boards/{boardID} (protected, Người B)
+- DELETE /api/boards/{boardID} (protected, Người B)
+- POST /api/boards/{boardID}/columns (protected, Người B)
+- PATCH /api/boards/{boardID}/columns/{columnID} (protected, Người B)
+- DELETE /api/boards/{boardID}/columns/{columnID} (protected, Người B)
+- PUT /api/boards/{boardID}/columns/reorder (protected, Người B)
+- POST /api/projects/{projectID}/labels (protected, Người B)
+- GET /api/projects/{projectID}/labels (protected, Người B)
+- PATCH /api/labels/{labelID} (protected, Người B)
+- DELETE /api/labels/{labelID} (protected, Người B)
+- POST /api/issues/{issueKey}/labels (protected, Người B)
+- DELETE /api/issues/{issueKey}/labels/{labelID} (protected, Người B)
 - GET /swagger/*
 
 ## 5) Response Contract
@@ -93,7 +108,7 @@ Shared helpers trong handler/response.go:
 - parsePagination(r): extract page/per_page → limit/offset
 - requireUserID(w, r): extract userID from JWT context
 
-Lưu ý: Project handler (Người B) hiện chưa dùng shared helpers này, vẫn dùng http.Error() và json trực tiếp.
+Lưu ý: Board handler và Label handler (Người B) hiện dùng json trực tiếp; cần chuyển sang shared helpers khi refactor.
 
 ## 6) Auth Data Flow (HTTP -> DB)
 
@@ -178,6 +193,24 @@ Permission model:
 - Hierarchy: admin > member > viewer
 - PermissionChecker xác minh role trước khi update/delete/manage members
 
+## 8.1) Board/Column Flow (Usecase Level)
+
+CreateBoard dùng transaction gộp:
+
+1. Create board row
+2. Tạo 4 cột mặc định: To Do (todo), In Progress (in_progress), In Review (in_review), Done (done)
+3. Commit nếu thành công toàn bộ
+
+ReorderColumns:
+- Nhận mảng columnIds theo thứ tự mới
+- Cập nhật position cho từng cột trong 1 transaction
+
+## 8.2) Label Flow (Usecase Level)
+
+- CRUD labels: Gắn theo project, yêu cầu PermissionChecker
+- Gắn/gỡ label cho issue: Thông qua bảng junction issue_labels
+- Mỗi label có name + color (mặc định #6366f1)
+
 ## 9) Handler Route Registration Pattern
 
 Mỗi handler tự đăng ký routes qua method RegisterRoutes:
@@ -187,17 +220,21 @@ AuthHandler.RegisterRoutes(r)           // public: /auth/register, /auth/login
 AuthHandler.RegisterProtectedRoutes(r)  // protected: /auth/logout, /auth/change-password, /auth/refresh
 UserHandler.RegisterRoutes(r)           // protected: /users/me, /users/{userID}, /users?search=
 ProjectHandler.RegisterRoutes(r)        // protected: /projects/...
+BoardHandler.RegisterRoutes(r)          // protected: /boards/..., /projects/{id}/boards
+LabelHandler.RegisterRoutes(r)          // protected: /labels/..., /projects/{id}/labels
 ```
 
-router.go chỉ gọi các method này, không khai báo route trực tiếp.
+router.go dùng r.Group cho protected routes (tránh duplicate mount /api).
 
 ## 10) Environment Contract (BE)
 
 - PORT
-- DATABASE_URL
+- DATABASE_URL (cần thêm `&default_query_exec_mode=simple_protocol` khi dùng PgBouncer)
 - JWT_SECRET
 - JWT_ISSUER
 - JWT_TTL_MINUTES
+- UPLOAD_DIR (cho attachment module sau)
+- MAX_FILE_SIZE_MB (cho attachment module sau)
 
 ## 11) Domain Errors
 
@@ -217,7 +254,11 @@ Defined trong domain/errors.go:
 
 - Khi sửa auth, giữ response envelope tương thích FE parser.
 - Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ response.go.
-- Dùng requireUserID(w, r) thay vì tự đọc context — đảm bảo dùng đúng struct key.
+- Dùng requireUserID(w, r) thay vì tự đọc context — đảm bảo dùng đúng struct key ctxKeyUserID{}.
 - Không đưa logic nghiệp vụ vào repository layer; giữ usecase là nơi điều phối transaction và permission.
 - GET /api/me giữ backward compat cho FE cũ. Sau khi FE chuyển sang /api/users/me thì xóa.
-- Migration 002_user_extend tạo hàm update_updated_at() dùng chung — các migration sau chỉ cần CREATE TRIGGER, không cần tạo lại function.
+- Migration 002_user_extend tạo hàm update_updated_at() dùng chung — các migration sau chỉ cần CREATE TRIGGER, không cần tạo lại function.
+- avatar_url trong users có thể NULL — dùng COALESCE(avatar_url, '') trong SQL khi scan vào Go string.
+- Khi dùng PgBouncer (Supabase), phải dùng simple_protocol để tránh lỗi prepared statement.
+- Board handler và Label handler dùng getUserID() từ project_handler.go (import middleware.UserIDFromContext).
+- Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.

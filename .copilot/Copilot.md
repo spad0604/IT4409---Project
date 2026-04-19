@@ -22,7 +22,10 @@
 ## Quick Notes
 
 - FE hiện đang tích hợp auth flow với route guard /login và /home.
-- BE đang wiring đầy đủ auth + user + project modules. Tất cả routes đã active.
+- BE đang wiring đầy đủ auth + user + project + board + label modules. Tất cả routes đã active.
 - FE parse response theo envelope payload.data từ BE.
 - GET /api/me giữ backward compat. Endpoint chính là GET /api/users/me.
 - Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ handler/response.go.
+- Swagger UI tại /swagger/index.html — phục vụ file docs/swagger.yaml tĩnh (không dùng swag generate).
+- Board tự tạo 4 cột mặc định khi khởi tạo (To Do, In Progress, In Review, Done).
+- Khi dùng PgBouncer (Supabase), cần thêm `&default_query_exec_mode=simple_protocol` vào DATABASE_URL.
