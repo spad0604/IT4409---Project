@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"it4409/internal/domain"
+	"it4409/internal/pkg/jwtutil"
 	"it4409/internal/repository/postgres"
 	"it4409/internal/usecase"
 )
@@ -49,8 +50,109 @@ func main() {
 	// 3. Khởi tạo Repo và TxManager
 	txManager := postgres.NewPgTxManager(pool)
 	projectRepo := postgres.NewProjectRepo(pool)
+	userRepo := postgres.NewUserRepo(pool)
+
+	jwtSvc := jwtutil.Service{
+		Secret: []byte(os.Getenv("JWT_SECRET")),
+		Issuer: os.Getenv("JWT_ISSUER"),
+		TTL:    60 * time.Minute,
+	}
 
 	testCtx := context.Background()
+
+	// === TEST CODE NGƯỜI A: Auth + User ===
+	fmt.Println("\n--- KIỂM TRA MODULE NGƯỜI A: AUTH + USER ---")
+	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
+	userUC := usecase.NewUserUsecase(userRepo)
+
+	// Test Đăng ký
+	testEmail := fmt.Sprintf("tester_%d@test.com", time.Now().Unix())
+	regResult, err := authUC.Register(testCtx, usecase.RegisterInput{
+		Email:    testEmail,
+		Password: "Test@123456",
+		Name:     "Tester Auto",
+	})
+	if err != nil {
+		fmt.Printf("[FAIL] Đăng ký tài khoản thất bại: %v\n", err)
+	} else {
+		fmt.Printf("[PASS] Đăng ký thành công: %s (Token: %s...)\n", regResult.User.Email, regResult.Token[:20])
+	}
+
+	// Test Đăng nhập
+	loginResult, err := authUC.Login(testCtx, usecase.LoginInput{
+		Email:    testEmail,
+		Password: "Test@123456",
+	})
+	if err != nil {
+		fmt.Printf("[FAIL] Đăng nhập thất bại: %v\n", err)
+	} else {
+		fmt.Printf("[PASS] Đăng nhập thành công: UserID %s\n", loginResult.User.ID)
+	}
+
+	// Test Đăng nhập sai mật khẩu
+	_, err = authUC.Login(testCtx, usecase.LoginInput{
+		Email:    testEmail,
+		Password: "SaiMatKhau",
+	})
+	if err != nil {
+		fmt.Printf("[PASS] Hệ thống từ chối mật khẩu sai đúng cách: %v\n", err)
+	} else {
+		fmt.Printf("[FAIL] LỖ HỔNG: Đăng nhập sai mật khẩu mà vẫn vào được!\n")
+	}
+
+	// Test Xem hồ sơ cá nhân
+	if loginResult.User.ID != "" {
+		profile, err := userUC.GetProfile(testCtx, loginResult.User.ID)
+		if err != nil {
+			fmt.Printf("[FAIL] Xem hồ sơ thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Hồ sơ: Tên=%s, Email=%s, Avatar=%s\n", profile.Name, profile.Email, profile.AvatarURL)
+		}
+
+		// Test Cập nhật hồ sơ
+		newName := "Tester Updated"
+		newAvatar := "https://example.com/avatar.png"
+		updatedProfile, err := userUC.UpdateProfile(testCtx, loginResult.User.ID, usecase.UpdateProfileInput{
+			Name:      &newName,
+			AvatarURL: &newAvatar,
+		})
+		if err != nil {
+			fmt.Printf("[FAIL] Cập nhật hồ sơ thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Hồ sơ đã cập nhật: Tên=%s, Avatar=%s\n", updatedProfile.Name, updatedProfile.AvatarURL)
+		}
+
+		// Test Đổi mật khẩu
+		err = authUC.ChangePassword(testCtx, loginResult.User.ID, "Test@123456", "NewPass@789")
+		if err != nil {
+			fmt.Printf("[FAIL] Đổi mật khẩu thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Đổi mật khẩu thành công\n")
+			// Đăng nhập lại bằng mật khẩu mới
+			_, err = authUC.Login(testCtx, usecase.LoginInput{Email: testEmail, Password: "NewPass@789"})
+			if err != nil {
+				fmt.Printf("[FAIL] Không đăng nhập được bằng mật khẩu mới: %v\n", err)
+			} else {
+				fmt.Printf("[PASS] Đăng nhập bằng mật khẩu mới thành công\n")
+			}
+		}
+
+		// Test Tìm kiếm người dùng
+		results, err := userUC.SearchUsers(testCtx, "Tester", 10, 0)
+		if err != nil {
+			fmt.Printf("[FAIL] Tìm kiếm người dùng thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Tìm thấy %d người dùng chứa từ khóa 'Tester'\n", len(results))
+		}
+
+		// Test Làm mới Token
+		newToken, err := authUC.RefreshToken(testCtx, loginResult.User.ID)
+		if err != nil {
+			fmt.Printf("[FAIL] Làm mới token thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Token mới: %s...\n", newToken[:20])
+		}
+	}
 
 	// 4. Seeding Data User (Vì Project ràng buộc foreign key tới users)
 	// Lưu ý: bảng users đã tạo trong 001_init, ta thêm nhanh một user tĩnh nếu chưa có
@@ -170,5 +272,103 @@ func main() {
 		}
 	}
 	
+	// 7. Test Module Bảng (Boards + Columns)
+	fmt.Println("\n--- BẮT ĐẦU CHẠY TEST BOARD + COLUMN ---")
+	boardRepo := postgres.NewBoardRepo(pool)
+	boardUC := usecase.NewBoardUsecase(boardRepo, projectRepo, txManager, permChecker)
+
+	if ucCreated != nil {
+		// Tạo bảng mới trong dự án (kèm 4 cột mặc định tự động)
+		board, err := boardUC.CreateBoard(testCtx, dummyUserID, ucCreated.ID, "Sprint Board")
+		if err != nil {
+			fmt.Printf("[FAIL] Tạo bảng thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Đã tạo bảng: %s (ID: %s)\n", board.Name, board.ID)
+
+			// Lấy bảng kèm danh sách cột
+			_, cols, err := boardUC.GetBoard(testCtx, dummyUserID, board.ID)
+			if err != nil {
+				fmt.Printf("[FAIL] Lấy chi tiết bảng thất bại: %v\n", err)
+			} else {
+				fmt.Printf("[PASS] Bảng có %d cột mặc định:", len(cols))
+				for _, c := range cols {
+					fmt.Printf(" [%s -> %s]", c.Name, c.StatusMap)
+				}
+				fmt.Println()
+			}
+
+			// Sắp xếp lại cột (đảo To Do và Done)
+			if len(cols) >= 4 {
+				reorder := []string{cols[3].ID, cols[1].ID, cols[2].ID, cols[0].ID}
+				err = boardUC.ReorderColumns(testCtx, dummyUserID, board.ID, reorder)
+				if err != nil {
+					fmt.Printf("[FAIL] Sắp xếp lại cột thất bại: %v\n", err)
+				} else {
+					fmt.Printf("[PASS] Đã sắp xếp lại thứ tự cột thành công\n")
+				}
+			}
+		}
+
+		// Liệt kê tất cả bảng trong dự án
+		boards, err := boardUC.ListBoards(testCtx, dummyUserID, ucCreated.ID)
+		if err != nil {
+			fmt.Printf("[FAIL] Liệt kê bảng thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Tổng số bảng trong dự án: %d\n", len(boards))
+		}
+	}
+
+	// 8. Test Module Nhãn (Labels)
+	fmt.Println("\n--- BẮT ĐẦU CHẠY TEST LABEL ---")
+	labelRepo := postgres.NewLabelRepo(pool)
+	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
+
+	if ucCreated != nil {
+		// Tạo nhãn mới
+		label, err := labelUC.CreateLabel(testCtx, dummyUserID, &domain.Label{
+			ProjectID: ucCreated.ID,
+			Name:      "Bug",
+			Color:     "#ef4444",
+		})
+		if err != nil {
+			fmt.Printf("[FAIL] Tạo nhãn thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Đã tạo nhãn: %s (Màu: %s)\n", label.Name, label.Color)
+		}
+
+		// Tạo nhãn thứ 2
+		_, err = labelUC.CreateLabel(testCtx, dummyUserID, &domain.Label{
+			ProjectID: ucCreated.ID,
+			Name:      "Feature",
+			Color:     "#22c55e",
+		})
+		if err != nil {
+			fmt.Printf("[FAIL] Tạo nhãn thứ 2 thất bại: %v\n", err)
+		}
+
+		// Liệt kê nhãn
+		labels, err := labelUC.ListLabels(testCtx, dummyUserID, ucCreated.ID)
+		if err != nil {
+			fmt.Printf("[FAIL] Liệt kê nhãn thất bại: %v\n", err)
+		} else {
+			fmt.Printf("[PASS] Tổng số nhãn trong dự án: %d\n", len(labels))
+			for _, l := range labels {
+				fmt.Printf("  - %s (%s)\n", l.Name, l.Color)
+			}
+		}
+
+		// Test quyền: Người lạ cố tạo nhãn
+		fakeUserID := "00000000-0000-0000-0000-000000000000"
+		_, err = labelUC.CreateLabel(testCtx, fakeUserID, &domain.Label{
+			ProjectID: ucCreated.ID,
+			Name:      "Hacked Label",
+		})
+		if err != nil {
+			fmt.Printf("[PASS] Hệ thống bảo mật đã chặn người lạ tạo nhãn: %v\n", err)
+		} else {
+			fmt.Printf("[FAIL] LỖ HỔNG: Người lạ tạo được nhãn!\n")
+		}
+	}
+
 	fmt.Println("\n=== HOÀN THÀNH TẤT CẢ TEST ===================")
 }
