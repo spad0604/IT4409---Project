@@ -23,7 +23,7 @@ func (r *UserRepo) Create(ctx context.Context, user domain.User) (domain.User, e
 	const q = `
 		insert into public.users (email, password_hash, name)
 		values ($1, $2, $3)
-		returning id, email, password_hash, name, avatar_url, updated_at, created_at
+		returning id, email, password_hash, name, COALESCE(avatar_url, ''), updated_at, created_at
 	`
 
 	row := r.pool.QueryRow(ctx, q, user.Email, user.PasswordHash, nullIfEmpty(user.Name))
@@ -42,7 +42,7 @@ func (r *UserRepo) Create(ctx context.Context, user domain.User) (domain.User, e
 
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (domain.User, error) {
 	const q = `
-		select id, email, password_hash, name, avatar_url, updated_at, created_at
+		select id, email, password_hash, name, COALESCE(avatar_url, ''), updated_at, created_at
 		from public.users
 		where email = $1
 		limit 1
@@ -61,7 +61,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (domain.User, e
 
 func (r *UserRepo) GetByID(ctx context.Context, id string) (domain.User, error) {
 	const q = `
-		select id, email, password_hash, name, avatar_url, updated_at, created_at
+		select id, email, password_hash, name, COALESCE(avatar_url, ''), updated_at, created_at
 		from public.users
 		where id = $1
 		limit 1
@@ -83,7 +83,7 @@ func (r *UserRepo) Update(ctx context.Context, user domain.User) (domain.User, e
 		update public.users
 		set name = $2, avatar_url = $3
 		where id = $1
-		returning id, email, password_hash, name, avatar_url, updated_at, created_at
+		returning id, email, password_hash, name, COALESCE(avatar_url, ''), updated_at, created_at
 	`
 
 	var out domain.User
@@ -112,7 +112,7 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id string, newHash string
 
 func (r *UserRepo) Search(ctx context.Context, keyword string, limit, offset int) ([]domain.User, error) {
 	const q = `
-		select id, email, name, avatar_url, updated_at, created_at
+		select id, email, name, COALESCE(avatar_url, ''), updated_at, created_at
 		from public.users
 		where (name ilike '%' || $1 || '%' or email ilike '%' || $1 || '%')
 		order by name asc
