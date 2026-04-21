@@ -59,7 +59,7 @@ export default function Login() {
             await signIn({ email, password })
             navigate('/home', { replace: true, state: { keepSignedIn } })
         } catch (err) {
-            const apiMessage = err?.response?.data?.message
+            const apiMessage = err?.message
             setError(apiMessage || 'Sign in failed. Please check your credentials.')
         } finally {
             setSubmitting(false)
@@ -173,7 +173,7 @@ export default function Login() {
                         <p className="register-link">
                             New to Ledger Project? <a href="#">Create an account</a>
                         </p>
-                        <p className="mock-note">Mock account: admin/admin</p>
+                        <p className="mock-note">Use your backend account credentials to sign in.</p>
                     </form>
 
                     <aside className="focus-tip" aria-hidden="true">
