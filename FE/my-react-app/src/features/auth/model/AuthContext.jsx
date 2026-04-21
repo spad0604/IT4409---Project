@@ -15,22 +15,7 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async ({ email, password }) => {
     const normalizedEmail = String(email ?? '').trim().toLowerCase()
-    if (normalizedEmail === 'admin' && password === 'admin') {
-      const data = {
-        token: 'mock-admin-token',
-        user: {
-          id: 'mock-admin',
-          email: 'admin',
-          name: 'Administrator',
-          role: 'admin',
-        },
-      }
-      saveToken(data.token)
-      setUser(data.user)
-      return data
-    }
-
-    const data = await authApi.login({ email, password })
+    const data = await authApi.login({ email: normalizedEmail, password })
     saveToken(data?.token)
     setUser(data?.user ?? null)
     return data

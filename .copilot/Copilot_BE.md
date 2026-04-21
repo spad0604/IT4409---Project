@@ -261,4 +261,4 @@ Defined trong domain/errors.go:
 - avatar_url trong users có thể NULL — dùng COALESCE(avatar_url, '') trong SQL khi scan vào Go string.
 - Khi dùng PgBouncer (Supabase), phải dùng simple_protocol để tránh lỗi prepared statement.
 - Board handler và Label handler dùng getUserID() từ project_handler.go (import middleware.UserIDFromContext).
-- Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.
+- Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.
