@@ -22,6 +22,8 @@ type Deps struct {
 	ProjectHandler *handler.ProjectHandler
 	BoardHandler   *handler.BoardHandler
 	LabelHandler   *handler.LabelHandler
+	IssueHandler   *handler.IssueHandler
+	CommentHandler *handler.CommentHandler
 	JWTAuth        middleware.JWTAuth
 }
 
@@ -76,6 +78,10 @@ func New(deps Deps) http.Handler {
 			deps.ProjectHandler.RegisterRoutes(r)
 			deps.BoardHandler.RegisterRoutes(r)
 			deps.LabelHandler.RegisterRoutes(r)
+
+			// Người A: Issues + Comments
+			deps.IssueHandler.RegisterRoutes(r)
+			deps.CommentHandler.RegisterRoutes(r)
 		})
 	})
 
