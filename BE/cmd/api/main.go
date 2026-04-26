@@ -55,6 +55,8 @@ func main() {
 	projectRepo := postgres.NewProjectRepo(pg.Pool)
 	boardRepo := postgres.NewBoardRepo(pg.Pool)
 	labelRepo := postgres.NewLabelRepo(pg.Pool)
+	issueRepo := postgres.NewIssueRepo(pg.Pool)
+	commentRepo := postgres.NewCommentRepo(pg.Pool)
 	txManager := postgres.NewPgTxManager(pg.Pool)
 
 	// ── Usecases ────────────────────────────────────────────────
@@ -64,6 +66,8 @@ func main() {
 	projectUC := usecase.NewProjectUsecase(projectRepo, txManager, permChecker)
 	boardUC := usecase.NewBoardUsecase(boardRepo, projectRepo, txManager, permChecker)
 	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
+	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker)
+	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker)
 
 	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
@@ -71,6 +75,8 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectUC)
 	boardHandler := handler.NewBoardHandler(boardUC)
 	labelHandler := handler.NewLabelHandler(labelUC)
+	issueHandler := handler.NewIssueHandler(issueUC)
+	commentHandler := handler.NewCommentHandler(commentUC)
 
 	h := router.New(router.Deps{
 		AuthHandler:    authHandler,
@@ -78,6 +84,8 @@ func main() {
 		ProjectHandler: projectHandler,
 		BoardHandler:   boardHandler,
 		LabelHandler:   labelHandler,
+		IssueHandler:   issueHandler,
+		CommentHandler: commentHandler,
 		JWTAuth:        middleware.JWTAuth{JWT: jwtSvc},
 	})
 
