@@ -36,14 +36,14 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 
 ## 4) Runtime Wiring (Current State)
 
-API server đang wiring auth + user + project + board + label modules:
+API server đang wiring auth + user + project + board + label + issue + comment modules:
 
 1. config.Load
 2. db.NewPostgres
-3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewPgTxManager
+3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewIssueRepo + postgres.NewCommentRepo + postgres.NewPgTxManager
 4. usecase.NewAuthUsecase + usecase.NewUserUsecase
-5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase
-6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler
+5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase + usecase.NewIssueUsecase + usecase.NewCommentUsecase
+6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler + handler.NewIssueHandler + handler.NewCommentHandler
 7. router.New với tất cả handlers + JWT + CORS middleware
 
 Routes active:
@@ -83,6 +83,18 @@ Routes active:
 - DELETE /api/labels/{labelID} (protected, Người B)
 - POST /api/issues/{issueKey}/labels (protected, Người B)
 - DELETE /api/issues/{issueKey}/labels/{labelID} (protected, Người B)
+- POST /api/projects/{projectID}/issues (protected, Người A)
+- GET /api/projects/{projectID}/issues (protected, Người A)
+- GET /api/issues/{issueKey} (protected, Người A)
+- PATCH /api/issues/{issueKey} (protected, Người A)
+- DELETE /api/issues/{issueKey} (protected, Người A)
+- PUT /api/issues/{issueKey}/status (protected, Người A)
+- PUT /api/issues/{issueKey}/assign (protected, Người A)
+- GET /api/issues/{issueKey}/subtasks (protected, Người A)
+- POST /api/issues/{issueKey}/comments (protected, Người A)
+- GET /api/issues/{issueKey}/comments (protected, Người A)
+- PATCH /api/comments/{commentID} (protected, Người A)
+- DELETE /api/comments/{commentID} (protected, Người A)
 - GET /swagger/*
 
 ## 5) Response Contract
@@ -222,6 +234,8 @@ UserHandler.RegisterRoutes(r)           // protected: /users/me, /users/{userID}
 ProjectHandler.RegisterRoutes(r)        // protected: /projects/...
 BoardHandler.RegisterRoutes(r)          // protected: /boards/..., /projects/{id}/boards
 LabelHandler.RegisterRoutes(r)          // protected: /labels/..., /projects/{id}/labels
+IssueHandler.RegisterRoutes(r)          // protected: /projects/{id}/issues, /issues/{key}/*
+CommentHandler.RegisterRoutes(r)        // protected: /issues/{key}/comments, /comments/{id}
 ```
 
 router.go dùng r.Group cho protected routes (tránh duplicate mount /api).
@@ -262,3 +276,9 @@ Defined trong domain/errors.go:
 - Khi dùng PgBouncer (Supabase), phải dùng simple_protocol để tránh lỗi prepared statement.
 - Board handler và Label handler dùng getUserID() từ project_handler.go (import middleware.UserIDFromContext).
 - Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.
+- Issue key tự tạo theo pattern PROJECT_KEY-NUMBER (VD: MYPRJ-1), dùng atomic increment trên project_issue_counters.
+- CreateIssue dùng txManager.WithTx: NextIssueNumberTx + CreateTx trong 1 transaction.
+- Bảng comments dùng cột user_id (theo migration 007 thực tế), code map thành Comment.UserID.
+- Comment edit chỉ cho author; delete cho author hoặc project admin.
+- Issue GET/status/assign/subtasks dùng issueKey (VD: MYPRJ-42) làm path param, không dùng UUID.
+- Filter issues: status, type, priority, assignee (UUID hoặc "me"), sprint (UUID hoặc "backlog"), search (ILIKE title).

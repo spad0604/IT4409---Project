@@ -22,7 +22,7 @@
 ## Quick Notes
 
 - FE hiện đang tích hợp auth flow với route guard /login và /home.
-- BE đang wiring đầy đủ auth + user + project + board + label modules. Tất cả routes đã active.
+- BE đang wiring đầy đủ auth + user + project + board + label + issue + comment modules. Tất cả routes đã active.
 - FE parse response theo envelope payload.data từ BE.
 - GET /api/me giữ backward compat. Endpoint chính là GET /api/users/me.
 - Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ handler/response.go.
