@@ -1,62 +1,153 @@
 $ErrorActionPreference = "Continue"
 $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-$email = "httptest_${ts}@test.com"
+$email = "fulltest_${ts}@test.com"
+$pass = 0
+$fail = 0
 
-# 1. Register
-Write-Host "`n=== TEST 1: Register ==="
-$regBody = "{`"email`":`"$email`",`"password`":`"Test@123456`",`"name`":`"HTTP Tester`"}"
+function Assert-OK($name, $cond) {
+    if ($cond) { $script:pass++; Write-Host "[PASS] $name" -ForegroundColor Green }
+    else { $script:fail++; Write-Host "[FAIL] $name" -ForegroundColor Red }
+}
+
+# ═══════════════════════════════════════
+# 1. Auth: Register + Login
+# ═══════════════════════════════════════
+Write-Host "`n=== AUTH ==="
+$regBody = "{`"email`":`"$email`",`"password`":`"Test@123456`",`"name`":`"Full Tester`"}"
 $reg = Invoke-RestMethod -Uri "http://localhost:8080/api/auth/register" -Method POST -Body $regBody -ContentType "application/json"
 $token = $reg.data.token
-Write-Host "[PASS] Email: $email"
-Write-Host "[PASS] Token: $($token.Substring(0,30))..."
+Assert-OK "Register" ($token.Length -gt 10)
 
-# 2. Login
-Write-Host "`n=== TEST 2: Login ==="
 $loginBody = "{`"email`":`"$email`",`"password`":`"Test@123456`"}"
 $login = Invoke-RestMethod -Uri "http://localhost:8080/api/auth/login" -Method POST -Body $loginBody -ContentType "application/json"
-Write-Host "[PASS] UserID: $($login.data.user.id)"
+Assert-OK "Login" ($login.data.user.id.Length -eq 36)
 
-# 3. Create Project (JWT required)
-Write-Host "`n=== TEST 3: Create Project ==="
 $headers = @{ Authorization = "Bearer $token" }
-$projBody = "{`"name`":`"HTTP Project $ts`",`"key`":`"HP$ts`",`"description`":`"Test via HTTP`",`"type`":`"kanban`"}"
+
+# ═══════════════════════════════════════
+# 2. User Profile
+# ═══════════════════════════════════════
+Write-Host "`n=== USERS ==="
+$me = Invoke-RestMethod -Uri "http://localhost:8080/api/users/me" -Method GET -Headers $headers
+Assert-OK "Get Profile" ($me.data.email -eq $email)
+
+# ═══════════════════════════════════════
+# 3. Project
+# ═══════════════════════════════════════
+Write-Host "`n=== PROJECTS ==="
+$projBody = "{`"name`":`"Test Project $ts`",`"key`":`"TP$ts`",`"description`":`"Full test`",`"type`":`"kanban`"}"
 $proj = Invoke-RestMethod -Uri "http://localhost:8080/api/projects" -Method POST -Body $projBody -ContentType "application/json" -Headers $headers
 $projectId = $proj.id
-Write-Host "[PASS] Project ID: $projectId"
+Assert-OK "Create Project" ($projectId.Length -eq 36)
 
-# 4. Create Board
-Write-Host "`n=== TEST 4: Create Board ==="
-$boardBody = '{"name":"Sprint Board HTTP"}'
+$projList = Invoke-RestMethod -Uri "http://localhost:8080/api/projects" -Method GET -Headers $headers
+Assert-OK "List Projects" ($projList.Count -ge 1)
+
+# ═══════════════════════════════════════
+# 4. Board + Columns
+# ═══════════════════════════════════════
+Write-Host "`n=== BOARDS ==="
+$boardBody = '{"name":"Sprint Board"}'
 $board = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/boards" -Method POST -Body $boardBody -ContentType "application/json" -Headers $headers
 $boardId = $board.id
-Write-Host "[PASS] Board ID: $boardId, Name: $($board.name)"
+Assert-OK "Create Board" ($boardId.Length -eq 36)
 
-# 5. Get Board + Columns
-Write-Host "`n=== TEST 5: Get Board Detail ==="
 $detail = Invoke-RestMethod -Uri "http://localhost:8080/api/boards/$boardId" -Method GET -Headers $headers
-Write-Host "[PASS] Columns: $($detail.columns.Count)"
-foreach ($col in $detail.columns) {
-    Write-Host "  - $($col.name) -> $($col.statusMap)"
-}
+Assert-OK "Board has 4 columns" ($detail.columns.Count -eq 4)
 
-# 6. Create Label
-Write-Host "`n=== TEST 6: Create Label ==="
+# ═══════════════════════════════════════
+# 5. Labels
+# ═══════════════════════════════════════
+Write-Host "`n=== LABELS ==="
 $labelBody = '{"name":"Bug","color":"#ef4444"}'
 $label = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/labels" -Method POST -Body $labelBody -ContentType "application/json" -Headers $headers
-Write-Host "[PASS] Label: $($label.name) ($($label.color))"
+Assert-OK "Create Label" ($label.name -eq "Bug")
 
-# 7. List Labels
-Write-Host "`n=== TEST 7: List Labels ==="
 $labels = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/labels" -Method GET -Headers $headers
-Write-Host "[PASS] Total labels: $($labels.Count)"
+Assert-OK "List Labels" ($labels.Count -ge 1)
 
-# 8. No JWT access (must be blocked)
-Write-Host "`n=== TEST 8: No JWT access ==="
+# ═══════════════════════════════════════
+# 6. Issues (Nguoi A)
+# ═══════════════════════════════════════
+Write-Host "`n=== ISSUES ==="
+$issueBody = '{"title":"Fix login bug","type":"bug","priority":"high","description":"Login crashes on empty email"}'
+$issue = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/issues" -Method POST -Body $issueBody -ContentType "application/json" -Headers $headers
+$issueKey = $issue.data.key
+$issueId = $issue.data.id
+Assert-OK "Create Issue" ($issueKey -like "*-1")
+Assert-OK "Issue type=bug" ($issue.data.type -eq "bug")
+Assert-OK "Issue priority=high" ($issue.data.priority -eq "high")
+Assert-OK "Issue status=todo" ($issue.data.status -eq "todo")
+
+# Get issue by key
+$gotIssue = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey" -Method GET -Headers $headers
+Assert-OK "Get Issue by key" ($gotIssue.data.id -eq $issueId)
+
+# Update issue
+$patchBody = '{"title":"Fix login crash","priority":"critical"}'
+$updated = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey" -Method PATCH -Body $patchBody -ContentType "application/json" -Headers $headers
+Assert-OK "Update Issue title" ($updated.data.title -eq "Fix login crash")
+Assert-OK "Update Issue priority" ($updated.data.priority -eq "critical")
+
+# Change status
+$statusBody = '{"status":"in_progress"}'
+$statusRes = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/status" -Method PUT -Body $statusBody -ContentType "application/json" -Headers $headers
+Assert-OK "Change Status" ($statusRes.data.status -eq "in_progress")
+
+# Assign issue
+$assignBody = "{`"assigneeId`":`"$($login.data.user.id)`"}"
+$assignRes = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/assign" -Method PUT -Body $assignBody -ContentType "application/json" -Headers $headers
+Assert-OK "Assign Issue" ($assignRes.data.assigneeId -eq $login.data.user.id)
+
+# List issues
+$issueList = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/issues" -Method GET -Headers $headers
+Assert-OK "List Issues" ($issueList.data.items.Count -ge 1)
+
+# Create subtask
+$subBody = "{`"title`":`"Investigate root cause`",`"type`":`"subtask`",`"parentId`":`"$issueId`"}"
+$sub = Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projectId/issues" -Method POST -Body $subBody -ContentType "application/json" -Headers $headers
+Assert-OK "Create Subtask" ($sub.data.type -eq "subtask")
+
+# List subtasks
+$subtasks = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/subtasks" -Method GET -Headers $headers
+Assert-OK "List Subtasks" ($subtasks.data.Count -ge 1)
+
+# ═══════════════════════════════════════
+# 7. Comments (Nguoi A)
+# ═══════════════════════════════════════
+Write-Host "`n=== COMMENTS ==="
+$cmtBody = '{"content":"This is a test comment"}'
+$cmt = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/comments" -Method POST -Body $cmtBody -ContentType "application/json" -Headers $headers
+$cmtId = $cmt.data.id
+Assert-OK "Add Comment" ($cmtId.Length -eq 36)
+
+# List comments
+$cmtList = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/comments" -Method GET -Headers $headers
+Assert-OK "List Comments" ($cmtList.data.items.Count -ge 1)
+
+# Edit comment
+$editBody = '{"content":"Updated comment content"}'
+$edited = Invoke-RestMethod -Uri "http://localhost:8080/api/comments/$cmtId" -Method PATCH -Body $editBody -ContentType "application/json" -Headers $headers
+Assert-OK "Edit Comment" ($edited.data.content -eq "Updated comment content")
+
+# Delete comment
+$delCmt = Invoke-RestMethod -Uri "http://localhost:8080/api/comments/$cmtId" -Method DELETE -Headers $headers
+Assert-OK "Delete Comment" ($delCmt.status -eq 200)
+
+# ═══════════════════════════════════════
+# 8. Security: No JWT
+# ═══════════════════════════════════════
+Write-Host "`n=== SECURITY ==="
 try {
     Invoke-RestMethod -Uri "http://localhost:8080/api/projects" -Method GET -ErrorAction Stop
-    Write-Host "[FAIL] SECURITY HOLE: accessed without login!"
+    Assert-OK "Block without JWT" $false
 } catch {
-    Write-Host "[PASS] Blocked correctly: 401 Unauthorized"
+    Assert-OK "Block without JWT" $true
 }
 
-Write-Host "`n=== ALL HTTP TESTS DONE ==="
+# ═══════════════════════════════════════
+# Summary
+# ═══════════════════════════════════════
+Write-Host "`n=========================================="
+Write-Host "TOTAL: $($pass + $fail) | PASS: $pass | FAIL: $fail" -ForegroundColor $(if ($fail -eq 0) {"Green"} else {"Red"})
+Write-Host "=========================================="
