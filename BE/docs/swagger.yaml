@@ -164,6 +164,90 @@ definitions:
         type: string
         format: date-time
 
+  Issue:
+    type: object
+    properties:
+      id:
+        type: string
+      projectId:
+        type: string
+      issueNumber:
+        type: integer
+      key:
+        type: string
+        example: "PROJ-1"
+      type:
+        type: string
+        enum: [epic, story, task, bug, subtask]
+      status:
+        type: string
+        enum: [todo, in_progress, in_review, done, cancelled]
+      priority:
+        type: string
+        enum: [critical, high, medium, low, trivial]
+      title:
+        type: string
+      description:
+        type: string
+      assigneeId:
+        type: string
+      reporterId:
+        type: string
+      parentId:
+        type: string
+      sprintId:
+        type: string
+      sortOrder:
+        type: number
+      dueDate:
+        type: string
+        format: date-time
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  Comment:
+    type: object
+    properties:
+      id:
+        type: string
+      issueId:
+        type: string
+      userId:
+        type: string
+      content:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  Attachment:
+    type: object
+    properties:
+      id:
+        type: string
+      issueId:
+        type: string
+      uploadedBy:
+        type: string
+      filename:
+        type: string
+      fileSize:
+        type: integer
+      mimeType:
+        type: string
+      storagePath:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+
 # ════════════════════════════════════════════════
 #  PATHS (API Endpoints)
 # ════════════════════════════════════════════════
@@ -884,6 +968,261 @@ paths:
       responses:
         204:
           description: Gỡ nhãn thành công
+
+  # ── ISSUES ──────────────────────────────────────
+  /api/projects/{projectID}/issues:
+    post:
+      tags: [Issues]
+      summary: Tạo công việc mới
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [title]
+            properties:
+              title: {type: string, example: "Fix login bug"}
+              type: {type: string, enum: [epic, story, task, bug, subtask], default: task}
+              priority: {type: string, enum: [critical, high, medium, low, trivial], default: medium}
+              description: {type: string}
+              assigneeId: {type: string}
+              parentId: {type: string}
+              sprintId: {type: string}
+              dueDate: {type: string, format: date-time}
+      responses:
+        201: {description: Tạo thành công, schema: {$ref: "#/definitions/Issue"}}
+        400: {description: Dữ liệu không hợp lệ}
+    get:
+      tags: [Issues]
+      summary: Liệt kê công việc (bộ lọc + phân trang)
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+        - {in: query, name: status, type: string, description: "todo, in_progress, in_review, done, cancelled"}
+        - {in: query, name: type, type: string, description: "epic, story, task, bug, subtask"}
+        - {in: query, name: priority, type: string}
+        - {in: query, name: assignee, type: string, description: "UUID hoặc 'none'"}
+        - {in: query, name: sprint, type: string, description: "UUID hoặc 'backlog'"}
+        - {in: query, name: search, type: string}
+        - {in: query, name: sort, type: string, default: created_at}
+        - {in: query, name: order, type: string, default: desc}
+        - {in: query, name: page, type: integer, default: 1}
+        - {in: query, name: per_page, type: integer, default: 50}
+      responses:
+        200: {description: Danh sách công việc}
+
+  /api/issues/{issueKey}:
+    get:
+      tags: [Issues]
+      summary: Chi tiết công việc
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true, description: "Ví dụ: PROJ-1"}
+      responses:
+        200: {description: Chi tiết, schema: {$ref: "#/definitions/Issue"}}
+        404: {description: Không tìm thấy}
+    patch:
+      tags: [Issues]
+      summary: Cập nhật công việc
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              title: {type: string}
+              description: {type: string}
+              type: {type: string}
+              priority: {type: string}
+              assigneeId: {type: string}
+              parentId: {type: string}
+              sprintId: {type: string}
+              sortOrder: {type: number}
+              dueDate: {type: string, format: date-time}
+      responses:
+        200: {description: Cập nhật thành công}
+    delete:
+      tags: [Issues]
+      summary: Xóa mềm công việc
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+      responses:
+        200: {description: Xóa thành công}
+
+  /api/issues/{issueKey}/status:
+    put:
+      tags: [Issues]
+      summary: Chuyển trạng thái công việc
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              status: {type: string, enum: [todo, in_progress, in_review, done, cancelled]}
+      responses:
+        200: {description: Chuyển trạng thái thành công}
+
+  /api/issues/{issueKey}/assign:
+    put:
+      tags: [Issues]
+      summary: Gán/bỏ gán người thực hiện
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              assigneeId: {type: string, description: "UUID hoặc null để bỏ gán"}
+      responses:
+        200: {description: Gán thành công}
+
+  /api/issues/{issueKey}/subtasks:
+    get:
+      tags: [Issues]
+      summary: Liệt kê công việc con
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+      responses:
+        200: {description: Danh sách subtasks}
+
+  # ── COMMENTS ───────────────────────────────────
+  /api/issues/{issueKey}/comments:
+    post:
+      tags: [Comments]
+      summary: Thêm bình luận
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              content: {type: string, example: "Đã xem xong, cần sửa thêm."}
+      responses:
+        201: {description: Thêm thành công, schema: {$ref: "#/definitions/Comment"}}
+    get:
+      tags: [Comments]
+      summary: Liệt kê bình luận
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - {in: query, name: page, type: integer, default: 1}
+        - {in: query, name: per_page, type: integer, default: 20}
+      responses:
+        200: {description: Danh sách bình luận}
+
+  /api/comments/{commentID}:
+    patch:
+      tags: [Comments]
+      summary: Sửa bình luận (chỉ tác giả)
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      parameters:
+        - {in: path, name: commentID, type: string, required: true}
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              content: {type: string}
+      responses:
+        200: {description: Sửa thành công}
+    delete:
+      tags: [Comments]
+      summary: Xóa bình luận (tác giả hoặc admin)
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: commentID, type: string, required: true}
+      responses:
+        200: {description: Xóa thành công}
+
+  # ── ATTACHMENTS ────────────────────────────────
+  /api/issues/{issueKey}/attachments:
+    post:
+      tags: [Attachments]
+      summary: Tải lên tệp đính kèm
+      security: [{BearerAuth: []}]
+      consumes: [multipart/form-data]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+        - {in: formData, name: file, type: file, required: true, description: "Tệp cần tải lên (max 10MB)"}
+      responses:
+        201: {description: Tải lên thành công, schema: {$ref: "#/definitions/Attachment"}}
+        400: {description: Tệp quá lớn hoặc không hợp lệ}
+    get:
+      tags: [Attachments]
+      summary: Liệt kê tệp đính kèm
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true}
+      responses:
+        200: {description: Danh sách tệp}
+
+  /api/attachments/{attachmentID}:
+    get:
+      tags: [Attachments]
+      summary: Tải xuống tệp
+      security: [{BearerAuth: []}]
+      produces: [application/octet-stream]
+      parameters:
+        - {in: path, name: attachmentID, type: string, required: true}
+      responses:
+        200: {description: Nội dung tệp}
+        404: {description: Không tìm thấy}
+    delete:
+      tags: [Attachments]
+      summary: Xóa tệp đính kèm
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: path, name: attachmentID, type: string, required: true}
+      responses:
+        204: {description: Xóa thành công}
+
+  # ── SEARCH ─────────────────────────────────────
+  /api/search:
+    get:
+      tags: [Search]
+      summary: Tìm kiếm toàn cục (issues + projects)
+      security: [{BearerAuth: []}]
+      parameters:
+        - {in: query, name: q, type: string, required: true, description: "Từ khóa tìm kiếm"}
+        - {in: query, name: type, type: string, description: "Loại: issues, projects (mặc định tất cả)"}
+        - {in: query, name: project_id, type: string, description: "Giới hạn trong dự án"}
+      responses:
+        200: {description: Kết quả tìm kiếm}
+
+  # ── WEBSOCKET ──────────────────────────────────
+  /api/ws:
+    get:
+      tags: [WebSocket]
+      summary: Kết nối WebSocket thời gian thực
+      description: |
+        Upgrade HTTP → WebSocket. Truyền JWT qua query param `token`.
+        Server sẽ broadcast sự kiện khi issue/comment thay đổi.
+      parameters:
+        - {in: query, name: token, type: string, required: true, description: "JWT token"}
+      responses:
+        101: {description: Switching Protocols (WebSocket)}
+        401: {description: Token không hợp lệ}
 
   # ── HEALTH ─────────────────────────────────────
   /api/health:

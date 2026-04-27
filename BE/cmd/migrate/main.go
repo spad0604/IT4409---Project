@@ -36,7 +36,7 @@ func main() {
 		SQL  string
 	}{
 		{
-			Name: "002_user_extend (Người A)",
+			Name: "002_user_extend ",
 			SQL: `
 				ALTER TABLE public.users
 				  ADD COLUMN IF NOT EXISTS avatar_url text,
@@ -60,7 +60,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "005_boards (Người B)",
+			Name: "005_boards ",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.boards (
 				  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,7 +85,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "008_labels (Người B)",
+			Name: "008_labels",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.labels (
 				  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,6 +95,79 @@ func main() {
 				  created_at  timestamptz NOT NULL DEFAULT now()
 				);
 				CREATE INDEX IF NOT EXISTS idx_labels_project ON public.labels(project_id);
+			`,
+		},
+		{
+			Name: "004_issues ",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.issues (
+				  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  project_id   UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+				  issue_number INTEGER NOT NULL,
+				  key          TEXT NOT NULL,
+				  type         TEXT NOT NULL DEFAULT 'task'
+				                 CHECK (type IN ('epic','story','task','bug','subtask')),
+				  status       TEXT NOT NULL DEFAULT 'todo'
+				                 CHECK (status IN ('todo','in_progress','in_review','done','cancelled')),
+				  priority     TEXT NOT NULL DEFAULT 'medium'
+				                 CHECK (priority IN ('critical','high','medium','low','trivial')),
+				  title        TEXT NOT NULL,
+				  description  TEXT NOT NULL DEFAULT '',
+				  assignee_id  UUID REFERENCES public.users(id),
+				  reporter_id  UUID NOT NULL REFERENCES public.users(id),
+				  parent_id    UUID REFERENCES public.issues(id) ON DELETE SET NULL,
+				  sprint_id    UUID,
+				  sort_order   DOUBLE PRECISION NOT NULL DEFAULT 0,
+				  due_date     TIMESTAMPTZ,
+				  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+				  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+				  deleted_at   TIMESTAMPTZ,
+				  CONSTRAINT uq_issue_project_number UNIQUE (project_id, issue_number)
+				);
+				CREATE INDEX IF NOT EXISTS idx_issues_project ON public.issues(project_id) WHERE deleted_at IS NULL;
+				CREATE INDEX IF NOT EXISTS idx_issues_assignee ON public.issues(assignee_id);
+				CREATE INDEX IF NOT EXISTS idx_issues_parent ON public.issues(parent_id);
+				CREATE INDEX IF NOT EXISTS idx_issues_status ON public.issues(status);
+				CREATE INDEX IF NOT EXISTS idx_issues_key ON public.issues(key);
+				CREATE INDEX IF NOT EXISTS idx_issues_sprint ON public.issues(sprint_id);
+
+				DO $$ BEGIN
+				  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_issues_updated_at') THEN
+				    CREATE TRIGGER trg_issues_updated_at
+				      BEFORE UPDATE ON public.issues
+				      FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+				  END IF;
+				END $$;
+			`,
+		},
+		{
+			Name: "007_comments ",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.comments (
+				  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  issue_id   UUID NOT NULL REFERENCES public.issues(id) ON DELETE CASCADE,
+				  user_id    UUID NOT NULL REFERENCES public.users(id),
+				  content    TEXT NOT NULL,
+				  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+				  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+				);
+				CREATE INDEX IF NOT EXISTS idx_comments_issue ON public.comments(issue_id);
+			`,
+		},
+		{
+			Name: "009_attachments",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.attachments (
+				  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  issue_id     UUID NOT NULL REFERENCES public.issues(id) ON DELETE CASCADE,
+				  uploaded_by  UUID NOT NULL REFERENCES public.users(id),
+				  filename     TEXT NOT NULL,
+				  file_size    BIGINT NOT NULL DEFAULT 0,
+				  mime_type    TEXT NOT NULL DEFAULT 'application/octet-stream',
+				  storage_path TEXT NOT NULL,
+				  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+				);
+				CREATE INDEX IF NOT EXISTS idx_attachments_issue ON public.attachments(issue_id);
 			`,
 		},
 	}
