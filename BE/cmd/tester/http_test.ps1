@@ -135,7 +135,71 @@ $delCmt = Invoke-RestMethod -Uri "http://localhost:8080/api/comments/$cmtId" -Me
 Assert-OK "Delete Comment" ($delCmt.status -eq 200)
 
 # ═══════════════════════════════════════
-# 8. Security: No JWT
+# 8. Attachments (Nguoi B)
+# ═══════════════════════════════════════
+Write-Host "`n=== ATTACHMENTS ==="
+# Tạo file tạm để upload
+$tmpFile = [System.IO.Path]::GetTempFileName()
+Set-Content -Path $tmpFile -Value "Test attachment content for issue"
+
+try {
+    $attUri = "http://localhost:8080/api/issues/$issueKey/attachments"
+    $fileBytes = [System.IO.File]::ReadAllBytes($tmpFile)
+    $boundary = [System.Guid]::NewGuid().ToString()
+    $LF = "`r`n"
+    $bodyLines = (
+        "--$boundary",
+        "Content-Disposition: form-data; name=`"file`"; filename=`"test.txt`"",
+        "Content-Type: text/plain",
+        "",
+        [System.Text.Encoding]::UTF8.GetString($fileBytes),
+        "--$boundary--"
+    )
+    $bodyStr = $bodyLines -join $LF
+    $ct = "multipart/form-data; boundary=$boundary"
+    $att = Invoke-RestMethod -Uri $attUri -Method POST -Body $bodyStr -ContentType $ct -Headers $headers
+    $attId = $att.data.id
+    Assert-OK "Upload Attachment" ($attId.Length -eq 36)
+} catch {
+    Assert-OK "Upload Attachment" $false
+    $attId = ""
+}
+
+# List attachments
+try {
+    $attList = Invoke-RestMethod -Uri "http://localhost:8080/api/issues/$issueKey/attachments" -Method GET -Headers $headers
+    Assert-OK "List Attachments" ($attList.data.Count -ge 1)
+} catch {
+    Assert-OK "List Attachments" $false
+}
+
+# Delete attachment
+if ($attId -ne "") {
+    try {
+        $delAtt = Invoke-RestMethod -Uri "http://localhost:8080/api/attachments/$attId" -Method DELETE -Headers $headers
+        Assert-OK "Delete Attachment" ($delAtt.status -eq 200)
+    } catch {
+        Assert-OK "Delete Attachment" $false
+    }
+} else {
+    Assert-OK "Delete Attachment (skipped)" $false
+}
+
+Remove-Item -Path $tmpFile -ErrorAction SilentlyContinue
+
+# ═══════════════════════════════════════
+# 9. Search (Nguoi B)
+# ═══════════════════════════════════════
+Write-Host "`n=== SEARCH ==="
+try {
+    $searchRes = Invoke-RestMethod -Uri "http://localhost:8080/api/search?q=login" -Method GET -Headers $headers
+    Assert-OK "Search issues" ($searchRes.data.issues.Count -ge 1 -or $searchRes.status -eq 200)
+} catch {
+    Assert-OK "Search issues" $false
+}
+
+# ═══════════════════════════════════════
+# 10. Security: No JWT
 # ═══════════════════════════════════════
 Write-Host "`n=== SECURITY ==="
 try {

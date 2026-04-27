@@ -24,7 +24,9 @@ import (
 	"it4409/internal/delivery/http/middleware"
 	"it4409/internal/delivery/http/router"
 	"it4409/internal/infra/db"
+	"it4409/internal/infra/filestore"
 	"it4409/internal/pkg/jwtutil"
+	"it4409/internal/pkg/ws"
 	"it4409/internal/repository/postgres"
 	"it4409/internal/usecase"
 
@@ -57,7 +59,17 @@ func main() {
 	labelRepo := postgres.NewLabelRepo(pg.Pool)
 	issueRepo := postgres.NewIssueRepo(pg.Pool)
 	commentRepo := postgres.NewCommentRepo(pg.Pool)
+	attRepo := postgres.NewAttachmentRepo(pg.Pool)
 	txManager := postgres.NewPgTxManager(pg.Pool)
+
+	// ── Filestore ───────────────────────────────────────────────
+	fs, err := filestore.New("uploads")
+	if err != nil {
+		log.Fatalf("filestore: %v", err)
+	}
+
+	// ── WebSocket Hub ───────────────────────────────────────────
+	wsHub := ws.NewHub()
 
 	// ── Usecases ────────────────────────────────────────────────
 	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
@@ -68,6 +80,8 @@ func main() {
 	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
 	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker)
 	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker)
+	attUC := usecase.NewAttachmentUsecase(attRepo, issueRepo, permChecker, fs)
+	searchUC := usecase.NewSearchUsecase(issueRepo, projectRepo)
 
 	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
@@ -77,16 +91,22 @@ func main() {
 	labelHandler := handler.NewLabelHandler(labelUC)
 	issueHandler := handler.NewIssueHandler(issueUC)
 	commentHandler := handler.NewCommentHandler(commentUC)
+	attHandler := handler.NewAttachmentHandler(attUC)
+	searchHandler := handler.NewSearchHandler(searchUC)
+	wsHandler := handler.NewWSHandler(wsHub, jwtSvc)
 
 	h := router.New(router.Deps{
-		AuthHandler:    authHandler,
-		UserHandler:    userHandler,
-		ProjectHandler: projectHandler,
-		BoardHandler:   boardHandler,
-		LabelHandler:   labelHandler,
-		IssueHandler:   issueHandler,
-		CommentHandler: commentHandler,
-		JWTAuth:        middleware.JWTAuth{JWT: jwtSvc},
+		AuthHandler:       authHandler,
+		UserHandler:       userHandler,
+		ProjectHandler:    projectHandler,
+		BoardHandler:      boardHandler,
+		LabelHandler:      labelHandler,
+		IssueHandler:      issueHandler,
+		CommentHandler:    commentHandler,
+		AttachmentHandler: attHandler,
+		SearchHandler:     searchHandler,
+		WSHandler:         wsHandler,
+		JWTAuth:           middleware.JWTAuth{JWT: jwtSvc},
 	})
 
 	srv := &http.Server{

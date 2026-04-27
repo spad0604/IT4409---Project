@@ -36,7 +36,7 @@ func main() {
 		SQL  string
 	}{
 		{
-			Name: "002_user_extend (Người A)",
+			Name: "002_user_extend ",
 			SQL: `
 				ALTER TABLE public.users
 				  ADD COLUMN IF NOT EXISTS avatar_url text,
@@ -60,7 +60,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "005_boards (Người B)",
+			Name: "005_boards ",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.boards (
 				  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,7 +85,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "008_labels (Người B)",
+			Name: "008_labels",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.labels (
 				  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,7 +98,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "004_issues (Người A)",
+			Name: "004_issues ",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.issues (
 				  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -141,7 +141,7 @@ func main() {
 			`,
 		},
 		{
-			Name: "007_comments (Người A+B)",
+			Name: "007_comments ",
 			SQL: `
 				CREATE TABLE IF NOT EXISTS public.comments (
 				  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -152,6 +152,22 @@ func main() {
 				  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 				);
 				CREATE INDEX IF NOT EXISTS idx_comments_issue ON public.comments(issue_id);
+			`,
+		},
+		{
+			Name: "009_attachments",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.attachments (
+				  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  issue_id     UUID NOT NULL REFERENCES public.issues(id) ON DELETE CASCADE,
+				  uploaded_by  UUID NOT NULL REFERENCES public.users(id),
+				  filename     TEXT NOT NULL,
+				  file_size    BIGINT NOT NULL DEFAULT 0,
+				  mime_type    TEXT NOT NULL DEFAULT 'application/octet-stream',
+				  storage_path TEXT NOT NULL,
+				  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+				);
+				CREATE INDEX IF NOT EXISTS idx_attachments_issue ON public.attachments(issue_id);
 			`,
 		},
 	}
