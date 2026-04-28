@@ -11,3 +11,18 @@ export function login({ email, password }) {
 export function me() {
   return httpClient.get('/api/me')
 }
+
+export function logout() {
+  return httpClient.post('/api/auth/logout')
+}
+
+export function changePassword({ oldPassword, newPassword }) {
+  return httpClient.post('/api/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  })
+}
+
+export function refreshToken() {
+  return httpClient.post('/api/auth/refresh')
+}
