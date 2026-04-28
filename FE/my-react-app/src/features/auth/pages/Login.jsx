@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
+import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Login.css'
 
@@ -39,6 +40,7 @@ function GithubIcon() {
 }
 
 export default function Login() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const { signIn } = useAuth()
     const [email, setEmail] = useState('')
@@ -60,7 +62,7 @@ export default function Login() {
             navigate('/home', { replace: true, state: { keepSignedIn } })
         } catch (err) {
             const apiMessage = err?.message
-            setError(apiMessage || 'Sign in failed. Please check your credentials.')
+            setError(apiMessage || t('auth.loginFailed'))
         } finally {
             setSubmitting(false)
         }
@@ -76,14 +78,14 @@ export default function Login() {
                     }}
                 >
                     <div className="visual-content">
-                        <p className="visual-logo">Ledger Project</p>
+                        <p className="visual-logo">{t('auth.login.brand')}</p>
                         <h1>
-                            Architecture for
+                            {t('auth.login.headlineLine1')}
                             <br />
-                            Deep Focus.
+                            {t('auth.login.headlineLine2')}
                         </h1>
                         <p className="visual-desc">
-                            A workspace designed with editorial precision to anchor your most ambitious projects.
+                            {t('auth.login.description')}
                         </p>
                     </div>
 
@@ -99,32 +101,32 @@ export default function Login() {
                             <span>N</span>
                             <span>T</span>
                         </div>
-                        <p>Joined by 12k+ architects</p>
+                        <p>{t('auth.login.socialProof')}</p>
                     </div>
                 </section>
 
                 <section className="login-form-wrap">
                     <form className="form-box" onSubmit={handleSubmit}>
-                        <h2>Welcome Back</h2>
-                        <p className="sub">Enter your details to access your workspace.</p>
+                        <h2>{t('auth.login.welcomeBack')}</h2>
+                        <p className="sub">{t('auth.login.welcomeSub')}</p>
 
                         <button type="button" className="social-btn">
                             <GoogleIcon />
-                            Continue with Google
+                            {t('auth.login.continueGoogle')}
                         </button>
 
                         <button type="button" className="social-btn">
                             <GithubIcon />
-                            Continue with GitHub
+                            {t('auth.login.continueGithub')}
                         </button>
 
-                        <div className="divider">OR LOGIN WITH EMAIL</div>
+                        <div className="divider">{t('auth.login.divider')}</div>
 
-                        <label className="field-label" htmlFor="login-email">Email Address</label>
+                        <label className="field-label" htmlFor="login-email">{t('auth.login.emailLabel')}</label>
                         <input
                             id="login-email"
                             type="text"
-                            placeholder="name@company.com"
+                            placeholder={t('auth.login.emailPlaceholder')}
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             autoComplete="username"
@@ -132,8 +134,8 @@ export default function Login() {
                         />
 
                         <div className="password-row">
-                            <label className="field-label" htmlFor="login-password">Password</label>
-                            <button type="button" className="text-link">Forgot password?</button>
+                            <label className="field-label" htmlFor="login-password">{t('auth.login.passwordLabel')}</label>
+                            <button type="button" className="text-link">{t('auth.login.forgotPassword')}</button>
                         </div>
                         <div className="password-input-wrap">
                             <input
@@ -148,10 +150,10 @@ export default function Login() {
                             <button
                                 type="button"
                                 className="password-toggle"
-                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                aria-label={showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
                                 onClick={() => setShowPassword((current) => !current)}
                             >
-                                {showPassword ? 'Hide' : 'Show'}
+                                {showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
                             </button>
                         </div>
 
@@ -161,24 +163,24 @@ export default function Login() {
                                 checked={keepSignedIn}
                                 onChange={(event) => setKeepSignedIn(event.target.checked)}
                             />
-                            Keep me signed in for 30 days
+                            {t('auth.login.keepSignedIn')}
                         </label>
 
                         {error ? <p className="form-error">{error}</p> : null}
 
                         <button className="login-btn" type="submit" disabled={submitting}>
-                            {submitting ? 'Signing in...' : 'Sign In to Workspace'}
+                            {submitting ? t('auth.login.signingIn') : t('auth.login.signIn')}
                         </button>
 
                         <p className="register-link">
-                            New to Ledger Project? <a href="#">Create an account</a>
+                            {t('auth.login.registerPrompt')} <a href="#">{t('auth.login.createAccount')}</a>
                         </p>
-                        <p className="mock-note">Use your backend account credentials to sign in.</p>
+                        <p className="mock-note">{t('auth.login.mockNote')}</p>
                     </form>
 
                     <aside className="focus-tip" aria-hidden="true">
                         <p className="tip-kicker">◎+</p>
-                        <p>Maintain a distraction-free environment by toggling Focus Mode in your project dashboard.</p>
+                        <p>{t('auth.login.focusTip')}</p>
                     </aside>
                 </section>
             </div>
