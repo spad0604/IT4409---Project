@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { StatsOverview } from './shared/components/stats-overview/StatsOverview.jsx'
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
 import { useAuth } from './features/auth/model/AuthContext'
+import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
 import * as projectApi from './features/projects/api/projectApi'
 import * as boardApi from './features/boards/api/boardApi'
 import * as issueApi from './features/issues/api/issueApi'
@@ -33,6 +35,7 @@ import {
   FiTarget,
   FiUserPlus,
   FiUsers,
+  FiX,
 } from 'react-icons/fi'
 
 const ACTIVE_PROJECT_KEY = 'it4409_active_project_id'
@@ -117,6 +120,8 @@ function Kanban() {
   const { user, refreshMe, serverSignOut } = useAuth()
   const [activeTopTab, setActiveTopTab] = useState('dashboard')
   const [activeSideLink, setActiveSideLink] = useState('overview')
+
+  const [activeIssueKey, setActiveIssueKey] = useState('')
   const [dragState, setDragState] = useState(null)
   const [dropColumnID, setDropColumnID] = useState('')
 
@@ -163,6 +168,10 @@ function Kanban() {
   const [newIssuePriority, setNewIssuePriority] = useState('medium')
   const [newIssueTitle, setNewIssueTitle] = useState('')
   const [newIssueDescription, setNewIssueDescription] = useState('')
+  const [newIssueAssigneeId, setNewIssueAssigneeId] = useState('')
+  const [newIssueSprintId, setNewIssueSprintId] = useState('')
+  const [newIssueLabels, setNewIssueLabels] = useState([])
+  const [createIssueCreateAnother, setCreateIssueCreateAnother] = useState(false)
 
   const [usersById, setUsersById] = useState({})
   const userFetchInFlight = useRef(new Map())
@@ -175,7 +184,7 @@ function Kanban() {
   const topTabs = t('boardShell.topTabs', { returnObjects: true })
   const sideLinks = t('boardShell.sideLinks', { returnObjects: true })
 
-  const activityFeed = t('overview.activity.items', { returnObjects: true })
+  const activityFeed = []  // TODO: fetch from BE activity log API when available
 
   const activeLocale = useMemo(() => (activeLang === 'vi' ? 'vi-VN' : 'en-US'), [activeLang])
 
@@ -474,9 +483,20 @@ function Kanban() {
 
   const handleSideLinkClick = useCallback((linkID) => {
     setActiveSideLink(linkID)
+    setActiveIssueKey('')
     if (linkID === 'overview') setActiveTopTab('dashboard')
     if (linkID === 'board') setActiveTopTab('projects')
     if (linkID === 'issues') setActiveTopTab('backlog')
+  }, [])
+
+  const handleOpenIssueDetails = useCallback((issueKey) => {
+    const key = String(issueKey ?? '').trim()
+    if (!key) return
+    setActiveIssueKey(key)
+  }, [])
+
+  const handleCloseIssueDetails = useCallback(() => {
+    setActiveIssueKey('')
   }, [])
 
   const resetCreateIssueForm = useCallback(() => {
@@ -484,13 +504,25 @@ function Kanban() {
     setNewIssuePriority('medium')
     setNewIssueTitle('')
     setNewIssueDescription('')
+    setNewIssueAssigneeId('')
+    setNewIssueSprintId('')
+    setNewIssueLabels([])
     setCreateIssueError('')
   }, [])
 
   const handleOpenCreateIssue = useCallback(() => {
-    setShowCreateIssue(true)
     setCreateIssueError('')
     setNewIssueProjectId(String(activeProjectId || projects?.[0]?.id || ''))
+    setShowCreateIssue(true)
+    // focus later when modal renders
+    setTimeout(() => {
+      try {
+        const el = document.getElementById('new-issue-title')
+        if (el) el.focus()
+      } catch {
+        /* ignore */
+      }
+    }, 60)
   }, [activeProjectId, projects])
 
   const handleCancelCreateIssue = useCallback(() => {
@@ -506,6 +538,8 @@ function Kanban() {
     const description = String(newIssueDescription ?? '').trim()
     const type = String(newIssueType ?? 'task').trim() || 'task'
     const priority = String(newIssuePriority ?? 'medium').trim() || 'medium'
+    const assigneeId = String(newIssueAssigneeId ?? '').trim() || null
+    const sprintId = String(newIssueSprintId ?? '').trim() || null
 
     if (!projectId) {
       setCreateIssueError(t('issues.create.validationProject'))
@@ -519,25 +553,43 @@ function Kanban() {
     setCreateIssueLoading(true)
     setCreateIssueError('')
     try {
-      await issueApi.createIssue(projectId, {
+      console.debug('[App] creating issue - payload prepare')
+      const payload = {
         title,
         type,
         priority,
         description,
-      })
+        ...(assigneeId && { assignee_id: assigneeId }),
+        ...(sprintId && { sprint_id: sprintId }),
+        ...(newIssueLabels?.length > 0 && { label_ids: newIssueLabels }),
+      }
+      console.debug('[App] createIssue payload', payload)
+      await issueApi.createIssue(projectId, payload)
+      console.debug('[App] createIssue resolved')
 
       setActiveProjectId(projectId)
       await refetchIssues(projectId, { search: headerSearch })
       await refetchAssigned(projectId)
 
-      setShowCreateIssue(false)
-      resetCreateIssueForm()
+      if (!createIssueCreateAnother) {
+        setShowCreateIssue(false)
+        resetCreateIssueForm()
+        setCreateIssueCreateAnother(false)
+      } else {
+        // Keep modal open, reset form for next issue but keep project/type
+        setNewIssueTitle('')
+        setNewIssueDescription('')
+        setNewIssueAssigneeId('')
+        setNewIssueSprintId('')
+        setNewIssueLabels([])
+        setCreateIssueError('')
+      }
     } catch (err) {
       setCreateIssueError(err?.message || t('common.actionFailed'))
     } finally {
       setCreateIssueLoading(false)
     }
-  }, [activeProjectId, headerSearch, newIssueDescription, newIssuePriority, newIssueProjectId, newIssueTitle, newIssueType, refetchAssigned, refetchIssues, resetCreateIssueForm, t])
+  }, [refetchAssigned, refetchIssues, resetCreateIssueForm, t, activeProjectId, headerSearch, newIssueProjectId, newIssueTitle, newIssueDescription, newIssueType, newIssuePriority, newIssueAssigneeId, newIssueSprintId, newIssueLabels, createIssueCreateAnother])
 
   const handleCardDragStart = useCallback((event, fromColumnID, cardID) => {
     event.dataTransfer.effectAllowed = 'move'
@@ -558,107 +610,6 @@ function Kanban() {
       setDropColumnID('')
       return
     }
-
-            {showCreateIssue ? (
-              <div className="modal-overlay" role="presentation" onMouseDown={handleCancelCreateIssue}>
-                <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
-                  <header className="modal-head">
-                    <div>
-                      <h2>{t('issues.create.title')}</h2>
-                      <p>{t('issues.create.subtitle')}</p>
-                    </div>
-                    <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateIssue}>
-                      <FiX />
-                    </button>
-                  </header>
-
-                  <form className="modal-body" onSubmit={handleSubmitCreateIssue}>
-                    <div className="modal-grid">
-                      <label className="inline-field" htmlFor="new-issue-project">
-                        <span className="inline-label">{t('issues.create.project')}</span>
-                        <select
-                          id="new-issue-project"
-                          className="inline-select"
-                          value={newIssueProjectId}
-                          onChange={(e) => setNewIssueProjectId(e.target.value)}
-                        >
-                          {(Array.isArray(projects) ? projects : []).map((p) => (
-                            <option key={p?.id} value={p?.id}>{p?.name || t('projects.untitled')}</option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="inline-field" htmlFor="new-issue-type">
-                        <span className="inline-label">{t('issues.create.type')}</span>
-                        <select
-                          id="new-issue-type"
-                          className="inline-select"
-                          value={newIssueType}
-                          onChange={(e) => setNewIssueType(e.target.value)}
-                        >
-                          <option value="task">{t('issue.type.task')}</option>
-                          <option value="bug">{t('issue.type.bug')}</option>
-                          <option value="story">{t('issue.type.story')}</option>
-                          <option value="epic">{t('issue.type.epic')}</option>
-                          <option value="subtask">{t('issue.type.subtask')}</option>
-                        </select>
-                      </label>
-
-                      <div className="inline-field">
-                        <span className="inline-label">{t('issues.create.priority')}</span>
-                        <div className="priority-stack">
-                          {['high', 'medium', 'low'].map((p) => (
-                            <button
-                              key={p}
-                              type="button"
-                              className={`priority-pill ${newIssuePriority === p ? 'is-active' : ''}`}
-                              onClick={() => setNewIssuePriority(p)}
-                            >
-                              {t(`priority.${p}`)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <label className="inline-field modal-span" htmlFor="new-issue-title">
-                        <span className="inline-label">{t('issues.create.summary')}</span>
-                        <input
-                          id="new-issue-title"
-                          className="inline-input"
-                          value={newIssueTitle}
-                          onChange={(e) => setNewIssueTitle(e.target.value)}
-                          placeholder={t('issues.create.summaryPlaceholder')}
-                          autoComplete="off"
-                        />
-                      </label>
-
-                      <label className="inline-field modal-span" htmlFor="new-issue-description">
-                        <span className="inline-label">{t('issues.create.description')}</span>
-                        <textarea
-                          id="new-issue-description"
-                          className="modal-textarea"
-                          value={newIssueDescription}
-                          onChange={(e) => setNewIssueDescription(e.target.value)}
-                          placeholder={t('issues.create.descriptionPlaceholder')}
-                          rows={6}
-                        />
-                      </label>
-                    </div>
-
-                    {createIssueError ? <p className="inline-error">{createIssueError}</p> : null}
-
-                    <footer className="modal-actions">
-                      <button type="button" className="filter-btn" onClick={handleCancelCreateIssue}>
-                        {t('common.cancel')}
-                      </button>
-                      <button type="submit" className="create-issue-btn" disabled={createIssueLoading}>
-                        {createIssueLoading ? t('issues.create.creating') : t('issues.create.submit')}
-                      </button>
-                    </footer>
-                  </form>
-                </div>
-              </div>
-            ) : null}
 
     const issueKey = dragState.cardID
     const fromStatus = dragState.fromColumnID
@@ -694,7 +645,7 @@ function Kanban() {
   const handleCardDragEnd = useCallback(() => {
     setDropColumnID('')
     setDragState(null)
-  }, [])
+  }, [])  // state setters don't need dependencies
 
   const isBoardView = activeTopTab === 'projects'
   const isOverviewView = activeTopTab === 'dashboard'
@@ -814,6 +765,168 @@ function Kanban() {
     }
   }, [activeProjectId, refetchMembers])
 
+  const createIssueModal = useMemo(() => {
+    if (!showCreateIssue) return null
+    return createPortal(
+      <div className="modal-overlay" role="presentation" onMouseDown={handleCancelCreateIssue}>
+        <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+          <header className="modal-head">
+            <div>
+              <h2>{t('issues.create.title')}</h2>
+              <p>{t('issues.create.subtitle')}</p>
+            </div>
+            <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateIssue}>
+              <FiX />
+            </button>
+          </header>
+
+          <form className="modal-body" onSubmit={handleSubmitCreateIssue}>
+            <div className="modal-grid">
+              <label className="inline-field" htmlFor="new-issue-project">
+                <span className="inline-label">{t('issues.create.project')}</span>
+                <select
+                  id="new-issue-project"
+                  className="inline-select"
+                  value={newIssueProjectId}
+                  onChange={(e) => setNewIssueProjectId(e.target.value)}
+                >
+                  {(Array.isArray(projects) ? projects : []).map((p) => (
+                    <option key={p?.id} value={p?.id}>{p?.name || t('projects.untitled')}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="inline-field" htmlFor="new-issue-type">
+                <span className="inline-label">{t('issues.create.type')}</span>
+                <select
+                  id="new-issue-type"
+                  className="inline-select"
+                  value={newIssueType}
+                  onChange={(e) => setNewIssueType(e.target.value)}
+                >
+                  <option value="task">{t('issue.type.task')}</option>
+                  <option value="bug">{t('issue.type.bug')}</option>
+                  <option value="story">{t('issue.type.story')}</option>
+                  <option value="epic">{t('issue.type.epic')}</option>
+                  <option value="subtask">{t('issue.type.subtask')}</option>
+                </select>
+              </label>
+
+              <div className="inline-field">
+                <span className="inline-label">{t('issues.create.priority')}</span>
+                <div className="priority-stack">
+                  {['high', 'medium', 'low'].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`priority-pill ${newIssuePriority === p ? 'is-active' : ''}`}
+                      onClick={() => setNewIssuePriority(p)}
+                    >
+                      {t(`priority.${p}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="inline-field" htmlFor="new-issue-assignee">
+                <span className="inline-label">{t('issues.create.assignee')}</span>
+                <select
+                  id="new-issue-assignee"
+                  className="inline-select"
+                  value={newIssueAssigneeId}
+                  onChange={(e) => setNewIssueAssigneeId(e.target.value)}
+                >
+                  <option value="">{t('issues.create.assigneePlaceholder')}</option>
+                  {(Array.isArray(members) ? members : []).map((m) => (
+                    <option key={m?.id} value={m?.id}>{m?.name || m?.email || t('common.unknown')}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="inline-field" htmlFor="new-issue-sprint">
+                <span className="inline-label">{t('issues.create.sprint')}</span>
+                <select
+                  id="new-issue-sprint"
+                  className="inline-select"
+                  value={newIssueSprintId}
+                  onChange={(e) => setNewIssueSprintId(e.target.value)}
+                >
+                  <option value="">{t('issues.create.sprintPlaceholder')}</option>
+                  {(Array.isArray(boardColumnsMeta) ? boardColumnsMeta : []).map((col) => (
+                    <option key={col?.id} value={col?.id}>{col?.name || t('common.unknown')}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="inline-field modal-span" htmlFor="new-issue-title">
+                <span className="inline-label">{t('issues.create.summary')}</span>
+                <input
+                  id="new-issue-title"
+                  className="inline-input"
+                  value={newIssueTitle}
+                  onChange={(e) => setNewIssueTitle(e.target.value)}
+                  placeholder={t('issues.create.summaryPlaceholder')}
+                  autoComplete="off"
+                />
+              </label>
+
+              <label className="inline-field modal-span" htmlFor="new-issue-description">
+                <span className="inline-label">{t('issues.create.description')}</span>
+                <textarea
+                  id="new-issue-description"
+                  className="modal-textarea"
+                  value={newIssueDescription}
+                  onChange={(e) => setNewIssueDescription(e.target.value)}
+                  placeholder={t('issues.create.descriptionPlaceholder')}
+                  rows={6}
+                />
+              </label>
+            </div>
+
+            <label className="inline-checkbox">
+              <input
+                type="checkbox"
+                checked={createIssueCreateAnother}
+                onChange={(e) => setCreateIssueCreateAnother(e.target.checked)}
+              />
+              <span>{t('issues.create.createAnother')}</span>
+            </label>
+
+            {createIssueError ? <p className="inline-error">{createIssueError}</p> : null}
+
+            <footer className="modal-actions">
+              <button type="button" className="filter-btn" onClick={handleCancelCreateIssue}>
+                {t('common.cancel')}
+              </button>
+              <button type="submit" className="create-issue-btn" disabled={createIssueLoading}>
+                {createIssueLoading ? t('issues.create.creating') : t('issues.create.submit')}
+              </button>
+            </footer>
+          </form>
+        </div>
+      </div>,
+      document.body,
+    )
+  }, [
+    boardColumnsMeta,
+    createIssueCreateAnother,
+    createIssueError,
+    createIssueLoading,
+    handleCancelCreateIssue,
+    handleSubmitCreateIssue,
+    members,
+    newIssueAssigneeId,
+    newIssueDescription,
+    newIssuePriority,
+    newIssueProjectId,
+    newIssueSprintId,
+    newIssueTitle,
+    newIssueType,
+    projects,
+    showCreateIssue,
+    t,
+  ])
+
   return (
     <main className="home-page">
       <section className="home-frame" data-enter>
@@ -840,6 +953,22 @@ function Kanban() {
           </div>
 
           <div className="topbar-right">
+            <label className="project-picker" htmlFor="header-project-select">
+              <select
+                id="header-project-select"
+                aria-label={t('common.project')}
+                value={String(activeProjectId ?? '')}
+                onChange={(e) => setActiveProjectId(String(e.target.value ?? ''))}
+                disabled={projectsLoading || !(Array.isArray(projects) && projects.length > 0)}
+              >
+                {!activeProjectId ? (
+                  <option value="" disabled>{t('projects.noProjectSelected')}</option>
+                ) : null}
+                {(Array.isArray(projects) ? projects : []).map((p) => (
+                  <option key={p?.id} value={p?.id}>{p?.name || t('projects.untitled')}</option>
+                ))}
+              </select>
+            </label>
             <label className="issue-search" htmlFor="header-issue-search">
               <FiSearch className="issue-search-icon" aria-hidden="true" />
               <input
@@ -850,6 +979,9 @@ function Kanban() {
                 onChange={(e) => setHeaderSearch(e.target.value)}
               />
             </label>
+            <button type="button" className="filter-btn" onClick={handleOpenCreateProject}>
+              <FiPlus /> {t('projects.create.open')}
+            </button>
             <button type="button" className="create-issue-btn" onClick={handleOpenCreateIssue}>
               {t('boardShell.createIssue')}
             </button>
@@ -858,6 +990,8 @@ function Kanban() {
             <span className="profile-pill" aria-hidden="true">{profileInitials || '??'}</span>
           </div>
         </header>
+
+        {createIssueModal}
 
         <div className="home-body">
           <aside className="home-sidebar" aria-label={t('boardShell.sideNavLabel')}>
@@ -899,6 +1033,15 @@ function Kanban() {
           </aside>
 
           <section className="dashboard-main">
+            {activeIssueKey ? (
+              <IssueDetailsPage
+                issueKey={activeIssueKey}
+                onBack={handleCloseIssueDetails}
+                projectName={activeProject?.name || ''}
+                locale={activeLocale}
+              />
+            ) : null}
+
             {isOverviewView ? (
               <>
                 <header className="dashboard-header">
@@ -1043,6 +1186,13 @@ function Kanban() {
                     </header>
 
                     <div className="activity-list">
+                      {activityFeed.length === 0 ? (
+                        <article className="activity-item">
+                          <p style={{ margin: 0, color: '#667085', fontSize: '0.62rem' }}>
+                            {t('overview.activity.empty')}
+                          </p>
+                        </article>
+                      ) : null}
                       {activityFeed.map((item) => (
                         <article key={item.id} className="activity-item">
                           <span className="activity-avatar">{item.avatar}</span>
@@ -1088,7 +1238,9 @@ function Kanban() {
                             {due ? `${t('common.due')}: ${due}` : t('common.noDueDate')} · {t(`priority.${pr.tone}`, { defaultValue: pr.label })}
                           </p>
                         </div>
-                        <button type="button" className="open-btn">{t('common.open')}</button>
+                        <button type="button" className="open-btn" onClick={() => handleOpenIssueDetails(task?.key)}>
+                          {t('common.open')}
+                        </button>
                       </article>
                       )
                     })}
@@ -1097,7 +1249,7 @@ function Kanban() {
               </>
             ) : null}
 
-            {isBacklogView ? (
+            {isBacklogView && !activeIssueKey ? (
               <section className="placeholder-panel panel">
                 <header className="panel-head">
                   <h2>{t('backlog.title')}</h2>
@@ -1135,7 +1287,9 @@ function Kanban() {
                             {assigneeInitials ? ` · ${t('common.assignee')}: ${assigneeInitials}` : ''}
                           </p>
                         </div>
-                        <button type="button" className="open-btn">{t('common.open')}</button>
+                        <button type="button" className="open-btn" onClick={() => handleOpenIssueDetails(issue?.key)}>
+                          {t('common.open')}
+                        </button>
                       </article>
                     )
                   })}
@@ -1228,7 +1382,7 @@ function Kanban() {
               </section>
             ) : null}
 
-            {isBoardView ? (
+            {isBoardView && !activeIssueKey ? (
               <section className="board-shell" aria-label="Draggable board">
                 <header className="dashboard-header board-header">
                   <div>
@@ -1304,6 +1458,7 @@ function Kanban() {
                             draggable
                             onDragStart={(event) => handleCardDragStart(event, column.id, item.key)}
                             onDragEnd={handleCardDragEnd}
+                            onDoubleClick={() => handleOpenIssueDetails(item.key)}
                           >
                             <p className="board-card-code">{item.key}</p>
                             <h4>{item.title}</h4>

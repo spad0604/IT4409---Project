@@ -246,6 +246,7 @@ export const en = {
       activity: {
         title: 'Activity Stream',
         viewFullHistory: 'View Full History',
+        empty: 'No activity yet.',
         items: [
           { id: 'a1', actor: 'Sarah Chen', action: 'moved Landing Page Redesign to QA', time: '12 minutes ago', avatar: 'SC' },
           { id: 'a2', actor: 'Marcus Thorne', action: 'commented on Database Schema', time: '2 hours ago', avatar: 'MT' },
@@ -323,6 +324,13 @@ export const en = {
         description: 'Description',
         descriptionPlaceholder: 'Provide context, acceptance criteria, or reproduction steps…',
         priority: 'Priority',
+        assignee: 'Assignee',
+        assigneePlaceholder: 'Select team member...',
+        sprint: 'Sprint',
+        sprintPlaceholder: 'Choose sprint...',
+        labels: 'Labels',
+        labelsPlaceholder: 'Add or create labels',
+        createAnother: 'Create another',
         submit: 'Create Issue',
         creating: 'Creating…',
         validationProject: 'Please select a project.',

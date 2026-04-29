@@ -213,7 +213,84 @@ Ghi chú trạng thái:
 - Fallback language: en
 - Khi đổi ngôn ngữ sẽ tự persist vào localStorage
 
-## 9) Board Drag-Drop Flow (UI)
+## 9) Create Issue Modal Workflow (Enhanced)
+
+**Location**: `FE/my-react-app/src/App.jsx` (modal component + state management)
+
+**Modal State Variables**:
+- `showCreateIssue`: boolean toggle
+- `createIssueLoading`: fetch loading state
+- `createIssueError`: error message display
+- `newIssueProjectId`: selected project (maps to active project)
+- `newIssueType`: 'task' | 'bug' | 'story' | 'epic' | 'subtask' (default 'task')
+- `newIssuePriority`: 'high' | 'medium' | 'low' (default 'medium')
+- `newIssueTitle`: string (required)
+- `newIssueDescription`: string (optional)
+- `newIssueAssigneeId`: string (optional, selected member ID from `members[]`)
+- `newIssueSprintId`: string (optional, selected sprint/column ID from `boardColumnsMeta[]`)
+- `newIssueLabels`: array (optional, label IDs - future enhancement)
+- `createIssueCreateAnother`: boolean (if true, keep modal open after create for quick multi-issue flow)
+
+**Form Layout** (3-column grid in modal):
+```
+[Project dropdown] [Type dropdown] [Priority pills (H/M/L)]
+[Assignee select] [Sprint select]
+[Title full-width]
+[Description textarea full-width]
+[Create another checkbox]
+[Cancel btn] [Create Issue btn]
+```
+
+**Validation**:
+- Project selection: required, error = `t('issues.create.validationProject')`
+- Title: required, error = `t('issues.create.validationTitle')`
+- Assignee/Sprint/Labels: optional
+
+**API Payload** (to `POST /api/projects/{id}/issues`):
+```javascript
+{
+  title: string,
+  type: string,
+  priority: string,
+  description: string,
+  assignee_id?: string (if selected),
+  sprint_id?: string (if selected),
+  label_ids?: array (if any selected),
+}
+```
+
+**Post-Create Behavior**:
+- If `createIssueCreateAnother` **unchecked** (default):
+  - Close modal
+  - Reset all form fields (via `resetCreateIssueForm()`)
+  - Refetch issues + assigned issues from BE
+- If `createIssueCreateAnother` **checked**:
+  - Keep modal open
+  - Clear only content fields (title, description, assignee, sprint, labels)
+  - Keep project, type, priority for next issue (UX optimization)
+  - Refetch issues in background
+  - Allow rapid creation of multiple related issues
+
+**i18n Keys Added**:
+- `issues.create.assignee` / `assigneePlaceholder`
+- `issues.create.sprint` / `sprintPlaceholder`
+- `issues.create.labels` / `labelsPlaceholder`
+- `issues.create.createAnother`
+
+**CSS Classes**:
+- `.modal-grid`: 3-column layout (Project, Type, Priority in row 1; Assignee, Sprint in row 2)
+- `.modal-span`: full-width fields (Title, Description)
+- `.modal-textarea`: rich description input
+- `.priority-pill`: visual button for High/Medium/Low selection
+- `.inline-checkbox`: custom checkbox styling for "Create another"
+
+**UI Button Location**:
+- Topbar: "New project" button (FiPlus icon, calls `handleOpenCreateProject`)
+- Topbar or Board header: "Create issue" button (calls `handleOpenCreateIssue`)
+
+---
+
+## 10) Board Drag-Drop Flow (UI)
 
 Kanban board state nằm trong `FE/my-react-app/src/App.jsx` (UI-level state):
 
@@ -225,16 +302,22 @@ Kanban board state nằm trong `FE/my-react-app/src/App.jsx` (UI-level state):
 6. Sau drop gọi `PUT /api/issues/{issueKey}/status` để lưu BE; nếu lỗi sẽ rollback status.
 7. Progress tổng = (#issue status=done) / tổng issue; progress theo stage dùng map `todo=25, in_progress=55, in_review=80, done=100` (fallback 25 nếu statusMap lạ).
 
+**Visual Feedback During Drag-Drop**:
+- `.board-column.is-drop-target`: blue border + shadow when dragging over column
+- `.board-card.is-dragging`: opacity 0.35 + scale 0.97 when card being dragged (ghost effect)
+- `.board-card:hover`: translateY(-1px) + enhanced shadow on hover (grab cursor)
+- Card cursor: `grab` on hover, `grabbing` while dragging
+
 Kết quả:
 
 - Có thể kéo card giữa các cột để mô phỏng flow sprint như Figma board.
 - Completion % trên board cập nhật theo trạng thái card sau khi thả.
 
-## 10) Environment Contract (FE)
+## 11) Environment Contract (FE)
 
 - VITE_API_BASE_URL
 
-## 11) Coding Notes For Copilot (FE)
+## 12) Coding Notes For Copilot (FE)
 
 - Khi sửa auth UI, kiểm tra đồng bộ Login, AuthContext, authApi, httpClient và guard trong App.
 - Khi BE đổi contract auth/response, cập nhật parser ở shared/api/httpClient trước để tránh vỡ toàn bộ feature.
