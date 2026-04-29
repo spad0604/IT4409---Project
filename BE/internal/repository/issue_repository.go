@@ -24,4 +24,8 @@ type IssueRepository interface {
 	UpdateStatus(ctx context.Context, id string, status string) (*domain.Issue, error)
 	UpdateAssignee(ctx context.Context, id string, assigneeID *string) (*domain.Issue, error)
 	ListSubtasks(ctx context.Context, parentID string) ([]*domain.Issue, error)
+
+	// ClearSprintID sets sprint_id = NULL for all undone issues in the given sprint.
+	// Used by SprintUsecase.CompleteSprint to move incomplete issues to backlog.
+	ClearSprintID(ctx context.Context, sprintID string) error
 }
