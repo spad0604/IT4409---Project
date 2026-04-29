@@ -52,6 +52,10 @@ func writeDomainError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, domain.ErrNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
+	case errors.Is(err, domain.ErrSprintActive):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, domain.ErrSprintNotActive):
+		writeError(w, http.StatusConflict, err.Error())
 	default:
 		log.Printf("internal error: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal error")

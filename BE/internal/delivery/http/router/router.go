@@ -24,6 +24,8 @@ type Deps struct {
 	LabelHandler      *handler.LabelHandler
 	IssueHandler      *handler.IssueHandler
 	CommentHandler    *handler.CommentHandler
+	SprintHandler     *handler.SprintHandler
+	ActivityHandler   *handler.ActivityHandler
 	AttachmentHandler *handler.AttachmentHandler
 	SearchHandler     *handler.SearchHandler
 	WSHandler         *handler.WSHandler
@@ -82,9 +84,11 @@ func New(deps Deps) http.Handler {
 			deps.BoardHandler.RegisterRoutes(r)
 			deps.LabelHandler.RegisterRoutes(r)
 
-			// Người A: Issues + Comments
+			// Người A: Issues + Comments + Sprints + Activity
 			deps.IssueHandler.RegisterRoutes(r)
 			deps.CommentHandler.RegisterRoutes(r)
+			deps.SprintHandler.RegisterRoutes(r)
+			deps.ActivityHandler.RegisterRoutes(r)
 
 			// Người B: Attachments + Search
 			deps.AttachmentHandler.RegisterRoutes(r)

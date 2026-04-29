@@ -36,14 +36,14 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 
 ## 4) Runtime Wiring (Current State)
 
-API server đang wiring auth + user + project + board + label + issue + comment modules:
+API server đang wiring auth + user + project + board + label + issue + comment + sprint + activity modules:
 
 1. config.Load
 2. db.NewPostgres
-3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewIssueRepo + postgres.NewCommentRepo + postgres.NewPgTxManager
+3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewIssueRepo + postgres.NewCommentRepo + postgres.NewSprintRepo + postgres.NewActivityRepo + postgres.NewPgTxManager
 4. usecase.NewAuthUsecase + usecase.NewUserUsecase
-5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase + usecase.NewIssueUsecase + usecase.NewCommentUsecase
-6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler + handler.NewIssueHandler + handler.NewCommentHandler
+5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase + usecase.NewIssueUsecase(+activityRepo) + usecase.NewCommentUsecase + usecase.NewSprintUsecase + usecase.NewActivityUsecase
+6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler + handler.NewIssueHandler + handler.NewCommentHandler + handler.NewSprintHandler + handler.NewActivityHandler
 7. router.New với tất cả handlers + JWT + CORS middleware
 
 Routes active:
@@ -95,6 +95,15 @@ Routes active:
 - GET /api/issues/{issueKey}/comments (protected, Người A)
 - PATCH /api/comments/{commentID} (protected, Người A)
 - DELETE /api/comments/{commentID} (protected, Người A)
+- POST /api/projects/{projectID}/sprints (protected, Người A)
+- GET /api/projects/{projectID}/sprints (protected, Người A)
+- GET /api/sprints/{sprintID} (protected, Người A)
+- PATCH /api/sprints/{sprintID} (protected, Người A)
+- POST /api/sprints/{sprintID}/start (protected, Người A)
+- POST /api/sprints/{sprintID}/complete (protected, Người A)
+- GET /api/projects/{projectID}/backlog (protected, Người A)
+- GET /api/issues/{issueKey}/activity (protected, Người A)
+- GET /api/projects/{projectID}/activity (protected, Người A)
 - GET /swagger/*
 
 ## 5) Response Contract
@@ -236,6 +245,8 @@ BoardHandler.RegisterRoutes(r)          // protected: /boards/..., /projects/{id
 LabelHandler.RegisterRoutes(r)          // protected: /labels/..., /projects/{id}/labels
 IssueHandler.RegisterRoutes(r)          // protected: /projects/{id}/issues, /issues/{key}/*
 CommentHandler.RegisterRoutes(r)        // protected: /issues/{key}/comments, /comments/{id}
+SprintHandler.RegisterRoutes(r)         // protected: /projects/{id}/sprints, /sprints/{id}/*, /projects/{id}/backlog
+ActivityHandler.RegisterRoutes(r)       // protected: /issues/{key}/activity, /projects/{id}/activity
 ```
 
 router.go dùng r.Group cho protected routes (tránh duplicate mount /api).
@@ -260,9 +271,9 @@ Defined trong domain/errors.go:
 - ErrForbidden → 403
 - ErrInvalidInput → 400
 - ErrInternal → 500
-- ErrSprintActive (cho sprint module sau)
-- ErrSprintNotActive (cho sprint module sau)
-- ErrInvalidStatus (cho issue status transition sau)
+- ErrSprintActive → 409 (another sprint is already active)
+- ErrSprintNotActive → 409 (sprint must be active to complete)
+- ErrInvalidStatus → 400 (invalid status transition)
 
 ## 12) Coding Notes For Copilot (BE)
 
@@ -282,3 +293,9 @@ Defined trong domain/errors.go:
 - Comment edit chỉ cho author; delete cho author hoặc project admin.
 - Issue GET/status/assign/subtasks dùng issueKey (VD: MYPRJ-42) làm path param, không dùng UUID.
 - Filter issues: status, type, priority, assignee (UUID hoặc "me"), sprint (UUID hoặc "backlog"), search (ILIKE title).
+- Sprint: mỗi project chỉ được 1 sprint active. HasActiveSprint kiểm tra trước khi start.
+- CompleteSprint dùng IssueRepo.ClearSprintID(sprintID) để chuyển issues chưa done về backlog (sprint_id = NULL).
+- SprintUsecase inject cả SprintRepo + IssueRepo + ProjectRepo + TxManager.
+- Activity log: bảng activity_log không có cột project_id, query project-level dùng JOIN issues.project_id.
+- IssueUsecase inject ActivityRepository và gọi logActivity() sau mỗi hành động (best-effort, không fail operation).
+- Migrations: 006_sprints (bảng sprints + FK issues.sprint_id), 010_activity_log (bảng activity_log).

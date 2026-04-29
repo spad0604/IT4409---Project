@@ -260,3 +260,11 @@ func (r *IssueRepo) ListSubtasks(ctx context.Context, parentID string) ([]*domai
 	}
 	return issues, rows.Err()
 }
+
+// ClearSprintID sets sprint_id = NULL for all undone issues belonging to the given sprint.
+// Called when completing a sprint to move incomplete issues back to backlog.
+func (r *IssueRepo) ClearSprintID(ctx context.Context, sprintID string) error {
+	const q = `UPDATE public.issues SET sprint_id = NULL WHERE sprint_id = $1 AND status != 'done' AND deleted_at IS NULL`
+	_, err := r.pool.Exec(ctx, q, sprintID)
+	return err
+}

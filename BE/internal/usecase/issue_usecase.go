@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -11,10 +12,11 @@ import (
 )
 
 type IssueUsecase struct {
-	issueRepo   repository.IssueRepository
-	projectRepo repository.ProjectRepository
-	txManager   repository.TxManager
-	perm        *PermissionChecker
+	issueRepo    repository.IssueRepository
+	projectRepo  repository.ProjectRepository
+	txManager    repository.TxManager
+	perm         *PermissionChecker
+	activityRepo repository.ActivityRepository
 }
 
 func NewIssueUsecase(
@@ -22,12 +24,32 @@ func NewIssueUsecase(
 	projectRepo repository.ProjectRepository,
 	txManager repository.TxManager,
 	perm *PermissionChecker,
+	activityRepo repository.ActivityRepository,
 ) *IssueUsecase {
 	return &IssueUsecase{
-		issueRepo:   issueRepo,
-		projectRepo: projectRepo,
-		txManager:   txManager,
-		perm:        perm,
+		issueRepo:    issueRepo,
+		projectRepo:  projectRepo,
+		txManager:    txManager,
+		perm:         perm,
+		activityRepo: activityRepo,
+	}
+}
+
+// logActivity is a best-effort helper — failure to log does not fail the operation.
+func (uc *IssueUsecase) logActivity(ctx context.Context, issueID, userID, action, field, oldVal, newVal string) {
+	if uc.activityRepo == nil {
+		return
+	}
+	err := uc.activityRepo.Create(ctx, &domain.Activity{
+		IssueID:  issueID,
+		UserID:   userID,
+		Action:   action,
+		Field:    field,
+		OldValue: oldVal,
+		NewValue: newVal,
+	})
+	if err != nil {
+		log.Printf("[WARN] failed to log activity: %v", err)
 	}
 }
 
@@ -111,6 +133,9 @@ func (uc *IssueUsecase) CreateIssue(ctx context.Context, userID, projectID strin
 	if err != nil {
 		return nil, err
 	}
+
+	uc.logActivity(ctx, created.ID, userID, domain.ActivityCreated, "", "", "")
+
 	return created, nil
 }
 
@@ -184,7 +209,13 @@ func (uc *IssueUsecase) DeleteIssue(ctx context.Context, userID, issueKey string
 		return fmt.Errorf("%w: only reporter or admin can delete", domain.ErrForbidden)
 	}
 
-	return uc.issueRepo.SoftDelete(ctx, issue.ID)
+	if err := uc.issueRepo.SoftDelete(ctx, issue.ID); err != nil {
+		return err
+	}
+
+	uc.logActivity(ctx, issue.ID, userID, domain.ActivityDeleted, "", "", "")
+
+	return nil
 }
 
 // ─── Change Status ──────────────────────────────────────────────────────────
@@ -202,7 +233,15 @@ func (uc *IssueUsecase) ChangeStatus(ctx context.Context, userID, issueKey, newS
 		return nil, err
 	}
 
-	return uc.issueRepo.UpdateStatus(ctx, issue.ID, newStatus)
+	oldStatus := issue.Status
+	updated, err := uc.issueRepo.UpdateStatus(ctx, issue.ID, newStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	uc.logActivity(ctx, issue.ID, userID, domain.ActivityStatusChanged, "status", oldStatus, newStatus)
+
+	return updated, nil
 }
 
 // ─── Assign Issue ───────────────────────────────────────────────────────────
@@ -216,7 +255,23 @@ func (uc *IssueUsecase) AssignIssue(ctx context.Context, userID, issueKey string
 		return nil, err
 	}
 
-	return uc.issueRepo.UpdateAssignee(ctx, issue.ID, assigneeID)
+	oldAssignee := ""
+	if issue.AssigneeID != nil {
+		oldAssignee = *issue.AssigneeID
+	}
+	newAssignee := ""
+	if assigneeID != nil {
+		newAssignee = *assigneeID
+	}
+
+	updated, err := uc.issueRepo.UpdateAssignee(ctx, issue.ID, assigneeID)
+	if err != nil {
+		return nil, err
+	}
+
+	uc.logActivity(ctx, issue.ID, userID, domain.ActivityAssigned, "assignee", oldAssignee, newAssignee)
+
+	return updated, nil
 }
 
 // ─── List Subtasks ──────────────────────────────────────────────────────────
