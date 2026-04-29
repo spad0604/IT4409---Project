@@ -57,6 +57,8 @@ func main() {
 	labelRepo := postgres.NewLabelRepo(pg.Pool)
 	issueRepo := postgres.NewIssueRepo(pg.Pool)
 	commentRepo := postgres.NewCommentRepo(pg.Pool)
+	sprintRepo := postgres.NewSprintRepo(pg.Pool)
+	activityRepo := postgres.NewActivityRepo(pg.Pool)
 	txManager := postgres.NewPgTxManager(pg.Pool)
 
 	// ── Usecases ────────────────────────────────────────────────
@@ -66,8 +68,10 @@ func main() {
 	projectUC := usecase.NewProjectUsecase(projectRepo, txManager, permChecker)
 	boardUC := usecase.NewBoardUsecase(boardRepo, projectRepo, txManager, permChecker)
 	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
-	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker)
+	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker, activityRepo)
 	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker)
+	sprintUC := usecase.NewSprintUsecase(sprintRepo, issueRepo, projectRepo, txManager, permChecker)
+	activityUC := usecase.NewActivityUsecase(activityRepo, issueRepo, permChecker)
 
 	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
@@ -77,16 +81,20 @@ func main() {
 	labelHandler := handler.NewLabelHandler(labelUC)
 	issueHandler := handler.NewIssueHandler(issueUC)
 	commentHandler := handler.NewCommentHandler(commentUC)
+	sprintHandler := handler.NewSprintHandler(sprintUC)
+	activityHandler := handler.NewActivityHandler(activityUC)
 
 	h := router.New(router.Deps{
-		AuthHandler:    authHandler,
-		UserHandler:    userHandler,
-		ProjectHandler: projectHandler,
-		BoardHandler:   boardHandler,
-		LabelHandler:   labelHandler,
-		IssueHandler:   issueHandler,
-		CommentHandler: commentHandler,
-		JWTAuth:        middleware.JWTAuth{JWT: jwtSvc},
+		AuthHandler:     authHandler,
+		UserHandler:     userHandler,
+		ProjectHandler:  projectHandler,
+		BoardHandler:    boardHandler,
+		LabelHandler:    labelHandler,
+		IssueHandler:    issueHandler,
+		CommentHandler:  commentHandler,
+		SprintHandler:   sprintHandler,
+		ActivityHandler: activityHandler,
+		JWTAuth:         middleware.JWTAuth{JWT: jwtSvc},
 	})
 
 	srv := &http.Server{

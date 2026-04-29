@@ -17,14 +17,16 @@ import (
 )
 
 type Deps struct {
-	AuthHandler    *handler.AuthHandler
-	UserHandler    *handler.UserHandler
-	ProjectHandler *handler.ProjectHandler
-	BoardHandler   *handler.BoardHandler
-	LabelHandler   *handler.LabelHandler
-	IssueHandler   *handler.IssueHandler
-	CommentHandler *handler.CommentHandler
-	JWTAuth        middleware.JWTAuth
+	AuthHandler     *handler.AuthHandler
+	UserHandler     *handler.UserHandler
+	ProjectHandler  *handler.ProjectHandler
+	BoardHandler    *handler.BoardHandler
+	LabelHandler    *handler.LabelHandler
+	IssueHandler    *handler.IssueHandler
+	CommentHandler  *handler.CommentHandler
+	SprintHandler   *handler.SprintHandler
+	ActivityHandler *handler.ActivityHandler
+	JWTAuth         middleware.JWTAuth
 }
 
 func New(deps Deps) http.Handler {
@@ -79,9 +81,11 @@ func New(deps Deps) http.Handler {
 			deps.BoardHandler.RegisterRoutes(r)
 			deps.LabelHandler.RegisterRoutes(r)
 
-			// Người A: Issues + Comments
+			// Người A: Issues + Comments + Sprints + Activity
 			deps.IssueHandler.RegisterRoutes(r)
 			deps.CommentHandler.RegisterRoutes(r)
+			deps.SprintHandler.RegisterRoutes(r)
+			deps.ActivityHandler.RegisterRoutes(r)
 		})
 	})
 
