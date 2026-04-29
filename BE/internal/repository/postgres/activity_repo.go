@@ -52,8 +52,9 @@ func (r *ActivityRepo) ListByProject(ctx context.Context, projectID string, limi
 		return nil, 0, err
 	}
 
-	// Data via JOIN
-	q := `SELECT a.` + activityColumns + `
+	// Data via JOIN — use fully qualified column names to avoid ambiguity
+	q := `SELECT a.id, a.issue_id, a.user_id, a.action,
+		COALESCE(a.field, ''), COALESCE(a.old_value, ''), COALESCE(a.new_value, ''), a.created_at
 		FROM public.activity_log a
 		JOIN public.issues i ON a.issue_id = i.id
 		WHERE i.project_id = $1
