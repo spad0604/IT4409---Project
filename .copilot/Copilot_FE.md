@@ -24,9 +24,18 @@ FE đang xây một web kiểu Jira để quản lý flow công việc:
 - FE/my-react-app/src/app/providers/AppProviders.jsx: app-level providers
 - FE/my-react-app/src/features/auth/api/authApi.js: gọi API auth
 - FE/my-react-app/src/features/projects/api/projectApi.js: gọi API project/member
+- FE/my-react-app/src/features/boards/api/boardApi.js: gọi API board/columns
+- FE/my-react-app/src/features/issues/api/issueApi.js: gọi API issue + status/assign/subtasks
+- FE/my-react-app/src/features/comments/api/commentApi.js: gọi API comments
+- FE/my-react-app/src/features/labels/api/labelApi.js: gọi API labels + attach/detach
+- FE/my-react-app/src/features/users/api/userApi.js: gọi API users/me + search users
+- FE/my-react-app/src/features/attachments/api/attachmentApi.js: gọi API attachments (upload multipart + download blob)
+- FE/my-react-app/src/features/search/api/searchApi.js: gọi API global search
+- FE/my-react-app/src/features/system/api/healthApi.js: gọi API health
 - FE/my-react-app/src/features/auth/model/AuthContext.jsx: auth state/actions
 - FE/my-react-app/src/features/auth/pages/Login.jsx: login UI
 - FE/my-react-app/src/shared/api/httpClient.js: fetch wrapper + error normalization
+- FE/my-react-app/src/shared/ws/wsClient.js: connect WebSocket `/api/ws?token=...`
 - FE/my-react-app/src/shared/storage/token.js: localStorage token
 - FE/my-react-app/src/shared/config/env.js: đọc VITE_API_BASE_URL
 - FE/my-react-app/src/shared/i18n: language resources + persistence
@@ -46,10 +55,12 @@ Guard behavior:
 
 UI navigation behavior trong /home:
 
-- Top tabs + sidebar links đã có icon system đồng bộ theo react-icons/fi (không còn placeholder icon).
-- Chọn `Overview` => dashboard metrics/recent projects.
-- Chọn `Board` (hoặc tab `Projects`) => mở Kanban board có kéo-thả.
-- Các mục sidebar còn lại hiển thị placeholder panel (để mở rộng module sau).
+- Top tabs + sidebar links đã có icon system đồng bộ theo react-icons/fi.
+- Chọn `Overview` (tab `Dashboard`) => dashboard metrics + recent projects + assigned-to-me.
+- Chọn `Board` (tab `Projects`) => Kanban board (load board detail + columns từ BE).
+- Chọn tab `Backlog` => danh sách issue (ưu tiên cao lên trước) + dùng chung header search.
+- Chọn tab `Team` => members list + invite (search user + add member).
+- Các mục sidebar khác vẫn hiển thị placeholder panel (để mở rộng module sau).
 
 ## 5) Auth State Data Flow
 
@@ -60,6 +71,7 @@ AuthContext cung cấp:
 - signIn
 - signUp
 - signOut
+- serverSignOut
 - refreshMe
 
 Luồng signIn:
@@ -76,6 +88,12 @@ Luồng signOut:
 
 1. Xóa token trong localStorage
 2. Clear auth state
+3. Guard tự đẩy về /login
+
+Luồng serverSignOut (UI đang dùng):
+
+1. Gọi BE `POST /api/auth/logout` (best-effort)
+2. Dù BE có lỗi vẫn xóa token + clear auth state
 3. Guard tự đẩy về /login
 
 Lưu ý hiện tại:
@@ -102,23 +120,91 @@ Implication:
 
 ## 7) API Coverage In FE
 
-Auth APIs (đang dùng runtime chính):
+Nguồn đối chiếu: `BE/docs/swagger.yaml`.
 
-- POST /api/auth/register
-- POST /api/auth/login
-- GET /api/me
+Ghi chú trạng thái:
 
-Project APIs (đã ghép ở FE API layer, chờ BE mount vào cmd/api router):
+- ✅ Wired UI: đang được gọi ở runtime (chủ yếu trong `FE/my-react-app/src/App.jsx`).
+- 🧩 Wrapper-only: đã có FE API module nhưng UI chưa dùng.
+- ❌ Missing: swagger có nhưng FE chưa có wrapper (hoặc cần nâng cấp httpClient).
 
-- POST /api/projects
-- GET /api/projects
-- GET /api/projects/{id}
-- PATCH /api/projects/{id}
-- DELETE /api/projects/{id}
-- GET /api/projects/{id}/members
-- POST /api/projects/{id}/members
-- DELETE /api/projects/{id}/members/{userID}
-- PUT /api/projects/{id}/members/{userID}
+### Auth (`src/features/auth/api/authApi.js`)
+
+- ✅ `POST /api/auth/register`
+- ✅ `POST /api/auth/login`
+- ✅ `POST /api/auth/logout`
+- 🧩 `POST /api/auth/change-password`
+- 🧩 `POST /api/auth/refresh`
+- ✅ `GET /api/me` (router BE giữ để tương thích ngược; swagger chuẩn là `/api/users/me`).
+
+### Users (`src/features/users/api/userApi.js`)
+
+- 🧩 `GET /api/users/me`
+- 🧩 `PATCH /api/users/me`
+- ✅ `GET /api/users/{userID}` (load profile/email để show assignee/members)
+- ✅ `GET /api/users?search=...` (invite/search)
+
+### Projects/Members (`src/features/projects/api/projectApi.js`)
+
+- ✅ `POST /api/projects`
+- ✅ `GET /api/projects`
+- 🧩 `GET /api/projects/{projectID}`
+- 🧩 `PATCH /api/projects/{projectID}`
+- 🧩 `DELETE /api/projects/{projectID}`
+- ✅ `GET /api/projects/{projectID}/members`
+- ✅ `POST /api/projects/{projectID}/members`
+- ✅ `DELETE /api/projects/{projectID}/members/{userID}`
+- 🧩 `PUT /api/projects/{projectID}/members/{userID}` (đổi role)
+
+### Boards/Columns (`src/features/boards/api/boardApi.js`)
+
+- ✅ `POST /api/projects/{projectID}/boards`
+- ✅ `GET /api/projects/{projectID}/boards`
+- ✅ `GET /api/boards/{boardID}`
+- 🧩 `PATCH /api/boards/{boardID}`
+- 🧩 `DELETE /api/boards/{boardID}`
+- 🧩 `POST /api/boards/{boardID}/columns`
+- 🧩 `PATCH /api/boards/{boardID}/columns/{columnID}`
+- 🧩 `DELETE /api/boards/{boardID}/columns/{columnID}`
+- 🧩 `PUT /api/boards/{boardID}/columns/reorder`
+
+### Issues (`src/features/issues/api/issueApi.js`)
+
+- ✅ `POST /api/projects/{projectID}/issues`
+- ✅ `GET /api/projects/{projectID}/issues` (supports `search`, `page`, `per_page`, `assignee=me`...)
+- 🧩 `GET /api/issues/{issueKey}`
+- 🧩 `PATCH /api/issues/{issueKey}`
+- 🧩 `DELETE /api/issues/{issueKey}`
+- ✅ `PUT /api/issues/{issueKey}/status` (drag-drop status change; optimistic update + rollback)
+- 🧩 `PUT /api/issues/{issueKey}/assign`
+- 🧩 `GET /api/issues/{issueKey}/subtasks`
+
+### Comments (`src/features/comments/api/commentApi.js`)
+
+- 🧩 `POST /api/issues/{issueKey}/comments`
+- 🧩 `GET /api/issues/{issueKey}/comments`
+- 🧩 `PATCH /api/comments/{commentID}`
+- 🧩 `DELETE /api/comments/{commentID}`
+
+### Labels (`src/features/labels/api/labelApi.js`)
+
+- 🧩 `POST /api/projects/{projectID}/labels`
+- 🧩 `GET /api/projects/{projectID}/labels`
+- 🧩 `PATCH /api/labels/{labelID}`
+- 🧩 `DELETE /api/labels/{labelID}`
+- 🧩 `POST /api/issues/{issueKey}/labels`
+- 🧩 `DELETE /api/issues/{issueKey}/labels/{labelID}`
+
+### Chưa cover theo swagger
+
+- 🧩 Attachments: `/api/issues/{issueKey}/attachments`, `/api/attachments/{attachmentID}`
+	- FE wrapper: `FE/my-react-app/src/features/attachments/api/attachmentApi.js` (upload dùng `FormData`, download trả về Blob).
+- 🧩 Search: `GET /api/search`
+	- FE wrapper: `FE/my-react-app/src/features/search/api/searchApi.js`.
+- 🧩 WebSocket: `/api/ws`
+	- FE wrapper: `FE/my-react-app/src/shared/ws/wsClient.js` (kết nối tối giản theo swagger: query `token`).
+- 🧩 Health: `/api/health`
+	- FE wrapper: `FE/my-react-app/src/features/system/api/healthApi.js`.
 
 ## 8) i18n Flow
 
@@ -127,29 +213,114 @@ Project APIs (đã ghép ở FE API layer, chờ BE mount vào cmd/api router):
 - Fallback language: en
 - Khi đổi ngôn ngữ sẽ tự persist vào localStorage
 
-## 9) Board Drag-Drop Flow (UI)
+## 9) Create Issue Modal Workflow (Enhanced)
 
-Kanban board state nằm trong `src/App.jsx` (UI-level state):
+**Location**: `FE/my-react-app/src/App.jsx` (modal component + state management)
 
-1. State `boardColumns` chứa lanes: `todo -> progress -> review -> done`.
-2. Card được kéo bằng HTML Drag & Drop (`draggable`, `onDragStart`, `onDragEnd`).
-3. Lane nhận thả qua `onDragOver` + `onDrop`.
-4. Khi drop, card bị remove khỏi lane cũ và prepend vào lane mới.
-5. Progress tổng được tính từ số card ở lane `done` / tổng card.
-6. Mỗi card cũng có progress bar theo stage (`todo=25`, `progress=55`, `review=80`, `done=100`).
+**Modal State Variables**:
+- `showCreateIssue`: boolean toggle
+- `createIssueLoading`: fetch loading state
+- `createIssueError`: error message display
+- `newIssueProjectId`: selected project (maps to active project)
+- `newIssueType`: 'task' | 'bug' | 'story' | 'epic' | 'subtask' (default 'task')
+- `newIssuePriority`: 'high' | 'medium' | 'low' (default 'medium')
+- `newIssueTitle`: string (required)
+- `newIssueDescription`: string (optional)
+- `newIssueAssigneeId`: string (optional, selected member ID from `members[]`)
+- `newIssueSprintId`: string (optional, selected sprint/column ID from `boardColumnsMeta[]`)
+- `newIssueLabels`: array (optional, label IDs - future enhancement)
+- `createIssueCreateAnother`: boolean (if true, keep modal open after create for quick multi-issue flow)
+
+**Form Layout** (3-column grid in modal):
+```
+[Project dropdown] [Type dropdown] [Priority pills (H/M/L)]
+[Assignee select] [Sprint select]
+[Title full-width]
+[Description textarea full-width]
+[Create another checkbox]
+[Cancel btn] [Create Issue btn]
+```
+
+**Validation**:
+- Project selection: required, error = `t('issues.create.validationProject')`
+- Title: required, error = `t('issues.create.validationTitle')`
+- Assignee/Sprint/Labels: optional
+
+**API Payload** (to `POST /api/projects/{id}/issues`):
+```javascript
+{
+  title: string,
+  type: string,
+  priority: string,
+  description: string,
+  assignee_id?: string (if selected),
+  sprint_id?: string (if selected),
+  label_ids?: array (if any selected),
+}
+```
+
+**Post-Create Behavior**:
+- If `createIssueCreateAnother` **unchecked** (default):
+  - Close modal
+  - Reset all form fields (via `resetCreateIssueForm()`)
+  - Refetch issues + assigned issues from BE
+- If `createIssueCreateAnother` **checked**:
+  - Keep modal open
+  - Clear only content fields (title, description, assignee, sprint, labels)
+  - Keep project, type, priority for next issue (UX optimization)
+  - Refetch issues in background
+  - Allow rapid creation of multiple related issues
+
+**i18n Keys Added**:
+- `issues.create.assignee` / `assigneePlaceholder`
+- `issues.create.sprint` / `sprintPlaceholder`
+- `issues.create.labels` / `labelsPlaceholder`
+- `issues.create.createAnother`
+
+**CSS Classes**:
+- `.modal-grid`: 3-column layout (Project, Type, Priority in row 1; Assignee, Sprint in row 2)
+- `.modal-span`: full-width fields (Title, Description)
+- `.modal-textarea`: rich description input
+- `.priority-pill`: visual button for High/Medium/Low selection
+- `.inline-checkbox`: custom checkbox styling for "Create another"
+
+**UI Button Location**:
+- Topbar: "New project" button (FiPlus icon, calls `handleOpenCreateProject`)
+- Topbar or Board header: "Create issue" button (calls `handleOpenCreateIssue`)
+
+---
+
+## 10) Board Drag-Drop Flow (UI)
+
+Kanban board state nằm trong `FE/my-react-app/src/App.jsx` (UI-level state):
+
+1. Project list load từ `GET /api/projects`, active project persist ở localStorage (`it4409_active_project_id`).
+2. Boards list theo project: `GET /api/projects/{id}/boards`, chọn default/first board.
+3. Board detail load: `GET /api/boards/{boardID}` => nhận `columns[]` có `statusMap` (`todo|in_progress|in_review|done`).
+4. Issues list load: `GET /api/projects/{id}/issues?search=...` và được group theo `status` để render lên từng cột.
+5. Drag-drop dùng HTML Drag & Drop; khi drop sẽ optimistic update issue status trong state.
+6. Sau drop gọi `PUT /api/issues/{issueKey}/status` để lưu BE; nếu lỗi sẽ rollback status.
+7. Progress tổng = (#issue status=done) / tổng issue; progress theo stage dùng map `todo=25, in_progress=55, in_review=80, done=100` (fallback 25 nếu statusMap lạ).
+
+**Visual Feedback During Drag-Drop**:
+- `.board-column.is-drop-target`: blue border + shadow when dragging over column
+- `.board-card.is-dragging`: opacity 0.35 + scale 0.97 when card being dragged (ghost effect)
+- `.board-card:hover`: translateY(-1px) + enhanced shadow on hover (grab cursor)
+- Card cursor: `grab` on hover, `grabbing` while dragging
 
 Kết quả:
 
 - Có thể kéo card giữa các cột để mô phỏng flow sprint như Figma board.
 - Completion % trên board cập nhật theo trạng thái card sau khi thả.
 
-## 10) Environment Contract (FE)
+## 11) Environment Contract (FE)
 
 - VITE_API_BASE_URL
 
-## 11) Coding Notes For Copilot (FE)
+## 12) Coding Notes For Copilot (FE)
 
 - Khi sửa auth UI, kiểm tra đồng bộ Login, AuthContext, authApi, httpClient và guard trong App.
 - Khi BE đổi contract auth/response, cập nhật parser ở shared/api/httpClient trước để tránh vỡ toàn bộ feature.
 - Với định hướng Jira-like workflow, nên giữ cấu trúc mở rộng theo feature module (issues, boards, sprints, members).
 - Với board kéo-thả hiện tại, nếu ghép BE thật thì map thao tác drop sang API đổi trạng thái issue và có optimistic update + rollback khi lỗi.
+- Các endpoint BE có thể trả envelope hoặc raw JSON (projects/boards/labels có thể raw); `httpClient` đã hỗ trợ cả 2.

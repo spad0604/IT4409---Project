@@ -17,16 +17,19 @@ import (
 )
 
 type Deps struct {
-	AuthHandler     *handler.AuthHandler
-	UserHandler     *handler.UserHandler
-	ProjectHandler  *handler.ProjectHandler
-	BoardHandler    *handler.BoardHandler
-	LabelHandler    *handler.LabelHandler
-	IssueHandler    *handler.IssueHandler
-	CommentHandler  *handler.CommentHandler
-	SprintHandler   *handler.SprintHandler
-	ActivityHandler *handler.ActivityHandler
-	JWTAuth         middleware.JWTAuth
+	AuthHandler       *handler.AuthHandler
+	UserHandler       *handler.UserHandler
+	ProjectHandler    *handler.ProjectHandler
+	BoardHandler      *handler.BoardHandler
+	LabelHandler      *handler.LabelHandler
+	IssueHandler      *handler.IssueHandler
+	CommentHandler    *handler.CommentHandler
+	SprintHandler     *handler.SprintHandler
+	ActivityHandler   *handler.ActivityHandler
+	AttachmentHandler *handler.AttachmentHandler
+	SearchHandler     *handler.SearchHandler
+	WSHandler         *handler.WSHandler
+	JWTAuth           middleware.JWTAuth
 }
 
 func New(deps Deps) http.Handler {
@@ -86,8 +89,15 @@ func New(deps Deps) http.Handler {
 			deps.CommentHandler.RegisterRoutes(r)
 			deps.SprintHandler.RegisterRoutes(r)
 			deps.ActivityHandler.RegisterRoutes(r)
+
+			// Người B: Attachments + Search
+			deps.AttachmentHandler.RegisterRoutes(r)
+			deps.SearchHandler.RegisterRoutes(r)
 		})
 	})
+
+	// WebSocket (ngoài /api vì không dùng JWT middleware, xác thực qua query param)
+	deps.WSHandler.RegisterRoutes(r)
 
 	return r
 }

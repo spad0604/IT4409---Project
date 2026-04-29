@@ -24,7 +24,9 @@ import (
 	"it4409/internal/delivery/http/middleware"
 	"it4409/internal/delivery/http/router"
 	"it4409/internal/infra/db"
+	"it4409/internal/infra/filestore"
 	"it4409/internal/pkg/jwtutil"
+	"it4409/internal/pkg/ws"
 	"it4409/internal/repository/postgres"
 	"it4409/internal/usecase"
 
@@ -59,7 +61,17 @@ func main() {
 	commentRepo := postgres.NewCommentRepo(pg.Pool)
 	sprintRepo := postgres.NewSprintRepo(pg.Pool)
 	activityRepo := postgres.NewActivityRepo(pg.Pool)
+	attRepo := postgres.NewAttachmentRepo(pg.Pool)
 	txManager := postgres.NewPgTxManager(pg.Pool)
+
+	// ── Filestore ───────────────────────────────────────────────
+	fs, err := filestore.New("uploads")
+	if err != nil {
+		log.Fatalf("filestore: %v", err)
+	}
+
+	// ── WebSocket Hub ───────────────────────────────────────────
+	wsHub := ws.NewHub()
 
 	// ── Usecases ────────────────────────────────────────────────
 	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
@@ -72,6 +84,8 @@ func main() {
 	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker)
 	sprintUC := usecase.NewSprintUsecase(sprintRepo, issueRepo, projectRepo, txManager, permChecker)
 	activityUC := usecase.NewActivityUsecase(activityRepo, issueRepo, permChecker)
+	attUC := usecase.NewAttachmentUsecase(attRepo, issueRepo, permChecker, fs)
+	searchUC := usecase.NewSearchUsecase(issueRepo, projectRepo)
 
 	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
@@ -83,18 +97,24 @@ func main() {
 	commentHandler := handler.NewCommentHandler(commentUC)
 	sprintHandler := handler.NewSprintHandler(sprintUC)
 	activityHandler := handler.NewActivityHandler(activityUC)
+	attHandler := handler.NewAttachmentHandler(attUC)
+	searchHandler := handler.NewSearchHandler(searchUC)
+	wsHandler := handler.NewWSHandler(wsHub, jwtSvc)
 
 	h := router.New(router.Deps{
-		AuthHandler:     authHandler,
-		UserHandler:     userHandler,
-		ProjectHandler:  projectHandler,
-		BoardHandler:    boardHandler,
-		LabelHandler:    labelHandler,
-		IssueHandler:    issueHandler,
-		CommentHandler:  commentHandler,
-		SprintHandler:   sprintHandler,
-		ActivityHandler: activityHandler,
-		JWTAuth:         middleware.JWTAuth{JWT: jwtSvc},
+		AuthHandler:       authHandler,
+		UserHandler:       userHandler,
+		ProjectHandler:    projectHandler,
+		BoardHandler:      boardHandler,
+		LabelHandler:      labelHandler,
+		IssueHandler:      issueHandler,
+		CommentHandler:    commentHandler,
+		SprintHandler:     sprintHandler,
+		ActivityHandler:   activityHandler,
+		AttachmentHandler: attHandler,
+		SearchHandler:     searchHandler,
+		WSHandler:         wsHandler,
+		JWTAuth:           middleware.JWTAuth{JWT: jwtSvc},
 	})
 
 	srv := &http.Server{
