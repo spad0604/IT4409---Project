@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { StatsOverview } from './shared/components/stats-overview/StatsOverview.jsx'
@@ -7,10 +7,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
 import { useAuth } from './features/auth/model/AuthContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
+import { useKanbanState } from './features/kanban/hooks'
+import { OverviewPanel, BoardPanel } from './features/kanban/components'
 import * as projectApi from './features/projects/api/projectApi'
 import * as boardApi from './features/boards/api/boardApi'
 import * as issueApi from './features/issues/api/issueApi'
 import * as userApi from './features/users/api/userApi'
+import * as sprintApi from './features/sprints/api/sprintApi'
+import * as activityApi from './features/activity/api/activityApi'
+import { WsClient } from './shared/ws/wsClient'
 import {
   FiArchive,
   FiBarChart2,
@@ -118,63 +123,128 @@ function formatShortDate(value, locale) {
 function Kanban() {
   const { t, i18n } = useTranslation()
   const { user, refreshMe, serverSignOut } = useAuth()
-  const [activeTopTab, setActiveTopTab] = useState('dashboard')
-  const [activeSideLink, setActiveSideLink] = useState('overview')
-
-  const [activeIssueKey, setActiveIssueKey] = useState('')
-  const [dragState, setDragState] = useState(null)
-  const [dropColumnID, setDropColumnID] = useState('')
-
-  const [headerSearch, setHeaderSearch] = useState('')
-
-  const [projects, setProjects] = useState([])
-  const [projectsLoading, setProjectsLoading] = useState(false)
-  const [projectsError, setProjectsError] = useState('')
-
-  const [showCreateProject, setShowCreateProject] = useState(false)
-  const [createProjectLoading, setCreateProjectLoading] = useState(false)
-  const [createProjectError, setCreateProjectError] = useState('')
-  const [newProjectName, setNewProjectName] = useState('')
-  const [newProjectKey, setNewProjectKey] = useState('')
-  const [newProjectDescription, setNewProjectDescription] = useState('')
-  const [newProjectType, setNewProjectType] = useState('kanban')
-
-  const [activeProjectId, setActiveProjectId] = useState('')
-  const [activeBoardId, setActiveBoardId] = useState('')
-  const [boardDetail, setBoardDetail] = useState(null)
-  const [boardColumnsMeta, setBoardColumnsMeta] = useState([])
-
-  const [issuesData, setIssuesData] = useState({ items: [], total: 0, page: 0, perPage: 20 })
-  const [issuesLoading, setIssuesLoading] = useState(false)
-  const [issuesError, setIssuesError] = useState('')
-
-  const [assignedIssues, setAssignedIssues] = useState([])
-
-  const [members, setMembers] = useState([])
-  const [membersLoading, setMembersLoading] = useState(false)
-  const [membersError, setMembersError] = useState('')
-
-  const [inviteSearch, setInviteSearch] = useState('')
-  const [inviteRole, setInviteRole] = useState('member')
-  const [inviteResults, setInviteResults] = useState([])
-  const [inviteLoading, setInviteLoading] = useState(false)
-  const [inviteError, setInviteError] = useState('')
-
-  const [showCreateIssue, setShowCreateIssue] = useState(false)
-  const [createIssueLoading, setCreateIssueLoading] = useState(false)
-  const [createIssueError, setCreateIssueError] = useState('')
-  const [newIssueProjectId, setNewIssueProjectId] = useState('')
-  const [newIssueType, setNewIssueType] = useState('task')
-  const [newIssuePriority, setNewIssuePriority] = useState('medium')
-  const [newIssueTitle, setNewIssueTitle] = useState('')
-  const [newIssueDescription, setNewIssueDescription] = useState('')
-  const [newIssueAssigneeId, setNewIssueAssigneeId] = useState('')
-  const [newIssueSprintId, setNewIssueSprintId] = useState('')
-  const [newIssueLabels, setNewIssueLabels] = useState([])
-  const [createIssueCreateAnother, setCreateIssueCreateAnother] = useState(false)
-
-  const [usersById, setUsersById] = useState({})
-  const userFetchInFlight = useRef(new Map())
+  const {
+    activeTopTab,
+    setActiveTopTab,
+    activeSideLink,
+    setActiveSideLink,
+    activeIssueKey,
+    setActiveIssueKey,
+    dragState,
+    setDragState,
+    dropColumnID,
+    setDropColumnID,
+    headerSearch,
+    setHeaderSearch,
+    projects,
+    setProjects,
+    projectsLoading,
+    setProjectsLoading,
+    projectsError,
+    setProjectsError,
+    showCreateProject,
+    setShowCreateProject,
+    createProjectLoading,
+    setCreateProjectLoading,
+    createProjectError,
+    setCreateProjectError,
+    newProjectName,
+    setNewProjectName,
+    newProjectKey,
+    setNewProjectKey,
+    newProjectDescription,
+    setNewProjectDescription,
+    newProjectType,
+    setNewProjectType,
+    activeProjectId,
+    setActiveProjectId,
+    activeBoardId,
+    setActiveBoardId,
+    boardDetail,
+    setBoardDetail,
+    boardColumnsMeta,
+    setBoardColumnsMeta,
+    issuesData,
+    setIssuesData,
+    issuesLoading,
+    setIssuesLoading,
+    issuesError,
+    setIssuesError,
+    assignedIssues,
+    setAssignedIssues,
+    members,
+    setMembers,
+    membersLoading,
+    setMembersLoading,
+    membersError,
+    setMembersError,
+    inviteSearch,
+    setInviteSearch,
+    inviteRole,
+    setInviteRole,
+    inviteResults,
+    setInviteResults,
+    inviteLoading,
+    setInviteLoading,
+    inviteError,
+    setInviteError,
+    showCreateIssue,
+    setShowCreateIssue,
+    createIssueLoading,
+    setCreateIssueLoading,
+    createIssueError,
+    setCreateIssueError,
+    newIssueProjectId,
+    setNewIssueProjectId,
+    newIssueType,
+    setNewIssueType,
+    newIssuePriority,
+    setNewIssuePriority,
+    newIssueTitle,
+    setNewIssueTitle,
+    newIssueDescription,
+    setNewIssueDescription,
+    newIssueAssigneeId,
+    setNewIssueAssigneeId,
+    newIssueSprintId,
+    setNewIssueSprintId,
+    newIssueLabels,
+    setNewIssueLabels,
+    createIssueCreateAnother,
+    setCreateIssueCreateAnother,
+    sprints,
+    setSprints,
+    sprintsLoading,
+    setSprintsLoading,
+    sprintsError,
+    setSprintsError,
+    activeSprint,
+    setActiveSprint,
+    showCreateSprint,
+    setShowCreateSprint,
+    createSprintLoading,
+    setCreateSprintLoading,
+    createSprintError,
+    setCreateSprintError,
+    newSprintName,
+    setNewSprintName,
+    newSprintDescription,
+    setNewSprintDescription,
+    backlogIssues,
+    setBacklogIssues,
+    backlogLoading,
+    setBacklogLoading,
+    activityLog,
+    setActivityLog,
+    activityLoading,
+    setActivityLoading,
+    activityError,
+    setActivityError,
+    wsClientRef,
+    usersById,
+    setUsersById,
+    userFetchInFlight,
+  } = useKanbanState()
 
   const activeLang = useMemo(() => {
     const current = i18n.resolvedLanguage || i18n.language || 'vi'
@@ -408,6 +478,114 @@ function Kanban() {
     refreshMe().catch(() => {})
   }, [refreshMe])
 
+  // ─── Sprint Handlers ───────────────────────────────────────────────────────
+
+  const refetchSprints = useCallback(async (projectId) => {
+    if (!projectId) return
+    setSprintsLoading(true)
+    setSprintsError('')
+    try {
+      const data = await sprintApi.listSprints(projectId)
+      setSprints(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setSprintsError(err?.message || t('common.actionFailed'))
+    } finally {
+      setSprintsLoading(false)
+    }
+  }, [t])
+
+  const refetchBacklog = useCallback(async (projectId) => {
+    if (!projectId) return
+    setBacklogLoading(true)
+    try {
+      const data = await sprintApi.getBacklog(projectId, { perPage: 50 })
+      setBacklogIssues(Array.isArray(data?.items) ? data.items : [])
+    } catch {
+      // ignore
+    } finally {
+      setBacklogLoading(false)
+    }
+  }, [])
+
+  const handleOpenCreateSprint = useCallback(() => {
+    setShowCreateSprint(true)
+    setCreateSprintError('')
+  }, [])
+
+  const handleCancelCreateSprint = useCallback(() => {
+    setShowCreateSprint(false)
+    setNewSprintName('')
+    setNewSprintDescription('')
+    setCreateSprintError('')
+  }, [])
+
+  const handleSubmitCreateSprint = useCallback(async (event) => {
+    event.preventDefault()
+    if (!activeProjectId) return
+
+    const name = String(newSprintName ?? '').trim()
+    if (!name) {
+      setCreateSprintError(t('sprints.create.validationName'))
+      return
+    }
+
+    setCreateSprintLoading(true)
+    setCreateSprintError('')
+    try {
+      await sprintApi.createSprint(activeProjectId, {
+        name,
+        description: String(newSprintDescription ?? '').trim(),
+      })
+      await refetchSprints(activeProjectId)
+      setShowCreateSprint(false)
+      setNewSprintName('')
+      setNewSprintDescription('')
+    } catch (err) {
+      setCreateSprintError(err?.message || t('common.actionFailed'))
+    } finally {
+      setCreateSprintLoading(false)
+    }
+  }, [activeProjectId, newSprintName, newSprintDescription, refetchSprints, t])
+
+  const handleStartSprint = useCallback(async (sprintId) => {
+    if (!sprintId) return
+    try {
+      await sprintApi.startSprint(sprintId)
+      await refetchSprints(activeProjectId)
+      setActiveSprint(sprintId)
+    } catch {
+      // ignore
+    }
+  }, [activeProjectId, refetchSprints])
+
+  const handleCompleteSprint = useCallback(async (sprintId) => {
+    if (!sprintId) return
+    try {
+      await sprintApi.completeSprint(sprintId)
+      await refetchSprints(activeProjectId)
+      await refetchBacklog(activeProjectId)
+      setActiveSprint(null)
+    } catch {
+      // ignore
+    }
+  }, [activeProjectId, refetchSprints, refetchBacklog])
+
+  // ─── Activity Handlers ─────────────────────────────────────────────────────
+
+  const refetchProjectActivity = useCallback(async (projectId) => {
+    if (!projectId) return
+    setActivityLoading(true)
+    setActivityError('')
+    try {
+      const data = await activityApi.getProjectActivity(projectId, { page: 0, perPage: 20 })
+      setActivityLog(Array.isArray(data?.items) ? data.items : [])
+    } catch (err) {
+      setActivityError(err?.message || '')
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     refetchProjects()
   }, [refetchProjects])
@@ -468,6 +646,61 @@ function Kanban() {
 
     return () => window.clearTimeout(handle)
   }, [inviteSearch, activeTopTab, t])
+
+  useEffect(() => {
+    if (!activeProjectId) return
+    refetchSprints(activeProjectId)
+    refetchBacklog(activeProjectId)
+  }, [activeProjectId, refetchSprints, refetchBacklog])
+
+  useEffect(() => {
+    if (!activeProjectId) return
+    refetchProjectActivity(activeProjectId)
+  }, [activeProjectId, refetchProjectActivity])
+
+  useEffect(() => {
+    if (!user?.id) return
+    const ws = new WsClient()
+    wsClientRef.current = ws
+
+    ws.on('issue_updated', (data) => {
+      // Refetch issues when updated via WebSocket
+      if (activeProjectId) {
+        refetchIssues(activeProjectId, { search: headerSearch })
+      }
+    })
+
+    ws.on('comment_added', () => {
+      // Refetch activity log
+      if (activeProjectId) {
+        refetchProjectActivity(activeProjectId)
+      }
+    })
+
+    ws.on('sprint_started', () => {
+      if (activeProjectId) {
+        refetchSprints(activeProjectId)
+      }
+    })
+
+    ws.on('sprint_completed', () => {
+      if (activeProjectId) {
+        refetchSprints(activeProjectId)
+        refetchBacklog(activeProjectId)
+      }
+    })
+
+    try {
+      ws.connect()
+    } catch (err) {
+      console.error('[App] Failed to connect WebSocket:', err)
+    }
+
+    return () => {
+      ws.disconnect()
+      wsClientRef.current = null
+    }
+  }, [user?.id, activeProjectId, headerSearch, refetchIssues, refetchProjectActivity, refetchSprints, refetchBacklog])
 
   const handleLanguageChange = (lang) => {
     i18n.changeLanguage(lang)
@@ -765,6 +998,169 @@ function Kanban() {
     }
   }, [activeProjectId, refetchMembers])
 
+  const createProjectModal = useMemo(() => {
+    if (!showCreateProject) return null
+    return createPortal(
+      <div className="modal-overlay" role="presentation" onMouseDown={handleCancelCreateProject}>
+        <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+          <header className="modal-head">
+            <div>
+              <h2>{t('projects.create.title')}</h2>
+              <p>{t('projects.create.subtitle')}</p>
+            </div>
+            <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateProject}>
+              <FiX />
+            </button>
+          </header>
+
+          <form className="modal-body" onSubmit={handleSubmitCreateProject}>
+            <div className="modal-grid">
+              <label className="inline-field" htmlFor="new-project-name">
+                <span className="inline-label">{t('projects.create.name')}</span>
+                <input
+                  id="new-project-name"
+                  className="inline-input"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder={t('projects.create.namePlaceholder')}
+                  autoComplete="off"
+                />
+              </label>
+
+              <label className="inline-field" htmlFor="new-project-key">
+                <span className="inline-label">{t('projects.create.key')}</span>
+                <input
+                  id="new-project-key"
+                  className="inline-input"
+                  value={newProjectKey}
+                  onChange={(e) => setNewProjectKey(normalizeProjectKey(e.target.value))}
+                  placeholder={t('projects.create.keyPlaceholder')}
+                  autoComplete="off"
+                />
+              </label>
+
+              <label className="inline-field" htmlFor="new-project-type">
+                <span className="inline-label">{t('projects.create.type')}</span>
+                <select
+                  id="new-project-type"
+                  className="inline-select"
+                  value={newProjectType}
+                  onChange={(e) => setNewProjectType(e.target.value)}
+                >
+                  <option value="kanban">{t('projects.create.typeKanban')}</option>
+                  <option value="scrum">{t('projects.create.typeScrum')}</option>
+                </select>
+              </label>
+
+              <label className="inline-field modal-span" htmlFor="new-project-description">
+                <span className="inline-label">{t('projects.create.description')}</span>
+                <textarea
+                  id="new-project-description"
+                  className="modal-textarea"
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                  placeholder={t('projects.create.descriptionPlaceholder')}
+                  rows={6}
+                />
+              </label>
+            </div>
+
+            {createProjectError ? <p className="inline-error">{createProjectError}</p> : null}
+
+            <footer className="modal-actions">
+              <button type="button" className="filter-btn" onClick={handleCancelCreateProject}>
+                {t('projects.create.cancel')}
+              </button>
+              <button type="submit" className="create-issue-btn" disabled={createProjectLoading}>
+                {createProjectLoading ? t('projects.create.creating') : t('projects.create.submit')}
+              </button>
+            </footer>
+          </form>
+        </div>
+      </div>,
+      document.body,
+    )
+  }, [
+    createProjectError,
+    createProjectLoading,
+    handleCancelCreateProject,
+    handleSubmitCreateProject,
+    newProjectDescription,
+    newProjectKey,
+    newProjectName,
+    newProjectType,
+    normalizeProjectKey,
+    showCreateProject,
+    t,
+  ])
+
+  const createSprintModal = useMemo(() => {
+    if (!showCreateSprint) return null
+    return createPortal(
+      <div className="modal-overlay" role="presentation" onMouseDown={handleCancelCreateSprint}>
+        <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+          <header className="modal-head">
+            <div>
+              <h2>{t('sprints.create.title')}</h2>
+              <p>{t('sprints.create.subtitle')}</p>
+            </div>
+            <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateSprint}>
+              <FiX />
+            </button>
+          </header>
+
+          <form className="modal-body" onSubmit={handleSubmitCreateSprint}>
+            <label className="inline-field modal-span" htmlFor="new-sprint-name">
+              <span className="inline-label">{t('sprints.create.name')}</span>
+              <input
+                id="new-sprint-name"
+                className="inline-input"
+                value={newSprintName}
+                onChange={(e) => setNewSprintName(e.target.value)}
+                placeholder={t('sprints.create.namePlaceholder')}
+                autoComplete="off"
+                autoFocus
+              />
+            </label>
+
+            <label className="inline-field modal-span" htmlFor="new-sprint-description">
+              <span className="inline-label">{t('sprints.create.description')}</span>
+              <textarea
+                id="new-sprint-description"
+                className="modal-textarea"
+                value={newSprintDescription}
+                onChange={(e) => setNewSprintDescription(e.target.value)}
+                placeholder={t('sprints.create.descriptionPlaceholder')}
+                rows={4}
+              />
+            </label>
+
+            {createSprintError ? <p className="inline-error">{createSprintError}</p> : null}
+
+            <footer className="modal-actions">
+              <button type="button" className="filter-btn" onClick={handleCancelCreateSprint}>
+                {t('common.cancel')}
+              </button>
+              <button type="submit" className="create-issue-btn" disabled={createSprintLoading}>
+                {createSprintLoading ? t('sprints.create.creating') : t('sprints.create.submit')}
+              </button>
+            </footer>
+          </form>
+        </div>
+      </div>,
+      document.body,
+    )
+  }, [
+    createSprintError,
+    createSprintLoading,
+    handleCancelCreateSprint,
+    handleSubmitCreateSprint,
+    newSprintDescription,
+    newSprintName,
+    showCreateSprint,
+    t,
+  ])
+
   const createIssueModal = useMemo(() => {
     if (!showCreateIssue) return null
     return createPortal(
@@ -991,6 +1387,8 @@ function Kanban() {
           </div>
         </header>
 
+        {createProjectModal}
+        {createSprintModal}
         {createIssueModal}
 
         <div className="home-body">
@@ -1039,214 +1437,26 @@ function Kanban() {
                 onBack={handleCloseIssueDetails}
                 projectName={activeProject?.name || ''}
                 locale={activeLocale}
+                members={members}
               />
             ) : null}
 
             {isOverviewView ? (
-              <>
-                <header className="dashboard-header">
-                  <div>
-                    <p className="dashboard-kicker">{t('overview.kicker')}</p>
-                    <h1>{t('overview.title')}</h1>
-                  </div>
-
-                  <div className="dashboard-actions">
-                    <div className="mini-avatars" aria-hidden="true">
-                      <span>SC</span>
-                      <span>AR</span>
-                      <span>MT</span>
-                    </div>
-                    <button type="button" className="filter-btn"><FiFilter /> {t('common.filter')}</button>
-                  </div>
-                </header>
-
-                <StatsOverview cards={statsCards} label={t('statsOverview.ariaLabel')} className="stats-overview-compact" />
-
-                {projectsLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
-                {projectsError ? <p className="dashboard-kicker">{projectsError}</p> : null}
-                {issuesLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
-                {issuesError ? <p className="dashboard-kicker">{issuesError}</p> : null}
-
-                <section className="content-grid">
-                  <article className="recent-projects panel">
-                    <header className="panel-head">
-                      <h2>{t('overview.recentProjects')}</h2>
-                      <div className="panel-head-actions">
-                        <button type="button" className="link-btn">{t('common.viewAll')}</button>
-                        <button type="button" className="filter-btn" onClick={handleOpenCreateProject}>
-                          {t('projects.create.open')}
-                        </button>
-                      </div>
-                    </header>
-
-                    {showCreateProject ? (
-                      <form className="inline-form" onSubmit={handleSubmitCreateProject}>
-                        <div className="inline-form-grid">
-                          <label className="inline-field" htmlFor="new-project-name">
-                            <span className="inline-label">{t('projects.create.name')}</span>
-                            <input
-                              id="new-project-name"
-                              className="inline-input"
-                              value={newProjectName}
-                              onChange={(e) => setNewProjectName(e.target.value)}
-                              placeholder={t('projects.create.namePlaceholder')}
-                              autoComplete="off"
-                            />
-                          </label>
-
-                          <label className="inline-field" htmlFor="new-project-key">
-                            <span className="inline-label">{t('projects.create.key')}</span>
-                            <input
-                              id="new-project-key"
-                              className="inline-input"
-                              value={newProjectKey}
-                              onChange={(e) => setNewProjectKey(normalizeProjectKey(e.target.value))}
-                              placeholder={t('projects.create.keyPlaceholder')}
-                              autoComplete="off"
-                            />
-                          </label>
-
-                          <label className="inline-field" htmlFor="new-project-type">
-                            <span className="inline-label">{t('projects.create.type')}</span>
-                            <select
-                              id="new-project-type"
-                              className="inline-select"
-                              value={newProjectType}
-                              onChange={(e) => setNewProjectType(e.target.value)}
-                            >
-                              <option value="kanban">{t('projects.create.typeKanban')}</option>
-                              <option value="scrum">{t('projects.create.typeScrum')}</option>
-                            </select>
-                          </label>
-
-                          <label className="inline-field inline-field-span" htmlFor="new-project-description">
-                            <span className="inline-label">{t('projects.create.description')}</span>
-                            <input
-                              id="new-project-description"
-                              className="inline-input"
-                              value={newProjectDescription}
-                              onChange={(e) => setNewProjectDescription(e.target.value)}
-                              placeholder={t('projects.create.descriptionPlaceholder')}
-                              autoComplete="off"
-                            />
-                          </label>
-                        </div>
-
-                        {createProjectError ? <p className="inline-error">{createProjectError}</p> : null}
-
-                        <div className="inline-form-actions">
-                          <button className="create-issue-btn" type="submit" disabled={createProjectLoading}>
-                            {createProjectLoading ? t('projects.create.creating') : t('projects.create.submit')}
-                          </button>
-                          <button className="filter-btn" type="button" onClick={handleCancelCreateProject}>
-                            {t('projects.create.cancel')}
-                          </button>
-                        </div>
-                      </form>
-                    ) : null}
-
-                    <div className="project-grid">
-                      {recentProjects.map((project) => {
-                        const ProjectIcon = FiBriefcase
-
-                        return (
-                          <article
-                            key={project.id}
-                            className="project-card"
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => handleProjectSelect(project.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') handleProjectSelect(project.id)
-                            }}
-                          >
-                            <p className={`project-icon tone-${project.tone}`} aria-hidden="true"><ProjectIcon /></p>
-                            <h3>{project.title}</h3>
-                            <p>{project.summary}</p>
-                            <div className="project-meta">
-                              <div className="mini-avatars small" aria-hidden="true">
-                                {project.owners.map((owner) => (
-                                  <span key={owner}>{owner}</span>
-                                ))}
-                              </div>
-                              <span className={`status-chip tone-${project.tone}`}>{project.status}</span>
-                            </div>
-                            <div className="progress-track" aria-hidden="true">
-                              <span style={{ width: `${project.progress}%` }} />
-                            </div>
-                          </article>
-                        )
-                      })}
-                    </div>
-                  </article>
-
-                  <aside className="activity-stream panel">
-                    <header className="panel-head">
-                      <h2>{t('overview.activity.title')}</h2>
-                    </header>
-
-                    <div className="activity-list">
-                      {activityFeed.length === 0 ? (
-                        <article className="activity-item">
-                          <p style={{ margin: 0, color: '#667085', fontSize: '0.62rem' }}>
-                            {t('overview.activity.empty')}
-                          </p>
-                        </article>
-                      ) : null}
-                      {activityFeed.map((item) => (
-                        <article key={item.id} className="activity-item">
-                          <span className="activity-avatar">{item.avatar}</span>
-                          <div>
-                            <p>
-                              <strong>{item.actor}</strong> {item.action}
-                            </p>
-                            <span>{item.time}</span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-
-                    <button type="button" className="history-btn">{t('overview.activity.viewFullHistory')}</button>
-                  </aside>
-                </section>
-
-                <section className="assigned panel">
-                  <header className="panel-head">
-                    <h2>{t('overview.assigned.title')}</h2>
-                    <p>{t('overview.assigned.sortedBy')}</p>
-                  </header>
-
-                  <div className="assigned-list">
-                    {assignedIssues.length === 0 ? (
-                      <article className="assigned-item">
-                        <div>
-                          <h3>{t('overview.assigned.empty')}</h3>
-                          <p>{t('overview.assigned.emptyHint')}</p>
-                        </div>
-                      </article>
-                    ) : null}
-
-                    {assignedIssues.map((task) => {
-                      const pr = priorityDisplay(task?.priority)
-                      const due = formatShortDate(task?.dueDate, activeLocale)
-                      return (
-                      <article key={task?.key} className="assigned-item">
-                        <div>
-                          <p className="task-code">{task?.key}</p>
-                          <h3>{task?.title}</h3>
-                          <p>
-                            {due ? `${t('common.due')}: ${due}` : t('common.noDueDate')} · {t(`priority.${pr.tone}`, { defaultValue: pr.label })}
-                          </p>
-                        </div>
-                        <button type="button" className="open-btn" onClick={() => handleOpenIssueDetails(task?.key)}>
-                          {t('common.open')}
-                        </button>
-                      </article>
-                      )
-                    })}
-                  </div>
-                </section>
-              </>
+              <OverviewPanel
+                t={t}
+                recentProjects={recentProjects}
+                activityFeed={activityFeed}
+                assignedIssues={assignedIssues}
+                statsCards={statsCards}
+                activeLocale={activeLocale}
+                projectsLoading={projectsLoading}
+                projectsError={projectsError}
+                issuesLoading={issuesLoading}
+                issuesError={issuesError}
+                onOpenCreateProject={handleOpenCreateProject}
+                onProjectSelect={handleProjectSelect}
+                onOpenIssueDetails={handleOpenIssueDetails}
+              />
             ) : null}
 
             {isBacklogView && !activeIssueKey ? (
@@ -1383,109 +1593,23 @@ function Kanban() {
             ) : null}
 
             {isBoardView && !activeIssueKey ? (
-              <section className="board-shell" aria-label="Draggable board">
-                <header className="dashboard-header board-header">
-                  <div>
-                    <p className="dashboard-kicker">{t('boardShell.contentTitle')}</p>
-                    <h1>{boardDetail?.name || t('board.title')}</h1>
-                    <p className="board-subtitle">{t('boardShell.contentSubtitle')}</p>
-                  </div>
-
-                  <div className="dashboard-actions board-actions">
-                    <div className="mini-avatars" aria-hidden="true">
-                      <span>AN</span>
-                      <span>AR</span>
-                      <span>MT</span>
-                    </div>
-                    <button type="button" className="filter-btn"><FiFilter /> {t('common.filters')}</button>
-                  </div>
-                </header>
-
-                <section className="board-flow panel">
-                  <div className="flow-header">
-                    <h2>{t('board.flowProgress')}</h2>
-                    <p>{boardDoneCount}/{boardTaskTotal} {t('board.completed')}</p>
-                  </div>
-
-                  <div className="flow-track" aria-hidden="true">
-                    {kanbanColumns.map((column, index) => (
-                      <div key={column.id} className="flow-step-wrap">
-                        <div className={`flow-step is-${column.tone}`}>
-                          <span>{column.title}</span>
-                          <strong>{column.items.length}</strong>
-                        </div>
-                        {index < kanbanColumns.length - 1 ? <FiChevronRight className="flow-arrow" /> : null}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="board-progress">
-                    <div className="board-progress-track" aria-hidden="true">
-                      <span style={{ width: `${boardCompletion}%` }} />
-                    </div>
-                    <span>{boardCompletion}% {t('board.completion')}</span>
-                  </div>
-                </section>
-
-                <section className="board-columns" aria-label="Kanban lanes">
-                  {kanbanColumns.map((column) => (
-                    <article
-                      key={column.id}
-                      className={`board-column is-${column.tone} ${dropColumnID === column.id ? 'is-drop-target' : ''}`}
-                      onDragOver={(event) => handleColumnDragOver(event, column.id)}
-                      onDrop={(event) => handleColumnDrop(event, column.id)}
-                    >
-                      <header className="board-column-head">
-                        <div>
-                          <h3>{column.title}</h3>
-                          <p>{column.items.length} {t('board.cards')}</p>
-                        </div>
-                        <button type="button" className="lane-add-btn" aria-label={t('board.addCardTo', { column: column.title })}>
-                          <FiPlus />
-                        </button>
-                      </header>
-
-                      <div className="board-card-list">
-                        {column.items.map((item) => {
-                          const pr = priorityDisplay(item?.priority)
-                          const due = formatShortDate(item?.dueDate, activeLocale)
-                          const assignee = item?.assigneeId ? usersById[String(item.assigneeId)] : null
-                          const assigneeInitials = toInitials(assignee?.name || assignee?.email || '')
-                          return (
-                          <article
-                            key={item.key}
-                            className={`board-card ${dragState?.cardID === item.key ? 'is-dragging' : ''}`}
-                            draggable
-                            onDragStart={(event) => handleCardDragStart(event, column.id, item.key)}
-                            onDragEnd={handleCardDragEnd}
-                            onDoubleClick={() => handleOpenIssueDetails(item.key)}
-                          >
-                            <p className="board-card-code">{item.key}</p>
-                            <h4>{item.title}</h4>
-
-                            <div className="board-card-tags">
-                              <span className={`task-tag tone-${labelToneFromIssueType(item?.type)}`}>{t(`issue.type.${safeLower(item?.type)}`, { defaultValue: safeLower(item?.type) || t('issue.type.task') })}</span>
-                              <span className={`task-priority tone-${pr.tone}`}>{t(`priority.${pr.tone}`, { defaultValue: pr.label })}</span>
-                            </div>
-
-                            <div className="board-progress-track compact" aria-hidden="true">
-                              <span style={{ width: `${BOARD_STAGE_PROGRESS[column.id] ?? 25}%` }} />
-                            </div>
-
-                            <footer className="board-card-foot">
-                              <span><FiClock /> {due || t('common.noDueDateShort')}</span>
-                              <span className="assignee-pill">{assigneeInitials || '??'}</span>
-                            </footer>
-                          </article>
-                          )
-                        })}
-                      </div>
-                    </article>
-                  ))}
-                </section>
-
-                <button type="button" className="quick-action-btn"><FiTarget /> {t('boardShell.quickActions')}</button>
-              </section>
+              <BoardPanel
+                t={t}
+                boardDetail={boardDetail}
+                kanbanColumns={kanbanColumns}
+                boardDoneCount={boardDoneCount}
+                boardTaskTotal={boardTaskTotal}
+                boardCompletion={boardCompletion}
+                dropColumnID={dropColumnID}
+                dragState={dragState}
+                activeLocale={activeLocale}
+                usersById={usersById}
+                onCardDragStart={handleCardDragStart}
+                onCardDragEnd={handleCardDragEnd}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDrop={handleColumnDrop}
+                onOpenIssueDetails={handleOpenIssueDetails}
+              />
             ) : null}
 
             {isPlaceholderView ? (

@@ -313,14 +313,152 @@ Kết quả:
 - Có thể kéo card giữa các cột để mô phỏng flow sprint như Figma board.
 - Completion % trên board cập nhật theo trạng thái card sau khi thả.
 
-## 11) Environment Contract (FE)
+## 11) Sprint Management (NEW)
+
+**Location**: `FE/my-react-app/src/App.jsx` + `features/sprints/api/sprintApi.js`
+
+**Sprint States**:
+- `sprints`: danh sách sprint của dự án
+- `activeSprint`: sprint hiện tại đang chạy
+- `showCreateSprint`: toggle modal tạo sprint
+- `newSprintName`, `newSprintDescription`: form inputs
+- `backlogIssues`: danh sách issue chưa gán sprint (GET /api/projects/{id}/backlog)
+
+**Sprint Handlers**:
+- `refetchSprints(projectId)` - GET /api/projects/{id}/sprints
+- `refetchBacklog(projectId)` - GET /api/projects/{id}/backlog
+- `handleOpenCreateSprint()` - show modal
+- `handleCancelCreateSprint()` - close modal
+- `handleSubmitCreateSprint()` - POST /api/projects/{id}/sprints + refetch
+- `handleStartSprint(sprintId)` - POST /api/sprints/{id}/start + set activeSprint
+- `handleCompleteSprint(sprintId)` - POST /api/sprints/{id}/complete + refetch backlog
+
+**API Endpoints** (features/sprints/api/sprintApi.js):
+- `createSprint(projectId, { name, description, startDate, endDate })`
+- `listSprints(projectId, { page, perPage })`
+- `getSprint(sprintId)`
+- `updateSprint(sprintId, patch)`
+- `startSprint(sprintId)`
+- `completeSprint(sprintId)`
+- `getBacklog(projectId, { page, perPage, search })`
+
+**Sprint Modal UI**:
+- Header: "Create Sprint" + "Plan and organize your work"
+- Form: Name (required, full-width) + Description (textarea, optional)
+- Actions: Cancel + Create Sprint buttons
+- Styling: same `.modal`, `.modal-grid`, `.modal-body` as issue modal
+
+**Sprint useEffect**:
+- Auto-refetch sprints + backlog when activeProjectId changes
+
+## 12) Activity Log (NEW)
+
+**Location**: `FE/my-react-app/src/App.jsx` + `features/activity/api/activityApi.js`
+
+**Activity States**:
+- `activityLog`: danh sách hoạt động dự án
+- `activityLoading`: fetch loading state
+- `activityError`: error message
+
+**Activity Handlers**:
+- `refetchProjectActivity(projectId)` - GET /api/projects/{id}/activity + set activityLog
+
+**API Endpoints** (features/activity/api/activityApi.js):
+- `getIssueActivity(issueKey, { page, perPage })` - GET /api/issues/{key}/activity
+- `getProjectActivity(projectId, { page, perPage })` - GET /api/projects/{id}/activity
+
+**Activity useEffect**:
+- Auto-refetch activity log when activeProjectId changes
+
+**Activity Display**:
+- Activity timeline component (future implementation)
+- Show: who did what (created/updated/commented) when
+
+**Note**: Activity log được tự động ghi trên BE khi issue thay đổi (best-effort, không fail operation).
+
+## 13) WebSocket Real-time Integration (NEW)
+
+**Location**: `FE/my-react-app/src/shared/ws/wsClient.js` + `App.jsx` useEffect
+
+**WsClient Class** (Enhanced):
+- `.connect(token?)` - connect to `/api/ws?token=...`
+- `.disconnect()` - close connection + stop auto-reconnect
+- `.on(event, callback)` - register event listener
+- `.off(event, callback)` - unregister listener
+- `.emit(event, data)` - internal method to trigger listeners
+- `.send(type, data)` - send JSON message to server
+- `.isConnected()` - check if WS is open
+
+**Auto-reconnection**:
+- Exponential backoff: starts at 1s, caps at 30s
+- Auto-reconnect on disconnect (unless manually closed)
+- Reset delay on successful connection
+
+**Events**:
+- `connected` - emitted when WS connection opens
+- `disconnected` - emitted when WS connection closes
+- `error` - emitted on WS error
+- `issue_updated` - when issue changes (triggers refetchIssues)
+- `comment_added` - when comment posted (triggers refetchProjectActivity)
+- `sprint_started` - when sprint starts (triggers refetchSprints)
+- `sprint_completed` - when sprint completes (triggers refetchSprints + refetchBacklog)
+
+**WebSocket useEffect** (in App.jsx):
+- Create WsClient instance on mount
+- Register event listeners for issue/sprint/comment updates
+- Call connect() to establish connection
+- Auto-reconnect on disconnect + refetch affected data
+- Cleanup: call disconnect() on unmount
+
+**Usage in App.jsx**:
+```javascript
+wsClientRef.current = new WsClient()
+wsClientRef.current.on('issue_updated', (data) => {
+  refetchIssues(activeProjectId, { search: headerSearch })
+})
+wsClientRef.current.connect()
+// ... later on unmount:
+wsClientRef.current.disconnect()
+```
+
+**JSON Message Format** (BE -> FE):
+```json
+{
+  "type": "issue_updated",
+  "data": { "issueKey": "PROJ-1", "status": "done", ... }
+}
+```
+
+## 14) i18n Keys Added (Sprint + Activity + WebSocket)
+
+**Sprint Keys**:
+- `sprints.create.title` - "Create Sprint" / "Tạo Sprint mới"
+- `sprints.create.subtitle` - "Plan and organize your work" / "Lên kế hoạch và tổ chức công việc"
+- `sprints.create.name` - "Sprint name" / "Tên sprint"
+- `sprints.create.namePlaceholder` - e.g. "Sprint 1 - Q2 Planning"
+- `sprints.create.description` - "Description" / "Mô tả"
+- `sprints.create.descriptionPlaceholder` - Optional details
+- `sprints.create.submit` - "Create Sprint" / "Tạo Sprint"
+- `sprints.create.creating` - "Creating…" / "Đang tạo..."
+- `sprints.create.validationName` - "Please enter a sprint name."
+- `sprints.status.planning`, `.active`, `.completed`
+
+**Activity Keys**:
+- `activity.title` - "Activity" / "Hoạt động"
+- `activity.empty` - "No activity yet" / "Chưa có hoạt động nào"
+- `activity.updated`, `.created`, `.changed`, `.assigned`, `.commented`
+
+## 15) Environment Contract (FE)
 
 - VITE_API_BASE_URL
 
-## 12) Coding Notes For Copilot (FE)
+## 16) Coding Notes For Copilot (FE)
 
 - Khi sửa auth UI, kiểm tra đồng bộ Login, AuthContext, authApi, httpClient và guard trong App.
 - Khi BE đổi contract auth/response, cập nhật parser ở shared/api/httpClient trước để tránh vỡ toàn bộ feature.
 - Với định hướng Jira-like workflow, nên giữ cấu trúc mở rộng theo feature module (issues, boards, sprints, members).
 - Với board kéo-thả hiện tại, nếu ghép BE thật thì map thao tác drop sang API đổi trạng thái issue và có optimistic update + rollback khi lỗi.
 - Các endpoint BE có thể trả envelope hoặc raw JSON (projects/boards/labels có thể raw); `httpClient` đã hỗ trợ cả 2.
+- WebSocket connection auto-reconnects; nếu cần manual reconnect hãy gọi `wsClientRef.current.connect()`.
+- Sprint modal UI tuân theo pattern như Issue modal (createPortal, modal-overlay, modal-body, etc.).
+- Activity log fetches automatically; future implementation có thể thêm timeline visualization component.

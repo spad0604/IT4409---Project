@@ -47,6 +47,7 @@ export default function IssueDetailsPage({
   onBack,
   projectName,
   locale = 'vi-VN',
+  members = [],
 }) {
   const { t } = useTranslation()
   const [issue, setIssue] = useState(null)
@@ -58,6 +59,19 @@ export default function IssueDetailsPage({
 
   const [attachments, setAttachments] = useState([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+
+  // Comment form
+  const [newCommentContent, setNewCommentContent] = useState('')
+  const [newCommentLoading, setNewCommentLoading] = useState(false)
+  const [newCommentError, setNewCommentError] = useState('')
+
+  // Edit comment
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingCommentContent, setEditingCommentContent] = useState('')
+  const [editingCommentLoading, setEditingCommentLoading] = useState(false)
+
+  // Assign issue
+  const [assignLoading, setAssignLoading] = useState(false)
 
   const headline = useMemo(() => {
     if (!issue) return issueKey
@@ -127,6 +141,86 @@ export default function IssueDetailsPage({
     a.remove()
     URL.revokeObjectURL(url)
   }, [])
+
+  // ─── Assign Issue ───────────────────────────────────────────────────────────
+  const handleAssignIssue = useCallback(async (assigneeId) => {
+    if (!issueKey) return
+    setAssignLoading(true)
+    try {
+      const updated = await issueApi.assignIssue(issueKey, assigneeId)
+      setIssue(updated || null)
+    } catch (err) {
+      console.error('Assign issue error:', err)
+    } finally {
+      setAssignLoading(false)
+    }
+  }, [issueKey])
+
+  // ─── Comment Handlers ───────────────────────────────────────────────────────
+  const handleAddComment = useCallback(async (event) => {
+    event.preventDefault()
+    const content = String(newCommentContent ?? '').trim()
+    if (!content) return
+
+    if (!issueKey) return
+    setNewCommentLoading(true)
+    setNewCommentError('')
+    try {
+      await commentApi.addComment(issueKey, { content })
+      setNewCommentContent('')
+      // Refetch comments
+      const data = await commentApi.listComments(issueKey)
+      setComments(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setNewCommentError(err?.message || t('common.error'))
+    } finally {
+      setNewCommentLoading(false)
+    }
+  }, [issueKey, newCommentContent, t])
+
+  const handleStartEditComment = useCallback((comment) => {
+    if (!comment?.id) return
+    setEditingCommentId(comment.id)
+    setEditingCommentContent(String(comment?.content ?? '').trim())
+  }, [])
+
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null)
+    setEditingCommentContent('')
+  }, [])
+
+  const handleSaveEditComment = useCallback(async (commentId) => {
+    const content = String(editingCommentContent ?? '').trim()
+    if (!content) return
+
+    setEditingCommentLoading(true)
+    try {
+      await commentApi.editComment(commentId, { content })
+      // Refetch comments
+      const data = await commentApi.listComments(issueKey)
+      setComments(Array.isArray(data) ? data : [])
+      setEditingCommentId(null)
+      setEditingCommentContent('')
+    } catch (err) {
+      console.error('Edit comment error:', err)
+    } finally {
+      setEditingCommentLoading(false)
+    }
+  }, [issueKey, editingCommentContent])
+
+  const handleDeleteComment = useCallback(async (commentId) => {
+    if (!window.confirm(t('issues.detail.confirmDeleteComment', { defaultValue: 'Delete this comment?' }))) {
+      return
+    }
+    try {
+      await commentApi.deleteComment(commentId)
+      // Refetch comments
+      const data = await commentApi.listComments(issueKey)
+      setComments(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Delete comment error:', err)
+    }
+  }, [issueKey, t])
 
   const statusLabel = useMemo(() => {
     const status = safeLower(issue?.status)
@@ -218,14 +312,80 @@ export default function IssueDetailsPage({
               <div className="issue-comment-list">
                 {comments.map((c) => (
                   <article key={c?.id} className="issue-comment">
-                    <div className="issue-comment-head">
-                      <strong>{c?.author?.name || c?.author?.username || t('common.unknown')}</strong>
-                      <span>{formatDateTime(c?.createdAt, locale)}</span>
-                    </div>
-                    <p className="issue-comment-content">{c?.content || ''}</p>
+                    {editingCommentId === c?.id ? (
+                      <div>
+                        <textarea
+                          value={editingCommentContent}
+                          onChange={(e) => setEditingCommentContent(e.target.value)}
+                          rows="3"
+                          style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit', marginBottom: '0.5rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            className="open-btn"
+                            onClick={() => handleSaveEditComment(c.id)}
+                            disabled={editingCommentLoading}
+                          >
+                            {editingCommentLoading ? t('common.saving') : t('common.save')}
+                          </button>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={handleCancelEditComment}
+                            disabled={editingCommentLoading}
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="issue-comment-head">
+                          <strong>{c?.author?.name || c?.author?.username || t('common.unknown')}</strong>
+                          <span>{formatDateTime(c?.createdAt, locale)}</span>
+                        </div>
+                        <p className="issue-comment-content">{c?.content || ''}</p>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => handleStartEditComment(c)}
+                          >
+                            {t('common.edit')}
+                          </button>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            style={{ color: '#d32f2f' }}
+                            onClick={() => handleDeleteComment(c.id)}
+                          >
+                            {t('common.delete')}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </article>
                 ))}
               </div>
+
+              <form onSubmit={handleAddComment} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                {newCommentError ? <p style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>{newCommentError}</p> : null}
+                <textarea
+                  value={newCommentContent}
+                  onChange={(e) => setNewCommentContent(e.target.value)}
+                  placeholder={t('issues.detail.addCommentPlaceholder', { defaultValue: 'Add a comment...' })}
+                  rows="3"
+                  style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit', marginBottom: '0.5rem' }}
+                />
+                <button
+                  type="submit"
+                  className="open-btn"
+                  disabled={newCommentLoading || !newCommentContent.trim()}
+                >
+                  {newCommentLoading ? t('common.posting') : t('issues.detail.postComment', { defaultValue: 'Post comment' })}
+                </button>
+              </form>
             </section>
           </div>
 
@@ -239,7 +399,27 @@ export default function IssueDetailsPage({
                 </div>
                 <div>
                   <dt>{t('issues.detail.assignee', { defaultValue: 'Assignee' })}</dt>
-                  <dd>{issue?.assignee?.name || issue?.assignee?.username || '-'}</dd>
+                  <dd style={{ cursor: 'pointer', minHeight: '1.5rem', display: 'flex', alignItems: 'center' }}>
+                    <select
+                      value={String(issue?.assigneeId || '')}
+                      onChange={(e) => handleAssignIssue(e.target.value || null)}
+                      disabled={assignLoading}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#fff',
+                        cursor: assignLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <option value="">{t('common.unassigned', { defaultValue: 'Unassigned' })}</option>
+                      {(Array.isArray(members) ? members : []).map((m) => (
+                        <option key={m?.id} value={m?.id}>
+                          {m?.name || m?.username || m?.email || 'Unknown'}
+                        </option>
+                      ))}
+                    </select>
+                  </dd>
                 </div>
                 <div>
                   <dt>{t('issues.detail.reporter', { defaultValue: 'Reporter' })}</dt>
