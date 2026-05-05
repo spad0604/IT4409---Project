@@ -170,6 +170,60 @@ func main() {
 				CREATE INDEX IF NOT EXISTS idx_attachments_issue ON public.attachments(issue_id);
 			`,
 		},
+		{
+			Name: "006_sprints",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.sprints (
+				  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  project_id  UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+				  name        TEXT NOT NULL,
+				  goal        TEXT NOT NULL DEFAULT '',
+				  status      TEXT NOT NULL DEFAULT 'planning'
+				              CHECK (status IN ('planning','active','completed')),
+				  start_date  TIMESTAMPTZ,
+				  end_date    TIMESTAMPTZ,
+				  created_by  UUID NOT NULL REFERENCES public.users(id),
+				  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+				  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+				);
+				CREATE INDEX IF NOT EXISTS idx_sprints_project ON public.sprints(project_id);
+				CREATE INDEX IF NOT EXISTS idx_sprints_status ON public.sprints(status);
+
+				DO $$ BEGIN
+				  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+				    WHERE constraint_name = 'fk_issues_sprint') THEN
+				    ALTER TABLE public.issues
+				      ADD CONSTRAINT fk_issues_sprint
+				      FOREIGN KEY (sprint_id) REFERENCES public.sprints(id) ON DELETE SET NULL;
+				  END IF;
+				END $$;
+
+				DO $$ BEGIN
+				  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sprints_updated_at') THEN
+				    CREATE TRIGGER trg_sprints_updated_at
+				      BEFORE UPDATE ON public.sprints
+				      FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+				  END IF;
+				END $$;
+			`,
+		},
+		{
+			Name: "010_activity_log",
+			SQL: `
+				CREATE TABLE IF NOT EXISTS public.activity_log (
+				  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				  issue_id    UUID NOT NULL REFERENCES public.issues(id) ON DELETE CASCADE,
+				  user_id     UUID NOT NULL REFERENCES public.users(id),
+				  action      TEXT NOT NULL,
+				  field       TEXT,
+				  old_value   TEXT,
+				  new_value   TEXT,
+				  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+				);
+				CREATE INDEX IF NOT EXISTS idx_activity_issue ON public.activity_log(issue_id);
+				CREATE INDEX IF NOT EXISTS idx_activity_created ON public.activity_log(created_at);
+			`,
+		},
 	}
 
 	for _, m := range migrations {

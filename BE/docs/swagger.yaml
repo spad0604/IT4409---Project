@@ -248,6 +248,71 @@ definitions:
         type: string
         format: date-time
 
+  Sprint:
+    type: object
+    properties:
+      id:
+        type: string
+      projectId:
+        type: string
+      name:
+        type: string
+      goal:
+        type: string
+      status:
+        type: string
+        enum: [planning, active, completed]
+      startDate:
+        type: string
+        format: date-time
+      endDate:
+        type: string
+        format: date-time
+      createdBy:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+
+  SprintPatch:
+    type: object
+    properties:
+      name:
+        type: string
+      goal:
+        type: string
+      startDate:
+        type: string
+        format: date-time
+      endDate:
+        type: string
+        format: date-time
+
+  Activity:
+    type: object
+    properties:
+      id:
+        type: string
+      issueId:
+        type: string
+      userId:
+        type: string
+      action:
+        type: string
+        enum: [created, updated, status_changed, assigned, commented, deleted]
+      field:
+        type: string
+      oldValue:
+        type: string
+      newValue:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+
 # ════════════════════════════════════════════════
 #  PATHS (API Endpoints)
 # ════════════════════════════════════════════════
@@ -1196,6 +1261,153 @@ paths:
         - {in: path, name: attachmentID, type: string, required: true}
       responses:
         204: {description: Xóa thành công}
+
+  # ── SPRINTS (Người A) ──────────────────────────
+  /api/projects/{projectID}/sprints:
+    post:
+      tags: [Sprints]
+      summary: Tạo sprint mới
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name: {type: string}
+              goal: {type: string}
+              startDate: {type: string, format: date-time}
+              endDate: {type: string, format: date-time}
+      responses:
+        201:
+          description: Sprint đã tạo
+          schema:
+            $ref: "#/definitions/Envelope"
+    get:
+      tags: [Sprints]
+      summary: Liệt kê sprints trong project
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+      responses:
+        200:
+          description: Danh sách sprints
+          schema:
+            $ref: "#/definitions/Envelope"
+
+  /api/projects/{projectID}/backlog:
+    get:
+      tags: [Sprints]
+      summary: Lấy backlog (issues chưa gán sprint)
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+      responses:
+        200:
+          description: Danh sách issues trong backlog
+          schema:
+            $ref: "#/definitions/Envelope"
+
+  /api/sprints/{sprintID}:
+    get:
+      tags: [Sprints]
+      summary: Chi tiết sprint
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: sprintID, type: string, required: true}
+      responses:
+        200:
+          description: Thông tin sprint
+          schema:
+            $ref: "#/definitions/Envelope"
+    patch:
+      tags: [Sprints]
+      summary: Cập nhật sprint (partial)
+      security: [{BearerAuth: []}]
+      consumes: [application/json]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: sprintID, type: string, required: true}
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/SprintPatch"
+      responses:
+        200:
+          description: Sprint đã cập nhật
+          schema:
+            $ref: "#/definitions/Envelope"
+
+  /api/sprints/{sprintID}/start:
+    post:
+      tags: [Sprints]
+      summary: Bắt đầu sprint (planning → active)
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: sprintID, type: string, required: true}
+      responses:
+        200:
+          description: Sprint đã bắt đầu
+          schema:
+            $ref: "#/definitions/Envelope"
+        409: {description: Đã có sprint đang active}
+
+  /api/sprints/{sprintID}/complete:
+    post:
+      tags: [Sprints]
+      summary: Hoàn thành sprint (active → completed)
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: sprintID, type: string, required: true}
+      responses:
+        200:
+          description: Sprint đã hoàn thành, issues chưa done chuyển về backlog
+          schema:
+            $ref: "#/definitions/Envelope"
+
+  # ── ACTIVITY LOG (Người A) ─────────────────────
+  /api/issues/{issueKey}/activity:
+    get:
+      tags: [Activity]
+      summary: Lịch sử thay đổi của issue
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: issueKey, type: string, required: true, description: "Issue key (e.g. PROJ-1)"}
+        - {in: query, name: page, type: integer, description: "Trang (mặc định 1)"}
+        - {in: query, name: per_page, type: integer, description: "Số item/trang (mặc định 20)"}
+      responses:
+        200:
+          description: Danh sách activity
+          schema:
+            $ref: "#/definitions/Envelope"
+
+  /api/projects/{projectID}/activity:
+    get:
+      tags: [Activity]
+      summary: Luồng hoạt động dự án
+      security: [{BearerAuth: []}]
+      produces: [application/json]
+      parameters:
+        - {in: path, name: projectID, type: string, required: true}
+        - {in: query, name: page, type: integer, description: "Trang (mặc định 1)"}
+        - {in: query, name: per_page, type: integer, description: "Số item/trang (mặc định 20)"}
+      responses:
+        200:
+          description: Danh sách activity của toàn project
+          schema:
+            $ref: "#/definitions/Envelope"
 
   # ── SEARCH ─────────────────────────────────────
   /api/search:
