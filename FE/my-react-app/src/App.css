@@ -79,6 +79,7 @@
   align-items: center;
   gap: 0.35rem;
   min-width: 0;
+  position: relative;
 }
 
 .project-picker {
@@ -168,6 +169,11 @@
   height: 0.9rem;
 }
 
+.icon-btn.is-active {
+  background: #e3e9ff;
+  color: #1438de;
+}
+
 .profile-pill {
   width: 28px;
   height: 28px;
@@ -178,6 +184,70 @@
   font-weight: 700;
   color: #19486a;
   background: linear-gradient(145deg, #ffd89c, #9cd7ff);
+  border: 0;
+  cursor: pointer;
+}
+
+.profile-pill.is-active {
+  box-shadow: 0 0 0 2px #e3e9ff;
+}
+
+.topbar-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(340px, 92vw);
+  border-radius: 0.55rem;
+  background: #fff;
+  border: 1px solid #e6e9f0;
+  box-shadow: 0 24px 60px rgb(8 13 25 / 18%);
+  padding: 0.7rem;
+  z-index: 60;
+}
+
+.topbar-popover-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.topbar-popover-muted {
+  margin: 0.4rem 0 0;
+  font-size: 0.62rem;
+  color: #667085;
+}
+
+.topbar-popover-list {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.topbar-popover-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.topbar-popover-item p {
+  margin: 0;
+  font-size: 0.62rem;
+  color: #344054;
+}
+
+.topbar-popover-item span {
+  display: inline-flex;
+  margin-top: 0.1rem;
+  font-size: 0.56rem;
+  color: #667085;
+}
+
+.topbar-popover-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .home-body {
@@ -696,6 +766,24 @@
   color: #1438de;
 }
 
+.priority-pill.tone-high.is-active {
+  border-color: #fda29b;
+  background: #fee4e2;
+  color: #b42318;
+}
+
+.priority-pill.tone-medium.is-active {
+  border-color: #9db0ff;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.priority-pill.tone-low.is-active {
+  border-color: #a7f3d0;
+  background: #d1fae5;
+  color: #047857;
+}
+
 .modal-actions {
   margin-top: 0.9rem;
   padding-top: 0.8rem;
@@ -913,7 +1001,8 @@
 .placeholder-panel {
   display: grid;
   gap: 0.65rem;
-  max-width: 420px;
+  width: 100%;
+  max-width: none;
 }
 
 .placeholder-panel h2 {
@@ -1274,6 +1363,21 @@
 }
 
 .task-priority.tone-low {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.board-card-chip.tone-high {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+.board-card-chip.tone-medium {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.board-card-chip.tone-low {
   color: #047857;
   background: #d1fae5;
 }

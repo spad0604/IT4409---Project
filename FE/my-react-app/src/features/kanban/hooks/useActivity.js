@@ -15,7 +15,11 @@ export function useActivity() {
       setActivityError('')
       try {
         const data = await activityApi.getProjectActivity(projectId)
-        setActivityLog(Array.isArray(data) ? data : [])
+        if (Array.isArray(data?.items)) {
+          setActivityLog(data.items)
+        } else {
+          setActivityLog(Array.isArray(data) ? data : [])
+        }
       } catch (err) {
         setActivityError(err?.message || t('common.loadError'))
       } finally {

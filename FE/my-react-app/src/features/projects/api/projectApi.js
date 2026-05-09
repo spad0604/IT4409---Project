@@ -8,20 +8,41 @@ function projectPath(projectId) {
   return `/api/projects/${encodeId(projectId)}`
 }
 
+function normalizeProjectList(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.projects)) return payload.projects
+  if (Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
+function normalizeProject(payload) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return payload.project ?? payload
+  }
+  return payload
+}
+
+function normalizeProjectMembers(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.members)) return payload.members
+  if (Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
 export function createProject(payload) {
-  return httpClient.post('/api/projects', payload)
+  return httpClient.post('/api/projects', payload).then(normalizeProject)
 }
 
 export function listProjects() {
-  return httpClient.get('/api/projects')
+  return httpClient.get('/api/projects').then(normalizeProjectList)
 }
 
 export function getProject(projectId) {
-  return httpClient.get(projectPath(projectId))
+  return httpClient.get(projectPath(projectId)).then(normalizeProject)
 }
 
 export function updateProject(projectId, patch) {
-  return httpClient.patch(projectPath(projectId), patch)
+  return httpClient.patch(projectPath(projectId), patch).then(normalizeProject)
 }
 
 export function deleteProject(projectId) {
@@ -29,7 +50,7 @@ export function deleteProject(projectId) {
 }
 
 export function getProjectMembers(projectId) {
-  return httpClient.get(`${projectPath(projectId)}/members`)
+  return httpClient.get(`${projectPath(projectId)}/members`).then(normalizeProjectMembers)
 }
 
 export function addProjectMember(projectId, { userId, role }) {

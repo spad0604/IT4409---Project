@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { StatsOverview } from './shared/components/stats-overview/StatsOverview.jsx'
@@ -8,7 +8,7 @@ import Login from './features/auth/pages/Login'
 import { useAuth } from './features/auth/model/AuthContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
 import { useKanbanState } from './features/kanban/hooks'
-import { OverviewPanel, BoardPanel } from './features/kanban/components'
+import { OverviewPanel, BoardPanel, ReportsPanel, ArchivePanel } from './features/kanban/components'
 import * as projectApi from './features/projects/api/projectApi'
 import * as boardApi from './features/boards/api/boardApi'
 import * as issueApi from './features/issues/api/issueApi'
@@ -123,6 +123,8 @@ function formatShortDate(value, locale) {
 function Kanban() {
   const { t, i18n } = useTranslation()
   const { user, refreshMe, serverSignOut } = useAuth()
+  const [topbarPopover, setTopbarPopover] = useState('')
+  const popoverRef = useRef(null)
   const {
     activeTopTab,
     setActiveTopTab,
@@ -251,12 +253,46 @@ function Kanban() {
     return current.startsWith('vi') ? 'vi' : 'en'
   }, [i18n.language, i18n.resolvedLanguage])
 
+  const activeLocale = useMemo(() => (activeLang === 'vi' ? 'vi-VN' : 'en-US'), [activeLang])
+
   const topTabs = t('boardShell.topTabs', { returnObjects: true })
   const sideLinks = t('boardShell.sideLinks', { returnObjects: true })
 
-  const activityFeed = []  // TODO: fetch from BE activity log API when available
+  const formatActivityAction = useCallback((a) => {
+    const action = safeLower(a?.action)
+    if (!action) return ''
 
-  const activeLocale = useMemo(() => (activeLang === 'vi' ? 'vi-VN' : 'en-US'), [activeLang])
+    if (action === 'status_changed') {
+      const from = safeLower(a?.oldValue)
+      const to = safeLower(a?.newValue)
+      const fromLabel = from ? t(`issue.status.${from}`, { defaultValue: String(a?.oldValue || '') }) : ''
+      const toLabel = to ? t(`issue.status.${to}`, { defaultValue: String(a?.newValue || '') }) : ''
+      if (fromLabel && toLabel) {
+        return `${t('activity.actions.status_changed', { defaultValue: 'Status changed' })}: ${fromLabel} → ${toLabel}`
+      }
+      return t('activity.actions.status_changed', { defaultValue: 'Status changed' })
+    }
+
+    return t(`activity.actions.${action}`, { defaultValue: String(a?.action || action) })
+  }, [t])
+
+  const activityFeed = useMemo(() => {
+    const items = Array.isArray(activityLog) ? activityLog : []
+    return items.slice(0, 6).map((a) => {
+      const actor = usersById?.[String(a?.userId)]
+      const name = actor?.name || actor?.email || t('common.unknown')
+      const initials = toInitials(name)
+      const action = formatActivityAction(a) || [a?.action, a?.field].filter(Boolean).join(' · ')
+      const time = formatShortDate(a?.createdAt, activeLocale) || ''
+      return {
+        id: a?.id || `${a?.userId}-${a?.createdAt}`,
+        avatar: initials || '??',
+        actor: name,
+        action: action || t('overview.activity.updated', { defaultValue: 'updated' }),
+        time,
+      }
+    })
+  }, [activityLog, activeLocale, formatActivityAction, t, usersById])
 
   const activeProject = useMemo(
     () => projects.find((p) => String(p?.id) === String(activeProjectId)) ?? null,
@@ -395,12 +431,15 @@ function Kanban() {
     try {
       const data = await issueApi.listIssues(projectId, { assignee: 'me', per_page: 10 })
       const items = Array.isArray(data?.items) ? data.items : []
-      setAssignedIssues(items.slice(0, 2))
+      const mine = user?.id
+        ? items.filter((it) => String(it?.assigneeId ?? '') === String(user.id))
+        : items
+      setAssignedIssues(mine.slice(0, 2))
       await ensureUsersLoaded(items.map((i) => i?.assigneeId).filter(Boolean))
     } catch {
       setAssignedIssues([])
     }
-  }, [ensureUsersLoaded])
+  }, [ensureUsersLoaded, user?.id])
 
   const refetchBoards = useCallback(async (projectId) => {
     if (!projectId) return
@@ -577,14 +616,36 @@ function Kanban() {
     setActivityLoading(true)
     setActivityError('')
     try {
-      const data = await activityApi.getProjectActivity(projectId, { page: 0, perPage: 20 })
-      setActivityLog(Array.isArray(data?.items) ? data.items : [])
+      const data = await activityApi.getProjectActivity(projectId, { page: 1, perPage: 20 })
+      const items = Array.isArray(data?.items) ? data.items : []
+      setActivityLog(items)
+      await ensureUsersLoaded(items.map((a) => a?.userId).filter(Boolean))
     } catch (err) {
       setActivityError(err?.message || '')
+      setActivityLog([])
     } finally {
       setActivityLoading(false)
     }
-  }, [])
+  }, [ensureUsersLoaded])
+
+  useEffect(() => {
+    if (!topbarPopover) return
+    const onMouseDown = (event) => {
+      const target = event.target
+      if (target?.closest?.('[data-popover-toggle="true"]')) return
+      if (popoverRef.current && popoverRef.current.contains(target)) return
+      setTopbarPopover('')
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setTopbarPopover('')
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [topbarPopover])
 
   useEffect(() => {
     refetchProjects()
@@ -659,6 +720,13 @@ function Kanban() {
   }, [activeProjectId, refetchProjectActivity])
 
   useEffect(() => {
+    if (!showCreateIssue) return
+    const pid = String(newIssueProjectId || '').trim()
+    if (!pid) return
+    refetchMembers(pid)
+  }, [newIssueProjectId, refetchMembers, showCreateIssue])
+
+  useEffect(() => {
     if (!user?.id) return
     const ws = new WsClient()
     wsClientRef.current = ws
@@ -719,6 +787,8 @@ function Kanban() {
     setActiveIssueKey('')
     if (linkID === 'overview') setActiveTopTab('dashboard')
     if (linkID === 'board') setActiveTopTab('projects')
+    if (linkID === 'reports') setActiveTopTab('projects')
+    if (linkID === 'archive') setActiveTopTab('projects')
     if (linkID === 'issues') setActiveTopTab('backlog')
   }, [])
 
@@ -747,6 +817,9 @@ function Kanban() {
     setCreateIssueError('')
     setNewIssueProjectId(String(activeProjectId || projects?.[0]?.id || ''))
     setShowCreateIssue(true)
+    if (activeProjectId) {
+      refetchMembers(activeProjectId)
+    }
     // focus later when modal renders
     setTimeout(() => {
       try {
@@ -756,7 +829,7 @@ function Kanban() {
         /* ignore */
       }
     }, 60)
-  }, [activeProjectId, projects])
+  }, [activeProjectId, projects, refetchMembers])
 
   const handleCancelCreateIssue = useCallback(() => {
     setShowCreateIssue(false)
@@ -879,6 +952,13 @@ function Kanban() {
     setDropColumnID('')
     setDragState(null)
   }, [])  // state setters don't need dependencies
+
+  useEffect(() => {
+    if (!activeProjectId) return
+    if (!activeIssueKey) return
+    if (Array.isArray(members) && members.length > 0) return
+    refetchMembers(activeProjectId)
+  }, [activeIssueKey, activeProjectId, members, refetchMembers])
 
   const isBoardView = activeTopTab === 'projects'
   const isOverviewView = activeTopTab === 'dashboard'
@@ -1215,7 +1295,7 @@ function Kanban() {
                     <button
                       key={p}
                       type="button"
-                      className={`priority-pill ${newIssuePriority === p ? 'is-active' : ''}`}
+                      className={`priority-pill tone-${p} ${newIssuePriority === p ? 'is-active' : ''}`}
                       onClick={() => setNewIssuePriority(p)}
                     >
                       {t(`priority.${p}`)}
@@ -1233,9 +1313,16 @@ function Kanban() {
                   onChange={(e) => setNewIssueAssigneeId(e.target.value)}
                 >
                   <option value="">{t('issues.create.assigneePlaceholder')}</option>
-                  {(Array.isArray(members) ? members : []).map((m) => (
-                    <option key={m?.id} value={m?.id}>{m?.name || m?.email || t('common.unknown')}</option>
-                  ))}
+                  {(Array.isArray(members) ? members : []).map((m) => {
+                    const userId = String(m?.userId ?? '')
+                    const u = userId ? usersById?.[userId] : null
+                    const label = u?.name || u?.email || t('common.unknown')
+                    return (
+                      <option key={userId || m?.id} value={userId}>
+                        {label}
+                      </option>
+                    )
+                  })}
                 </select>
               </label>
 
@@ -1248,8 +1335,8 @@ function Kanban() {
                   onChange={(e) => setNewIssueSprintId(e.target.value)}
                 >
                   <option value="">{t('issues.create.sprintPlaceholder')}</option>
-                  {(Array.isArray(boardColumnsMeta) ? boardColumnsMeta : []).map((col) => (
-                    <option key={col?.id} value={col?.id}>{col?.name || t('common.unknown')}</option>
+                  {(Array.isArray(sprints) ? sprints : []).map((sp) => (
+                    <option key={sp?.id} value={sp?.id}>{sp?.name || t('common.unknown')}</option>
                   ))}
                 </select>
               </label>
@@ -1304,13 +1391,13 @@ function Kanban() {
       document.body,
     )
   }, [
-    boardColumnsMeta,
     createIssueCreateAnother,
     createIssueError,
     createIssueLoading,
     handleCancelCreateIssue,
     handleSubmitCreateIssue,
     members,
+    usersById,
     newIssueAssigneeId,
     newIssueDescription,
     newIssuePriority,
@@ -1319,6 +1406,7 @@ function Kanban() {
     newIssueTitle,
     newIssueType,
     projects,
+    sprints,
     showCreateIssue,
     t,
   ])
@@ -1381,9 +1469,82 @@ function Kanban() {
             <button type="button" className="create-issue-btn" onClick={handleOpenCreateIssue}>
               {t('boardShell.createIssue')}
             </button>
-            <button type="button" className="icon-btn" aria-label={t('boardShell.notifications')}><FiBell /></button>
-            <button type="button" className="icon-btn" aria-label={t('boardShell.settings')}><FiSettings /></button>
-            <span className="profile-pill" aria-hidden="true">{profileInitials || '??'}</span>
+            <button
+              type="button"
+              className={`icon-btn ${topbarPopover === 'notifications' ? 'is-active' : ''}`}
+              aria-label={t('boardShell.notifications')}
+              data-popover-toggle="true"
+              onClick={() => setTopbarPopover((prev) => (prev === 'notifications' ? '' : 'notifications'))}
+            >
+              <FiBell />
+            </button>
+            <button
+              type="button"
+              className={`icon-btn ${topbarPopover === 'settings' ? 'is-active' : ''}`}
+              aria-label={t('boardShell.settings')}
+              data-popover-toggle="true"
+              onClick={() => setTopbarPopover((prev) => (prev === 'settings' ? '' : 'settings'))}
+            >
+              <FiSettings />
+            </button>
+            <button
+              type="button"
+              className={`profile-pill ${topbarPopover === 'profile' ? 'is-active' : ''}`}
+              aria-label={t('boardShell.profile', { defaultValue: 'Profile' })}
+              data-popover-toggle="true"
+              onClick={() => setTopbarPopover((prev) => (prev === 'profile' ? '' : 'profile'))}
+            >
+              {profileInitials || '??'}
+            </button>
+
+            {topbarPopover ? (
+              <div ref={popoverRef} className="topbar-popover" role="dialog" aria-label={t('boardShell.popover', { defaultValue: 'Menu' })}>
+                {topbarPopover === 'notifications' ? (
+                  <>
+                    <p className="topbar-popover-title">{t('boardShell.notifications')}</p>
+                    <div className="topbar-popover-list">
+                      {activityLoading ? (
+                        <p className="topbar-popover-muted">{t('common.loading')}</p>
+                      ) : null}
+                      {activityError ? (
+                        <p className="topbar-popover-muted">{activityError}</p>
+                      ) : null}
+                      {!activityLoading && activityFeed.length === 0 ? (
+                        <p className="topbar-popover-muted">{t('overview.activity.empty')}</p>
+                      ) : null}
+                      {activityFeed.map((it) => (
+                        <div key={it.id} className="topbar-popover-item">
+                          <span className="activity-avatar">{it.avatar}</span>
+                          <div>
+                            <p><strong>{it.actor}</strong> {it.action}</p>
+                            <span>{it.time}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+
+                {topbarPopover === 'settings' ? (
+                  <>
+                    <p className="topbar-popover-title">{t('boardShell.settings')}</p>
+                    <p className="topbar-popover-muted">{t('common.comingSoon', { defaultValue: 'Coming soon' })}</p>
+                  </>
+                ) : null}
+
+                {topbarPopover === 'profile' ? (
+                  <>
+                    <p className="topbar-popover-title">{user?.name || user?.email || t('common.unknown')}</p>
+                    <p className="topbar-popover-muted">{user?.email || ''}</p>
+                    <div className="topbar-popover-actions">
+                      <button type="button" className="filter-btn" onClick={serverSignOut}>
+                        <FiLogOut /> {t('auth.signOut')}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </header>
 
@@ -1421,7 +1582,7 @@ function Kanban() {
               })}
             </nav>
 
-            <button type="button" className="invite-member-btn"><FiUserPlus /> {t('boardShell.inviteMember')}</button>
+            <button type="button" className="invite-member-btn" onClick={() => handleTopTabClick('team')}><FiUserPlus /> {t('boardShell.inviteMember')}</button>
 
             <div className="sidebar-footer">
               <button type="button" className="footer-link"><FiHelpCircle /> {t('boardShell.help')}</button>
@@ -1438,6 +1599,7 @@ function Kanban() {
                 projectName={activeProject?.name || ''}
                 locale={activeLocale}
                 members={members}
+                usersById={usersById}
               />
             ) : null}
 
@@ -1592,7 +1754,7 @@ function Kanban() {
               </section>
             ) : null}
 
-            {isBoardView && !activeIssueKey ? (
+            {isBoardView && !activeIssueKey && activeSideLink === 'board' ? (
               <BoardPanel
                 t={t}
                 boardDetail={boardDetail}
@@ -1608,6 +1770,33 @@ function Kanban() {
                 onCardDragEnd={handleCardDragEnd}
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDrop={handleColumnDrop}
+                onOpenIssueDetails={handleOpenIssueDetails}
+              />
+            ) : null}
+
+            {isBoardView && !activeIssueKey && activeSideLink === 'reports' ? (
+              <ReportsPanel
+                t={t}
+                projectName={activeProject?.name || ''}
+                issues={issueItems}
+                issuesTotal={Number(issuesData?.total ?? issueItems.length)}
+                issuesLoading={issuesLoading}
+                issuesError={issuesError}
+                activeLocale={activeLocale}
+                usersById={usersById}
+                onOpenIssueDetails={handleOpenIssueDetails}
+              />
+            ) : null}
+
+            {isBoardView && !activeIssueKey && activeSideLink === 'archive' ? (
+              <ArchivePanel
+                t={t}
+                projectName={activeProject?.name || ''}
+                issues={issueItems}
+                issuesLoading={issuesLoading}
+                issuesError={issuesError}
+                activeLocale={activeLocale}
+                usersById={usersById}
                 onOpenIssueDetails={handleOpenIssueDetails}
               />
             ) : null}

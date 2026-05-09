@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"it4409/internal/delivery/http/middleware"
 	"it4409/internal/domain"
 	"it4409/internal/usecase"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type ProjectHandler struct {
@@ -47,87 +48,107 @@ func getUserID(r *http.Request) string {
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	if userID == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var proj domain.Project
 	if err := json.NewDecoder(r.Body).Decode(&proj); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	created, err := h.projectUC.CreateProject(r.Context(), userID, &proj)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(created)
+	writeSuccess(w, http.StatusCreated, created)
 }
 
 func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
-	projects, err := h.projectUC.ListProjects(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projects)
+	projects, err := h.projectUC.ListProjects(r.Context(), userID)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, projects)
 }
 
 func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 
 	proj, err := h.projectUC.GetProject(r.Context(), userID, projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(proj)
+	writeSuccess(w, http.StatusOK, proj)
 }
 
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 
 	var patch domain.ProjectPatch
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	proj, err := h.projectUC.UpdateProject(r.Context(), userID, projectID, &patch)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(proj)
+	writeSuccess(w, http.StatusOK, proj)
 }
 
 func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
-	projectID := chi.URLParam(r, "id")
-
-	if err := h.projectUC.DeleteProject(r.Context(), userID, projectID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	projectID := chi.URLParam(r, "id")
+
+	if err := h.projectUC.DeleteProject(r.Context(), userID, projectID); err != nil {
+		writeDomainError(w, err)
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, nil)
 }
 
 func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	adminID := getUserID(r)
+	if adminID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 
 	var req struct {
@@ -135,7 +156,7 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		Role   string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -146,42 +167,56 @@ func (h *ProjectHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.projectUC.AddMember(r.Context(), adminID, member); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	writeSuccess(w, http.StatusCreated, nil)
 }
 
 func (h *ProjectHandler) GetMembers(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 
 	members, err := h.projectUC.GetMembers(r.Context(), userID, projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(members)
+	writeSuccess(w, http.StatusOK, members)
 }
 
 func (h *ProjectHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	adminID := getUserID(r)
+	if adminID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 	targetUserID := chi.URLParam(r, "userID")
 
 	if err := h.projectUC.RemoveMember(r.Context(), adminID, projectID, targetUserID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	writeSuccess(w, http.StatusOK, nil)
 }
 
 func (h *ProjectHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 	adminID := getUserID(r)
+	if adminID == "" {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	projectID := chi.URLParam(r, "id")
 	targetUserID := chi.URLParam(r, "userID")
 
@@ -189,14 +224,14 @@ func (h *ProjectHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		Role string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.projectUC.ChangeRole(r.Context(), adminID, projectID, targetUserID, req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	writeSuccess(w, http.StatusOK, nil)
 }
