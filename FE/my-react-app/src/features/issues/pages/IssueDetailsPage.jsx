@@ -48,6 +48,7 @@ export default function IssueDetailsPage({
   projectName,
   locale = 'vi-VN',
   members = [],
+  usersById = {},
 }) {
   const { t } = useTranslation()
   const [issue, setIssue] = useState(null)
@@ -72,6 +73,11 @@ export default function IssueDetailsPage({
 
   // Assign issue
   const [assignLoading, setAssignLoading] = useState(false)
+
+  // Inline field edits
+  const [statusUpdating, setStatusUpdating] = useState(false)
+  const [priorityUpdating, setPriorityUpdating] = useState(false)
+  const [typeUpdating, setTypeUpdating] = useState(false)
 
   const headline = useMemo(() => {
     if (!issue) return issueKey
@@ -156,6 +162,54 @@ export default function IssueDetailsPage({
     }
   }, [issueKey])
 
+  const handleChangeStatus = useCallback(async (nextStatus) => {
+    if (!issueKey) return
+    if (!nextStatus) return
+    if (safeLower(issue?.status) === safeLower(nextStatus)) return
+    setStatusUpdating(true)
+    setError('')
+    try {
+      const updated = await issueApi.changeIssueStatus(issueKey, nextStatus)
+      setIssue(updated || null)
+    } catch (err) {
+      setError(err?.message || t('common.actionFailed'))
+    } finally {
+      setStatusUpdating(false)
+    }
+  }, [issue?.status, issueKey, t])
+
+  const handleChangePriority = useCallback(async (nextPriority) => {
+    if (!issueKey) return
+    if (!nextPriority) return
+    if (safeLower(issue?.priority) === safeLower(nextPriority)) return
+    setPriorityUpdating(true)
+    setError('')
+    try {
+      const updated = await issueApi.updateIssue(issueKey, { priority: nextPriority })
+      setIssue(updated || null)
+    } catch (err) {
+      setError(err?.message || t('common.actionFailed'))
+    } finally {
+      setPriorityUpdating(false)
+    }
+  }, [issue?.priority, issueKey, t])
+
+  const handleChangeType = useCallback(async (nextType) => {
+    if (!issueKey) return
+    if (!nextType) return
+    if (safeLower(issue?.type) === safeLower(nextType)) return
+    setTypeUpdating(true)
+    setError('')
+    try {
+      const updated = await issueApi.updateIssue(issueKey, { type: nextType })
+      setIssue(updated || null)
+    } catch (err) {
+      setError(err?.message || t('common.actionFailed'))
+    } finally {
+      setTypeUpdating(false)
+    }
+  }, [issue?.type, issueKey, t])
+
   // ─── Comment Handlers ───────────────────────────────────────────────────────
   const handleAddComment = useCallback(async (event) => {
     event.preventDefault()
@@ -234,6 +288,23 @@ export default function IssueDetailsPage({
     return t(`issue.type.${type}`, { defaultValue: type })
   }, [issue?.type, t])
 
+  const typeTone = useMemo(() => {
+    const type = safeLower(issue?.type)
+    if (type === 'bug') return 'amber'
+    if (type === 'task') return 'indigo'
+    if (type === 'story') return 'blue'
+    if (type === 'epic') return 'violet'
+    if (type === 'subtask') return 'green'
+    return 'blue'
+  }, [issue?.type])
+
+  const priorityTone = useMemo(() => {
+    const p = safeLower(issue?.priority)
+    if (p === 'critical' || p === 'high') return 'high'
+    if (p === 'medium') return 'medium'
+    return 'low'
+  }, [issue?.priority])
+
   const priorityLabel = useMemo(() => {
     const p = safeLower(issue?.priority)
     if (!p) return '-'
@@ -265,9 +336,9 @@ export default function IssueDetailsPage({
             <h1 className="issue-detail-title">{issue?.title || '-'}</h1>
 
             <div className="issue-detail-meta">
-              <span className="meta-chip">{typeLabel}</span>
-              <span className="meta-chip">{statusLabel}</span>
-              <span className="meta-chip">{priorityLabel}</span>
+              <span className={`task-tag tone-${typeTone}`}>{typeLabel}</span>
+              <span className={`board-card-chip tone-${safeLower(issue?.status) || 'todo'}`}>{statusLabel}</span>
+              <span className={`task-priority tone-${priorityTone}`}>{priorityLabel}</span>
             </div>
 
             <section className="issue-detail-section">
@@ -315,10 +386,10 @@ export default function IssueDetailsPage({
                     {editingCommentId === c?.id ? (
                       <div>
                         <textarea
+                          className="issue-detail-textarea"
                           value={editingCommentContent}
                           onChange={(e) => setEditingCommentContent(e.target.value)}
                           rows="3"
-                          style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit', marginBottom: '0.5rem' }}
                         />
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
@@ -372,11 +443,11 @@ export default function IssueDetailsPage({
               <form onSubmit={handleAddComment} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 {newCommentError ? <p style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>{newCommentError}</p> : null}
                 <textarea
+                  className="issue-detail-textarea"
                   value={newCommentContent}
                   onChange={(e) => setNewCommentContent(e.target.value)}
                   placeholder={t('issues.detail.addCommentPlaceholder', { defaultValue: 'Add a comment...' })}
                   rows="3"
-                  style={{ width: '100%', padding: '0.5rem', fontFamily: 'inherit', marginBottom: '0.5rem' }}
                 />
                 <button
                   type="submit"
@@ -395,27 +466,67 @@ export default function IssueDetailsPage({
               <dl className="kv">
                 <div>
                   <dt>{t('issues.detail.status', { defaultValue: 'Status' })}</dt>
-                  <dd>{statusLabel}</dd>
+                  <dd style={{ minHeight: '1.5rem', display: 'flex', alignItems: 'center' }}>
+                    <select
+                      className="issue-detail-select"
+                      value={safeLower(issue?.status) || ''}
+                      onChange={(e) => handleChangeStatus(e.target.value)}
+                      disabled={statusUpdating}
+                    >
+                      {['todo', 'in_progress', 'in_review', 'done', 'cancelled'].map((s) => (
+                        <option key={s} value={s}>{t(`issue.status.${s}`, { defaultValue: s })}</option>
+                      ))}
+                    </select>
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('issues.detail.priority', { defaultValue: 'Priority' })}</dt>
+                  <dd style={{ minHeight: '1.5rem', display: 'flex', alignItems: 'center' }}>
+                    <select
+                      className="issue-detail-select"
+                      value={safeLower(issue?.priority) || ''}
+                      onChange={(e) => handleChangePriority(e.target.value)}
+                      disabled={priorityUpdating}
+                    >
+                      {['critical', 'high', 'medium', 'low', 'trivial'].map((p) => (
+                        <option key={p} value={p}>{t(`priority.${p}`, { defaultValue: p })}</option>
+                      ))}
+                    </select>
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('issues.detail.type', { defaultValue: 'Type' })}</dt>
+                  <dd style={{ minHeight: '1.5rem', display: 'flex', alignItems: 'center' }}>
+                    <select
+                      className="issue-detail-select"
+                      value={safeLower(issue?.type) || ''}
+                      onChange={(e) => handleChangeType(e.target.value)}
+                      disabled={typeUpdating}
+                    >
+                      {['task', 'bug', 'story', 'epic', 'subtask'].map((tp) => (
+                        <option key={tp} value={tp}>{t(`issue.type.${tp}`, { defaultValue: tp })}</option>
+                      ))}
+                    </select>
+                  </dd>
                 </div>
                 <div>
                   <dt>{t('issues.detail.assignee', { defaultValue: 'Assignee' })}</dt>
                   <dd style={{ cursor: 'pointer', minHeight: '1.5rem', display: 'flex', alignItems: 'center' }}>
                     <select
+                      className="issue-detail-select"
                       value={String(issue?.assigneeId || '')}
                       onChange={(e) => handleAssignIssue(e.target.value || null)}
                       disabled={assignLoading}
-                      style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: '#fff',
-                        cursor: assignLoading ? 'not-allowed' : 'pointer',
-                      }}
                     >
                       <option value="">{t('common.unassigned', { defaultValue: 'Unassigned' })}</option>
                       {(Array.isArray(members) ? members : []).map((m) => (
-                        <option key={m?.id} value={m?.id}>
-                          {m?.name || m?.username || m?.email || 'Unknown'}
+                        <option key={m?.userId || m?.id} value={String(m?.userId ?? '')}>
+                          {usersById?.[String(m?.userId)]?.name
+                            || usersById?.[String(m?.userId)]?.email
+                            || m?.name
+                            || m?.username
+                            || m?.email
+                            || 'Unknown'}
                         </option>
                       ))}
                     </select>

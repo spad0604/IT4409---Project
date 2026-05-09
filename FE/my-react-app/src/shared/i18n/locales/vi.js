@@ -110,7 +110,7 @@ export const vi = {
     },
     board: {
       kicker: 'Bảng điều phối',
-      title: 'Nhật ký thực thi (Execution Ledger)',
+      title: 'Nhật ký',
       subtitle:
         'Danh sách sử dụng khoảng cách và thay đổi nền để tách biệt thông tin. Ưu tiên cao được đánh dấu bằng thanh đỏ 4px ở cạnh trái.',
       flowProgress: 'Tiến độ luồng công việc',
@@ -171,6 +171,7 @@ export const vi = {
       actionFailed: 'Thao tác thất bại',
       close: 'Đóng',
       cancel: 'Hủy',
+      back: 'Quay lại',
       filter: 'Lọc',
       filters: 'Bộ lọc',
       viewAll: 'Xem tất cả',
@@ -244,7 +245,33 @@ export const vi = {
         validation: 'Vui lòng nhập đầy đủ tên và mã dự án.',
       },
       status: {
-        active: 'ĐANG HOẠT ĐỘNG',
+        active: 'Dự án đang hoạt động',
+      },
+    },
+
+    reports: {
+      aria: 'Báo cáo',
+      title: 'Báo cáo',
+      total: 'Tổng số vấn đề',
+      searchPlaceholder: 'Tìm kiếm vấn đề…',
+      empty: 'Không tìm thấy vấn đề nào',
+      emptyHint: 'Thử thay đổi bộ lọc hoặc từ khóa.',
+      filters: {
+        all: 'Tất cả',
+        assignee: 'Người được giao',
+        status: 'Trạng thái',
+        priority: 'Ưu tiên',
+        type: 'Loại',
+      },
+    },
+
+    activity: {
+      actions: {
+        status_changed: 'Đã đổi trạng thái',
+        issue_created: 'Đã tạo vấn đề',
+        issue_updated: 'Đã cập nhật vấn đề',
+        comment_added: 'Đã thêm bình luận',
+        issue_assigned: 'Đã thay đổi người được giao',
       },
     },
 
@@ -299,9 +326,11 @@ export const vi = {
     },
 
     priority: {
+      critical: 'Khẩn cấp',
       high: 'Cao',
       medium: 'Trung bình',
       low: 'Thấp',
+      trivial: 'Rất thấp',
     },
 
     issue: {

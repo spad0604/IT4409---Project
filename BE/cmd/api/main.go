@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -36,7 +37,7 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load()
+	loadDotEnv()
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -138,4 +139,32 @@ func main() {
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
 	log.Printf("shutdown complete")
+}
+
+func loadDotEnv() {
+	wd, err := os.Getwd()
+	if err != nil {
+		_ = godotenv.Load()
+		return
+	}
+
+	// Support running from BE root (go run ./cmd/api)
+	// and from BE/cmd/api (go run main.go).
+	paths := []string{
+		filepath.Join(wd, ".env"),
+		filepath.Join(wd, "..", ".env"),
+		filepath.Join(wd, "..", "..", ".env"),
+	}
+
+	for _, p := range paths {
+		if statErr := func() error {
+			_, e := os.Stat(p)
+			return e
+		}(); statErr == nil {
+			_ = godotenv.Load(p)
+			return
+		}
+	}
+
+	_ = godotenv.Load()
 }

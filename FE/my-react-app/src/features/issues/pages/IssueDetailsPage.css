@@ -59,6 +59,48 @@
   gap: 0.4rem;
 }
 
+.issue-detail-textarea {
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.42rem;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  font-size: 0.7rem;
+  color: #111827;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 0.5rem;
+}
+
+.issue-detail-textarea:focus {
+  outline: none;
+  border-color: #1438de;
+  box-shadow: 0 0 0 2px #e3e9ff;
+}
+
+.issue-detail-select {
+  height: 30px;
+  padding: 0 0.45rem;
+  border-radius: 0.42rem;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  font-size: 0.66rem;
+  color: #111827;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.issue-detail-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.issue-detail-select:focus {
+  outline: none;
+  border-color: #1438de;
+  box-shadow: 0 0 0 2px #e3e9ff;
+}
+
 .meta-chip {
   font-size: 0.62rem;
   font-weight: 700;

@@ -171,6 +171,7 @@ export const en = {
       actionFailed: 'Action failed',
       close: 'Close',
       cancel: 'Cancel',
+      back: 'Back',
       filter: 'Filter',
       filters: 'Filters',
       viewAll: 'View all',
@@ -244,7 +245,33 @@ export const en = {
         validation: 'Please enter project name and key.',
       },
       status: {
-        active: 'ACTIVE',
+        active: 'Active',
+      },
+    },
+
+    reports: {
+      aria: 'Reports',
+      title: 'Reports',
+      total: 'Total issues',
+      searchPlaceholder: 'Search issues…',
+      empty: 'No issues found',
+      emptyHint: 'Try changing filters or search.',
+      filters: {
+        all: 'All',
+        assignee: 'Assignee',
+        status: 'Status',
+        priority: 'Priority',
+        type: 'Type',
+      },
+    },
+
+    activity: {
+      actions: {
+        status_changed: 'Status changed',
+        issue_created: 'Issue created',
+        issue_updated: 'Issue updated',
+        comment_added: 'Comment added',
+        issue_assigned: 'Assignee changed',
       },
     },
 
@@ -300,9 +327,11 @@ export const en = {
     },
 
     priority: {
+      critical: 'Critical',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      trivial: 'Trivial',
     },
 
     issue: {
