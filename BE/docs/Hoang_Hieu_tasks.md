@@ -791,5 +791,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/projects/$projId/issues" -Meth
 ```bash
 docker rm -f pg-test
 del BE\.env
+
+đã xong nhiệm vụ 2/3 tuần
 ```
 
