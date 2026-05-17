@@ -1,6 +1,6 @@
 import { FiBriefcase } from 'react-icons/fi'
 import { StatsOverview } from '../../../shared/components/stats-overview/StatsOverview.jsx'
-import { formatShortDate, priorityDisplay, toInitials } from '../kanbanUtils'
+import { formatShortDate, priorityDisplay } from '../kanbanUtils'
 
 export default function OverviewPanel({
   t,

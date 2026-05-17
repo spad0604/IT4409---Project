@@ -8,10 +8,10 @@ function encodeId(value) {
  * POST /api/projects/{projectID}/sprints
  * Create a new sprint
  */
-export function createSprint(projectId, { name, description, startDate, endDate } = {}) {
+export function createSprint(projectId, { name, goal, startDate, endDate } = {}) {
   return httpClient.post(`/api/projects/${encodeId(projectId)}/sprints`, {
     name,
-    description,
+    goal,
     startDate,
     endDate,
   })

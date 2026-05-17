@@ -3,18 +3,24 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { StatsOverview } from './shared/components/stats-overview/StatsOverview.jsx'
 import './App.css'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
 import { useAuth } from './features/auth/model/AuthContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
+import IssuesPage from './features/issues/pages/IssuesPage'
+import ProfilePage from './features/users/pages/ProfilePage'
 import { useKanbanState } from './features/kanban/hooks'
-import { OverviewPanel, BoardPanel, ReportsPanel, ArchivePanel } from './features/kanban/components'
+import { OverviewPanel, BoardPanel, ReportsPanel, ArchivePanel, TeamPanel } from './features/kanban/components'
 import * as projectApi from './features/projects/api/projectApi'
 import * as boardApi from './features/boards/api/boardApi'
 import * as issueApi from './features/issues/api/issueApi'
 import * as userApi from './features/users/api/userApi'
 import * as sprintApi from './features/sprints/api/sprintApi'
 import * as activityApi from './features/activity/api/activityApi'
+import * as labelApi from './features/labels/api/labelApi'
+import BacklogView from './features/sprints/components/BacklogView'
+import FilterBar from './shared/components/FilterBar'
+import GlobalSearch from './shared/components/GlobalSearch'
 import { WsClient } from './shared/ws/wsClient'
 import {
   FiArchive,
@@ -85,30 +91,6 @@ function toneFromIndex(index) {
   return tones[Math.abs(index) % tones.length]
 }
 
-function labelToneFromIssueType(type) {
-  switch (safeLower(type)) {
-    case 'bug':
-      return 'amber'
-    case 'task':
-      return 'indigo'
-    case 'story':
-      return 'blue'
-    case 'epic':
-      return 'violet'
-    case 'subtask':
-      return 'green'
-    default:
-      return 'blue'
-  }
-}
-
-function priorityDisplay(priority) {
-  const p = safeLower(priority)
-  if (p === 'critical' || p === 'high') return { label: 'High', tone: 'high' }
-  if (p === 'medium') return { label: 'Medium', tone: 'medium' }
-  return { label: 'Low', tone: 'low' }
-}
-
 function formatShortDate(value, locale) {
   if (!value) return ''
   const date = value instanceof Date ? value : new Date(value)
@@ -122,9 +104,25 @@ function formatShortDate(value, locale) {
 
 function Kanban() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { user, refreshMe, serverSignOut } = useAuth()
   const [topbarPopover, setTopbarPopover] = useState('')
   const popoverRef = useRef(null)
+  const [projectLabels, setProjectLabels] = useState([])
+  const [issueFilters, setIssueFilters] = useState({
+    search: '',
+    status: '',
+    type: '',
+    priority: '',
+    assignee: '',
+    label: '',
+    sprint: '',
+    reporter: '',
+  })
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false)
+  const [editingSprint, setEditingSprint] = useState(null)
   const {
     activeTopTab,
     setActiveTopTab,
@@ -136,7 +134,6 @@ function Kanban() {
     setDragState,
     dropColumnID,
     setDropColumnID,
-    headerSearch,
     setHeaderSearch,
     projects,
     setProjects,
@@ -216,11 +213,8 @@ function Kanban() {
     setCreateIssueCreateAnother,
     sprints,
     setSprints,
-    sprintsLoading,
     setSprintsLoading,
-    sprintsError,
     setSprintsError,
-    activeSprint,
     setActiveSprint,
     showCreateSprint,
     setShowCreateSprint,
@@ -232,7 +226,6 @@ function Kanban() {
     setNewSprintName,
     newSprintDescription,
     setNewSprintDescription,
-    backlogIssues,
     setBacklogIssues,
     backlogLoading,
     setBacklogLoading,
@@ -395,15 +388,26 @@ function Kanban() {
     }))
   }, [usersById])
 
-  const refetchIssues = useCallback(async (projectId, { search } = {}) => {
+  const refetchIssues = useCallback(async (projectId, overrides = {}) => {
     if (!projectId) return
     setIssuesLoading(true)
     setIssuesError('')
     try {
+      const query = {
+        search: issueFilters.search ? String(issueFilters.search) : '',
+        status: issueFilters.status || '',
+        type: issueFilters.type || '',
+        priority: issueFilters.priority || '',
+        assignee: issueFilters.assignee || '',
+        label: issueFilters.label || '',
+        sprint: issueFilters.sprint || '',
+        reporter: issueFilters.reporter || '',
+        ...overrides,
+      }
       const data = await issueApi.listIssues(projectId, {
         page: 0,
         per_page: 50,
-        search: search ? String(search) : '',
+        ...query,
       })
       const items = Array.isArray(data?.items) ? data.items : []
       setIssuesData({
@@ -424,7 +428,7 @@ function Kanban() {
     } finally {
       setIssuesLoading(false)
     }
-  }, [ensureUsersLoaded, t])
+  }, [ensureUsersLoaded, issueFilters, t])
 
   const refetchAssigned = useCallback(async (projectId) => {
     if (!projectId) return
@@ -538,7 +542,7 @@ function Kanban() {
     setBacklogLoading(true)
     try {
       const data = await sprintApi.getBacklog(projectId, { perPage: 50 })
-      setBacklogIssues(Array.isArray(data?.items) ? data.items : [])
+      setBacklogIssues(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [])
     } catch {
       // ignore
     } finally {
@@ -546,13 +550,38 @@ function Kanban() {
     }
   }, [])
 
+  const refetchProjectLabels = useCallback(async (projectId) => {
+    if (!projectId) {
+      setProjectLabels([])
+      return
+    }
+    try {
+      const data = await labelApi.listLabels(projectId)
+      setProjectLabels(Array.isArray(data) ? data : [])
+    } catch {
+      setProjectLabels([])
+    }
+  }, [])
+
   const handleOpenCreateSprint = useCallback(() => {
+    setEditingSprint(null)
+    setNewSprintName('')
+    setNewSprintDescription('')
+    setShowCreateSprint(true)
+    setCreateSprintError('')
+  }, [])
+
+  const handleEditSprint = useCallback((sprint) => {
+    setEditingSprint(sprint || null)
+    setNewSprintName(String(sprint?.name || ''))
+    setNewSprintDescription(String(sprint?.goal || ''))
     setShowCreateSprint(true)
     setCreateSprintError('')
   }, [])
 
   const handleCancelCreateSprint = useCallback(() => {
     setShowCreateSprint(false)
+    setEditingSprint(null)
     setNewSprintName('')
     setNewSprintDescription('')
     setCreateSprintError('')
@@ -571,12 +600,20 @@ function Kanban() {
     setCreateSprintLoading(true)
     setCreateSprintError('')
     try {
-      await sprintApi.createSprint(activeProjectId, {
-        name,
-        description: String(newSprintDescription ?? '').trim(),
-      })
+      if (editingSprint?.id) {
+        await sprintApi.updateSprint(editingSprint.id, {
+          name,
+          goal: String(newSprintDescription ?? '').trim(),
+        })
+      } else {
+        await sprintApi.createSprint(activeProjectId, {
+          name,
+          goal: String(newSprintDescription ?? '').trim(),
+        })
+      }
       await refetchSprints(activeProjectId)
       setShowCreateSprint(false)
+      setEditingSprint(null)
       setNewSprintName('')
       setNewSprintDescription('')
     } catch (err) {
@@ -584,7 +621,7 @@ function Kanban() {
     } finally {
       setCreateSprintLoading(false)
     }
-  }, [activeProjectId, newSprintName, newSprintDescription, refetchSprints, t])
+  }, [activeProjectId, editingSprint?.id, newSprintName, newSprintDescription, refetchSprints, t])
 
   const handleStartSprint = useCallback(async (sprintId) => {
     if (!sprintId) return
@@ -663,8 +700,10 @@ function Kanban() {
   useEffect(() => {
     if (!activeProjectId) return
     refetchBoards(activeProjectId)
-    refetchIssues(activeProjectId, { search: headerSearch })
-  }, [activeProjectId, headerSearch, refetchBoards, refetchIssues])
+    refetchIssues(activeProjectId)
+    refetchProjectLabels(activeProjectId)
+    refetchMembers(activeProjectId)
+  }, [activeProjectId, issueFilters, refetchBoards, refetchIssues, refetchProjectLabels, refetchMembers])
 
   useEffect(() => {
     refetchBoardDetail(activeBoardId)
@@ -724,17 +763,18 @@ function Kanban() {
     const pid = String(newIssueProjectId || '').trim()
     if (!pid) return
     refetchMembers(pid)
-  }, [newIssueProjectId, refetchMembers, showCreateIssue])
+    refetchProjectLabels(pid)
+  }, [newIssueProjectId, refetchMembers, refetchProjectLabels, showCreateIssue])
 
   useEffect(() => {
     if (!user?.id) return
     const ws = new WsClient()
     wsClientRef.current = ws
 
-    ws.on('issue_updated', (data) => {
+    ws.on('issue_updated', () => {
       // Refetch issues when updated via WebSocket
       if (activeProjectId) {
-        refetchIssues(activeProjectId, { search: headerSearch })
+        refetchIssues(activeProjectId)
       }
     })
 
@@ -768,39 +808,120 @@ function Kanban() {
       ws.disconnect()
       wsClientRef.current = null
     }
-  }, [user?.id, activeProjectId, headerSearch, refetchIssues, refetchProjectActivity, refetchSprints, refetchBacklog])
+  }, [user?.id, activeProjectId, refetchIssues, refetchProjectActivity, refetchSprints, refetchBacklog])
 
   const handleLanguageChange = (lang) => {
     i18n.changeLanguage(lang)
   }
 
+  const handleFilterChange = useCallback((nextFilters) => {
+    setIssueFilters(nextFilters)
+    if (typeof nextFilters?.search === 'string') {
+      setHeaderSearch(nextFilters.search)
+    }
+  }, [setHeaderSearch])
+
+  const handleClearFilters = useCallback(() => {
+    const cleared = {
+      search: '',
+      status: '',
+      type: '',
+      priority: '',
+      assignee: '',
+      label: '',
+      sprint: '',
+      reporter: '',
+    }
+    setIssueFilters(cleared)
+    setHeaderSearch('')
+  }, [setHeaderSearch])
+
+  const handleMoveIssueToSprint = useCallback(async (issueKey, sprintId) => {
+    if (!issueKey) return
+    try {
+      await issueApi.updateIssue(issueKey, { sprintId: sprintId || null })
+      await Promise.all([
+        refetchIssues(activeProjectId),
+        refetchBacklog(activeProjectId),
+        refetchSprints(activeProjectId),
+      ])
+    } catch {
+      // ignore
+    }
+  }, [activeProjectId, refetchBacklog, refetchIssues, refetchSprints])
+
+  useEffect(() => {
+    const path = location.pathname.replace(/\/+$/, '') || '/home'
+
+    if (path === '/home') {
+      navigate('/home/dashboard', { replace: true })
+      return
+    }
+
+    const issueMatch = path.match(/^\/home\/issues\/([^/]+)$/)
+    if (issueMatch) {
+      setActiveIssueKey(decodeURIComponent(issueMatch[1]))
+      return
+    }
+
+    if (activeIssueKey) setActiveIssueKey('')
+
+    if (path === '/home/dashboard') {
+      setActiveTopTab('dashboard')
+      setActiveSideLink('overview')
+      return
+    }
+
+    if (path === '/home/backlog') {
+      setActiveTopTab('backlog')
+      setActiveSideLink('issues')
+      return
+    }
+
+    if (path === '/home/team') {
+      setActiveTopTab('team')
+      setActiveSideLink('issues')
+      return
+    }
+
+    const projectMatch = path.match(/^\/home\/projects\/([^/]+)(?:\/([^/]+))?$/)
+    if (projectMatch) {
+      const nextLink = projectMatch[1]
+      setActiveTopTab('projects')
+      setActiveSideLink(['board', 'issues', 'reports', 'archive'].includes(nextLink) ? nextLink : 'board')
+    }
+  }, [activeIssueKey, location.pathname, navigate])
+
   const handleTopTabClick = useCallback((tabID) => {
-    setActiveTopTab(tabID)
-    if (tabID === 'dashboard') setActiveSideLink('overview')
-    if (tabID === 'projects') setActiveSideLink('board')
-    if (tabID === 'backlog') setActiveSideLink('issues')
-    if (tabID === 'team') setActiveSideLink('issues')
-  }, [])
+    if (tabID === 'dashboard') navigate('/home/dashboard')
+    if (tabID === 'projects') navigate('/home/projects/board')
+    if (tabID === 'backlog') navigate('/home/backlog')
+    if (tabID === 'team') navigate('/home/team')
+  }, [navigate])
 
   const handleSideLinkClick = useCallback((linkID) => {
-    setActiveSideLink(linkID)
-    setActiveIssueKey('')
-    if (linkID === 'overview') setActiveTopTab('dashboard')
-    if (linkID === 'board') setActiveTopTab('projects')
-    if (linkID === 'reports') setActiveTopTab('projects')
-    if (linkID === 'archive') setActiveTopTab('projects')
-    if (linkID === 'issues') setActiveTopTab('backlog')
-  }, [])
+    if (linkID === 'overview') navigate('/home/dashboard')
+    if (linkID === 'board') navigate('/home/projects/board')
+    if (linkID === 'reports') navigate('/home/projects/reports')
+    if (linkID === 'archive') navigate('/home/projects/archive')
+    if (linkID === 'issues') navigate('/home/projects/issues')
+  }, [navigate])
 
   const handleOpenIssueDetails = useCallback((issueKey) => {
     const key = String(issueKey ?? '').trim()
     if (!key) return
-    setActiveIssueKey(key)
-  }, [])
+    navigate(`/home/issues/${encodeURIComponent(key)}`, { state: { from: location.pathname } })
+  }, [location.pathname, navigate])
+
+  const handleSelectProjectIssue = useCallback((issueKey, options = {}) => {
+    const key = String(issueKey ?? '').trim()
+    if (!key) return
+    navigate(`/home/projects/issues/${encodeURIComponent(key)}`, { replace: Boolean(options?.replace) })
+  }, [navigate])
 
   const handleCloseIssueDetails = useCallback(() => {
-    setActiveIssueKey('')
-  }, [])
+    navigate(location.state?.from || '/home/projects/board')
+  }, [location.state, navigate])
 
   const resetCreateIssueForm = useCallback(() => {
     setNewIssueType('task')
@@ -831,6 +952,44 @@ function Kanban() {
     }, 60)
   }, [activeProjectId, projects, refetchMembers])
 
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const target = event.target
+      const tag = String(target?.tagName || '').toLowerCase()
+      const isFormField = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable
+
+      if ((event.metaKey || event.ctrlKey) && String(event.key).toLowerCase() === 'k') {
+        event.preventDefault()
+        setShowGlobalSearch(true)
+        return
+      }
+
+      if (event.key === 'Escape') {
+        setShowGlobalSearch(false)
+        setShowShortcutHelp(false)
+        return
+      }
+
+      if (isFormField) return
+
+      if (String(event.key).toLowerCase() === 'c') {
+        event.preventDefault()
+        handleOpenCreateIssue()
+      }
+      if (String(event.key).toLowerCase() === 'b') {
+        event.preventDefault()
+        navigate(activeTopTab === 'backlog' ? '/home/projects/board' : '/home/backlog')
+      }
+      if (event.key === '?') {
+        event.preventDefault()
+        setShowShortcutHelp((prev) => !prev)
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [activeTopTab, handleOpenCreateIssue, navigate])
+
   const handleCancelCreateIssue = useCallback(() => {
     setShowCreateIssue(false)
     resetCreateIssueForm()
@@ -859,23 +1018,24 @@ function Kanban() {
     setCreateIssueLoading(true)
     setCreateIssueError('')
     try {
-      console.debug('[App] creating issue - payload prepare')
       const payload = {
         title,
         type,
         priority,
         description,
-        ...(assigneeId && { assignee_id: assigneeId }),
-        ...(sprintId && { sprint_id: sprintId }),
-        ...(newIssueLabels?.length > 0 && { label_ids: newIssueLabels }),
+        ...(assigneeId && { assigneeId }),
+        ...(sprintId && { sprintId }),
       }
-      console.debug('[App] createIssue payload', payload)
-      await issueApi.createIssue(projectId, payload)
-      console.debug('[App] createIssue resolved')
+      const created = await issueApi.createIssue(projectId, payload)
+
+      if (Array.isArray(newIssueLabels) && newIssueLabels.length > 0 && created?.key) {
+        await Promise.all(newIssueLabels.map((labelId) => labelApi.attachLabelToIssue(created.key, labelId)))
+      }
 
       setActiveProjectId(projectId)
-      await refetchIssues(projectId, { search: headerSearch })
+      await refetchIssues(projectId)
       await refetchAssigned(projectId)
+      await refetchProjectLabels(projectId)
 
       if (!createIssueCreateAnother) {
         setShowCreateIssue(false)
@@ -895,7 +1055,7 @@ function Kanban() {
     } finally {
       setCreateIssueLoading(false)
     }
-  }, [refetchAssigned, refetchIssues, resetCreateIssueForm, t, activeProjectId, headerSearch, newIssueProjectId, newIssueTitle, newIssueDescription, newIssueType, newIssuePriority, newIssueAssigneeId, newIssueSprintId, newIssueLabels, createIssueCreateAnother])
+  }, [refetchAssigned, refetchIssues, refetchProjectLabels, resetCreateIssueForm, t, activeProjectId, newIssueProjectId, newIssueTitle, newIssueDescription, newIssueType, newIssuePriority, newIssueAssigneeId, newIssueSprintId, newIssueLabels, createIssueCreateAnother])
 
   const handleCardDragStart = useCallback((event, fromColumnID, cardID) => {
     event.dataTransfer.effectAllowed = 'move'
@@ -967,6 +1127,11 @@ function Kanban() {
 
   const isPlaceholderView = !(isBoardView || isOverviewView || isBacklogView || isTeamView)
 
+  const selectedProjectIssueKey = useMemo(() => {
+    const match = location.pathname.match(/^\/home\/projects\/issues\/([^/]+)$/)
+    return match ? decodeURIComponent(match[1]) : ''
+  }, [location.pathname])
+
   const recentProjects = useMemo(() => {
     return (Array.isArray(projects) ? projects : []).slice(0, 4).map((p, index) => {
       const owners = [profileInitials || '']
@@ -982,17 +1147,6 @@ function Kanban() {
       }
     })
   }, [projects, profileInitials, t, boardCompletion])
-
-  const backlogItems = useMemo(() => {
-    const items = issueItems
-    const order = { critical: 0, high: 1, medium: 2, low: 3, trivial: 4 }
-    return [...items].sort((a, b) => {
-      const pa = order[safeLower(a?.priority)] ?? 99
-      const pb = order[safeLower(b?.priority)] ?? 99
-      if (pa !== pb) return pa - pb
-      return safeLower(a?.key).localeCompare(safeLower(b?.key))
-    })
-  }, [issueItems])
 
   const handleProjectSelect = useCallback((projectId) => {
     setActiveProjectId(String(projectId ?? ''))
@@ -1181,8 +1335,8 @@ function Kanban() {
         <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
           <header className="modal-head">
             <div>
-              <h2>{t('sprints.create.title')}</h2>
-              <p>{t('sprints.create.subtitle')}</p>
+              <h2>{editingSprint ? t('sprints.edit.title', { defaultValue: 'Edit sprint' }) : t('sprints.create.title')}</h2>
+              <p>{editingSprint ? t('sprints.edit.subtitle', { defaultValue: 'Update sprint details' }) : t('sprints.create.subtitle')}</p>
             </div>
             <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateSprint}>
               <FiX />
@@ -1204,13 +1358,13 @@ function Kanban() {
             </label>
 
             <label className="inline-field modal-span" htmlFor="new-sprint-description">
-              <span className="inline-label">{t('sprints.create.description')}</span>
+              <span className="inline-label">{t('sprints.goal', { defaultValue: 'Goal' })}</span>
               <textarea
                 id="new-sprint-description"
                 className="modal-textarea"
                 value={newSprintDescription}
                 onChange={(e) => setNewSprintDescription(e.target.value)}
-                placeholder={t('sprints.create.descriptionPlaceholder')}
+                placeholder={t('sprints.goalPlaceholder', { defaultValue: 'What should this sprint deliver?' })}
                 rows={4}
               />
             </label>
@@ -1222,7 +1376,7 @@ function Kanban() {
                 {t('common.cancel')}
               </button>
               <button type="submit" className="create-issue-btn" disabled={createSprintLoading}>
-                {createSprintLoading ? t('sprints.create.creating') : t('sprints.create.submit')}
+                {createSprintLoading ? t('sprints.create.creating') : editingSprint ? t('common.save') : t('sprints.create.submit')}
               </button>
             </footer>
           </form>
@@ -1237,6 +1391,7 @@ function Kanban() {
     handleSubmitCreateSprint,
     newSprintDescription,
     newSprintName,
+    editingSprint,
     showCreateSprint,
     t,
   ])
@@ -1341,6 +1496,31 @@ function Kanban() {
                 </select>
               </label>
 
+              <div className="inline-field modal-span">
+                <span className="inline-label">{t('issues.detail.labels', { defaultValue: 'Labels' })}</span>
+                <div className="label-row">
+                  {projectLabels.map((label) => {
+                    const isActive = newIssueLabels.includes(label?.id)
+                    return (
+                      <button
+                        key={label?.id}
+                        type="button"
+                        className={`issue-label-option ${isActive ? 'is-active' : ''}`}
+                        onClick={() => setNewIssueLabels((prev) => (
+                          prev.includes(label?.id)
+                            ? prev.filter((id) => id !== label?.id)
+                            : [...prev, label?.id]
+                        ))}
+                      >
+                        <span className="issue-label-dot" style={label?.color ? { background: label.color } : undefined} />
+                        {label?.name}
+                      </button>
+                    )
+                  })}
+                  {projectLabels.length === 0 ? <span className="muted">{t('labels.empty', { defaultValue: 'No labels yet' })}</span> : null}
+                </div>
+              </div>
+
               <label className="inline-field modal-span" htmlFor="new-issue-title">
                 <span className="inline-label">{t('issues.create.summary')}</span>
                 <input
@@ -1405,6 +1585,8 @@ function Kanban() {
     newIssueSprintId,
     newIssueTitle,
     newIssueType,
+    newIssueLabels,
+    projectLabels,
     projects,
     sprints,
     showCreateIssue,
@@ -1459,8 +1641,8 @@ function Kanban() {
                 id="header-issue-search"
                 type="search"
                 placeholder={t('boardShell.searchPlaceholder')}
-                value={headerSearch}
-                onChange={(e) => setHeaderSearch(e.target.value)}
+                value={issueFilters.search}
+                onChange={(e) => handleFilterChange({ ...issueFilters, search: e.target.value })}
               />
             </label>
             <button type="button" className="filter-btn" onClick={handleOpenCreateProject}>
@@ -1537,6 +1719,9 @@ function Kanban() {
                     <p className="topbar-popover-title">{user?.name || user?.email || t('common.unknown')}</p>
                     <p className="topbar-popover-muted">{user?.email || ''}</p>
                     <div className="topbar-popover-actions">
+                      <button type="button" className="filter-btn" onClick={() => navigate('/profile')}>
+                        {t('boardShell.profile', { defaultValue: 'Profile' })}
+                      </button>
                       <button type="button" className="filter-btn" onClick={serverSignOut}>
                         <FiLogOut /> {t('auth.signOut')}
                       </button>
@@ -1551,6 +1736,39 @@ function Kanban() {
         {createProjectModal}
         {createSprintModal}
         {createIssueModal}
+        <GlobalSearch
+          t={t}
+          open={showGlobalSearch}
+          onClose={() => setShowGlobalSearch(false)}
+          projectId={activeProjectId}
+          onOpenIssueDetails={handleOpenIssueDetails}
+          onOpenProject={handleProjectSelect}
+        />
+        {showShortcutHelp ? createPortal(
+          <div className="modal-overlay" role="presentation" onMouseDown={() => setShowShortcutHelp(false)}>
+            <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+              <header className="modal-head">
+                <div>
+                  <h2>{t('shortcuts.title', { defaultValue: 'Keyboard shortcuts' })}</h2>
+                  <p>{t('shortcuts.subtitle', { defaultValue: 'Quick actions available in the app' })}</p>
+                </div>
+                <button type="button" className="icon-btn" onClick={() => setShowShortcutHelp(false)} aria-label={t('common.close')}>
+                  <FiX />
+                </button>
+              </header>
+              <div className="modal-body">
+                <div className="shortcut-list">
+                  <p><strong>C</strong> {t('shortcuts.createIssue', { defaultValue: 'Create issue' })}</p>
+                  <p><strong>Ctrl/Cmd + K</strong> {t('shortcuts.globalSearch', { defaultValue: 'Open global search' })}</p>
+                  <p><strong>B</strong> {t('shortcuts.toggleBoard', { defaultValue: 'Toggle board/backlog' })}</p>
+                  <p><strong>?</strong> {t('shortcuts.help', { defaultValue: 'Show keyboard shortcuts' })}</p>
+                  <p><strong>Esc</strong> {t('shortcuts.close', { defaultValue: 'Close current modal' })}</p>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        ) : null}
 
         <div className="home-body">
           <aside className="home-sidebar" aria-label={t('boardShell.sideNavLabel')}>
@@ -1603,6 +1821,19 @@ function Kanban() {
               />
             ) : null}
 
+            {!activeIssueKey && (isBacklogView || (isBoardView && activeSideLink !== 'issues')) ? (
+              <FilterBar
+                t={t}
+                filters={issueFilters}
+                onChange={handleFilterChange}
+                onClear={handleClearFilters}
+                members={members}
+                labels={projectLabels}
+                sprints={sprints}
+                usersById={usersById}
+              />
+            ) : null}
+
             {isOverviewView ? (
               <OverviewPanel
                 t={t}
@@ -1622,136 +1853,43 @@ function Kanban() {
             ) : null}
 
             {isBacklogView && !activeIssueKey ? (
-              <section className="placeholder-panel panel">
-                <header className="panel-head">
-                  <h2>{t('backlog.title')}</h2>
-                  <p>{activeProject?.name ? `${t('common.project')}: ${activeProject.name}` : t('projects.noProjectSelected')}</p>
-                </header>
-
-                {issuesLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
-                {issuesError ? <p className="dashboard-kicker">{issuesError}</p> : null}
-
-                <div className="assigned-list">
-                  {backlogItems.length === 0 ? (
-                    <article className="assigned-item">
-                      <div>
-                        <h3>{t('backlog.empty')}</h3>
-                        <p>{t('backlog.emptyHint')}</p>
-                      </div>
-                    </article>
-                  ) : null}
-
-                  {backlogItems.map((issue) => {
-                    const pr = priorityDisplay(issue?.priority)
-                    const assignee = issue?.assigneeId ? usersById[String(issue.assigneeId)] : null
-                    const assigneeInitials = toInitials(assignee?.name || assignee?.email || '')
-                    const due = formatShortDate(issue?.dueDate, activeLocale)
-                    return (
-                      <article key={issue?.key} className="assigned-item">
-                        <div>
-                          <p className="task-code">{issue?.key}</p>
-                          <h3>{issue?.title}</h3>
-                          <p>
-                            {t(`issue.status.${safeLower(issue?.status)}`, { defaultValue: String(issue?.status || '-') })}
-                            {' · '}
-                            {t(`priority.${pr.tone}`, { defaultValue: pr.label })}
-                            {due ? ` · ${t('common.due')}: ${due}` : ''}
-                            {assigneeInitials ? ` · ${t('common.assignee')}: ${assigneeInitials}` : ''}
-                          </p>
-                        </div>
-                        <button type="button" className="open-btn" onClick={() => handleOpenIssueDetails(issue?.key)}>
-                          {t('common.open')}
-                        </button>
-                      </article>
-                    )
-                  })}
-                </div>
-              </section>
+              <BacklogView
+                t={t}
+                projectName={activeProject?.name || ''}
+                sprints={sprints}
+                issueItems={issueItems}
+                backlogLoading={backlogLoading}
+                issuesLoading={issuesLoading}
+                issuesError={issuesError}
+                activeLocale={activeLocale}
+                usersById={usersById}
+                onOpenIssueDetails={handleOpenIssueDetails}
+                onOpenCreateSprint={handleOpenCreateSprint}
+                onStartSprint={handleStartSprint}
+                onCompleteSprint={handleCompleteSprint}
+                onMoveIssue={handleMoveIssueToSprint}
+                onEditSprint={handleEditSprint}
+              />
             ) : null}
 
             {isTeamView ? (
-              <section className="placeholder-panel panel">
-                <header className="panel-head">
-                  <h2>{t('team.title')}</h2>
-                  <p>{activeProject?.name ? `${t('common.project')}: ${activeProject.name}` : t('projects.noProjectSelected')}</p>
-                </header>
-
-                <div className="assigned panel" style={{ marginTop: '0.8rem' }}>
-                  <header className="panel-head">
-                    <h2>{t('team.invite.title')}</h2>
-                    <p>{t('team.invite.subtitle')}</p>
-                  </header>
-
-                  <label className="issue-search" htmlFor="invite-search">
-                    <FiSearch className="issue-search-icon" aria-hidden="true" />
-                    <input
-                      id="invite-search"
-                      type="search"
-                      placeholder={t('team.invite.searchPlaceholder')}
-                      value={inviteSearch}
-                      onChange={(e) => setInviteSearch(e.target.value)}
-                    />
-                  </label>
-
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                    <span className="dashboard-kicker">{t('team.invite.role')}</span>
-                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-                      <option value="admin">{t('roles.admin')}</option>
-                      <option value="member">{t('roles.member')}</option>
-                      <option value="viewer">{t('roles.viewer')}</option>
-                    </select>
-                  </div>
-
-                  {inviteLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
-                  {inviteError ? <p className="dashboard-kicker">{inviteError}</p> : null}
-
-                  <div className="assigned-list" style={{ marginTop: '0.6rem' }}>
-                    {(Array.isArray(inviteResults) ? inviteResults : []).map((u) => (
-                      <article key={u?.id} className="assigned-item">
-                        <div>
-                          <p className="task-code">{toInitials(u?.name || u?.email || '')}</p>
-                          <h3>{u?.name || t('common.unknown')}</h3>
-                          <p>{u?.email}</p>
-                        </div>
-                        <button type="button" className="open-btn" onClick={() => handleInviteMember(u?.id)}>
-                          {t('team.invite.add')}
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="assigned panel" style={{ marginTop: '0.8rem' }}>
-                  <header className="panel-head">
-                    <h2>{t('team.members.title')}</h2>
-                    <p>{t('team.members.subtitle')}</p>
-                  </header>
-
-                  {membersLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
-                  {membersError ? <p className="dashboard-kicker">{membersError}</p> : null}
-
-                  <div className="assigned-list">
-                    {members.map((m) => {
-                      const u = usersById[String(m?.userId)]
-                      return (
-                        <article key={m?.userId} className="assigned-item">
-                          <div>
-                            <p className="task-code">{toInitials(u?.name || u?.email || '') || '??'}</p>
-                            <h3>{u?.name || t('common.unknown')}</h3>
-                            <p>
-                              {u?.email ? `${u.email} · ` : ''}
-                              {t('team.members.role')}: {t(`roles.${safeLower(m?.role)}`, { defaultValue: String(m?.role || '-') })}
-                            </p>
-                          </div>
-                          <button type="button" className="open-btn" onClick={() => handleRemoveMember(m?.userId)}>
-                            {t('team.members.remove')}
-                          </button>
-                        </article>
-                      )
-                    })}
-                  </div>
-                </div>
-              </section>
+              <TeamPanel
+                t={t}
+                activeProject={activeProject}
+                inviteSearch={inviteSearch}
+                setInviteSearch={setInviteSearch}
+                inviteRole={inviteRole}
+                setInviteRole={setInviteRole}
+                inviteResults={inviteResults}
+                inviteLoading={inviteLoading}
+                inviteError={inviteError}
+                members={members}
+                membersLoading={membersLoading}
+                membersError={membersError}
+                usersById={usersById}
+                onInviteMember={handleInviteMember}
+                onRemoveMember={handleRemoveMember}
+              />
             ) : null}
 
             {isBoardView && !activeIssueKey && activeSideLink === 'board' ? (
@@ -1771,6 +1909,23 @@ function Kanban() {
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDrop={handleColumnDrop}
                 onOpenIssueDetails={handleOpenIssueDetails}
+              />
+            ) : null}
+
+            {isBoardView && !activeIssueKey && activeSideLink === 'issues' ? (
+              <IssuesPage
+                t={t}
+                projectName={activeProject?.name || ''}
+                issues={issueItems}
+                selectedIssueKey={selectedProjectIssueKey}
+                active={location.pathname.startsWith('/home/projects/issues')}
+                onSelectIssue={handleSelectProjectIssue}
+                onOpenCreateIssue={handleOpenCreateIssue}
+                issuesLoading={issuesLoading}
+                issuesError={issuesError}
+                locale={activeLocale}
+                members={members}
+                usersById={usersById}
               />
             ) : null}
 
@@ -1844,13 +1999,13 @@ function RequireAuth({ children }) {
 
 function PublicOnly({ children }) {
   const { token } = useAuth()
-  if (token) return <Navigate to="/home" replace />
+  if (token) return <Navigate to="/home/dashboard" replace />
   return children
 }
 
 function AppFallback() {
   const { token } = useAuth()
-  return <Navigate to={token ? '/home' : '/login'} replace />
+  return <Navigate to={token ? '/home/dashboard' : '/login'} replace />
 }
 
 function App() {
@@ -1869,10 +2024,19 @@ function App() {
         />
 
         <Route
-          path="/home"
+          path="/home/*"
           element={(
             <RequireAuth>
               <Kanban />
+            </RequireAuth>
+          )}
+        />
+
+        <Route
+          path="/profile"
+          element={(
+            <RequireAuth>
+              <ProfilePage />
             </RequireAuth>
           )}
         />

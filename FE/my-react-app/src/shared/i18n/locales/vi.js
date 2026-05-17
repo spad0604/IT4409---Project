@@ -265,16 +265,6 @@ export const vi = {
       },
     },
 
-    activity: {
-      actions: {
-        status_changed: 'Đã đổi trạng thái',
-        issue_created: 'Đã tạo vấn đề',
-        issue_updated: 'Đã cập nhật vấn đề',
-        comment_added: 'Đã thêm bình luận',
-        issue_assigned: 'Đã thay đổi người được giao',
-      },
-    },
-
     overview: {
       kicker: 'Bảng điều khiển Workspace',
       title: 'Tổng quan hệ thống',
@@ -423,6 +413,13 @@ export const vi = {
       changed: 'Đổi trạng thái',
       assigned: 'Gán cho',
       commented: 'Bình luận',
+      actions: {
+        status_changed: 'Đã đổi trạng thái',
+        issue_created: 'Đã tạo vấn đề',
+        issue_updated: 'Đã cập nhật vấn đề',
+        comment_added: 'Đã thêm bình luận',
+        issue_assigned: 'Đã thay đổi người được giao',
+      },
     },
 
   },
