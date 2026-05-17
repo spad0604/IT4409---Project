@@ -44,10 +44,7 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--on-surface-variant);
-  background:
-    radial-gradient(circle at 14% 18%, rgb(135 156 224 / 20%), transparent 32%),
-    radial-gradient(circle at 82% 88%, rgb(113 131 196 / 16%), transparent 38%),
-    linear-gradient(180deg, #f5f7fc 0%, #edf1f8 100%);
+  background: #edf1f6;
   background-attachment: fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;

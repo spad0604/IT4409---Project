@@ -100,6 +100,8 @@ type IssueFilter struct {
 	Type       string
 	Priority   string
 	AssigneeID string
+	ReporterID string
+	LabelID    string
 	SprintID   string
 	ParentID   string
 	Search     string

@@ -113,6 +113,11 @@ func (r *IssueRepo) List(ctx context.Context, projectID string, filter domain.Is
 			argIdx++
 		}
 	}
+	if filter.ReporterID != "" {
+		where = append(where, fmt.Sprintf("reporter_id = $%d", argIdx))
+		args = append(args, filter.ReporterID)
+		argIdx++
+	}
 	if filter.SprintID != "" {
 		if filter.SprintID == "backlog" {
 			where = append(where, "sprint_id IS NULL")
@@ -130,6 +135,14 @@ func (r *IssueRepo) List(ctx context.Context, projectID string, filter domain.Is
 	if filter.Search != "" {
 		where = append(where, fmt.Sprintf("title ILIKE '%%' || $%d || '%%'", argIdx))
 		args = append(args, filter.Search)
+		argIdx++
+	}
+	if filter.LabelID != "" {
+		where = append(where, fmt.Sprintf(
+			`id IN (SELECT issue_id FROM public.issue_labels WHERE label_id = $%d)`,
+			argIdx,
+		))
+		args = append(args, filter.LabelID)
 		argIdx++
 	}
 

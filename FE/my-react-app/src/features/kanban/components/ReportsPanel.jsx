@@ -69,6 +69,65 @@ export default function ReportsPanel({
     ? Number(issuesTotal)
     : sorted.length
 
+  const byStatus = useMemo(() => {
+    const counts = new Map()
+    for (const issue of issueItems) {
+      const key = safeLower(issue?.status) || 'unknown'
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return Array.from(counts.entries()).map(([key, count]) => ({ key, count }))
+  }, [issueItems])
+
+  const byType = useMemo(() => {
+    const counts = new Map()
+    for (const issue of issueItems) {
+      const key = safeLower(issue?.type) || 'unknown'
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return Array.from(counts.entries()).map(([key, count]) => ({ key, count }))
+  }, [issueItems])
+
+  const byAssignee = useMemo(() => {
+    const counts = new Map()
+    for (const issue of issueItems) {
+      const key = String(issue?.assigneeId || 'unassigned')
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .map(([key, count]) => ({
+        key,
+        count,
+        label: key === 'unassigned'
+          ? t('common.unassigned', { defaultValue: 'Unassigned' })
+          : usersById?.[key]?.name || usersById?.[key]?.email || key,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+  }, [issueItems, t, usersById])
+
+  const doneCount = issueItems.filter((issue) => safeLower(issue?.status) === 'done').length
+  const activeCount = issueItems.filter((issue) => safeLower(issue?.status) === 'in_progress').length
+  const reviewCount = issueItems.filter((issue) => safeLower(issue?.status) === 'in_review').length
+
+  const renderMiniBars = (items, labelRenderer) => (
+    <div style={{ display: 'grid', gap: '0.6rem' }}>
+      {items.map((item) => {
+        const width = totalCount > 0 ? Math.max(8, Math.round((item.count / totalCount) * 100)) : 0
+        return (
+          <div key={item.key}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#344054' }}>{labelRenderer(item)}</span>
+              <strong style={{ fontSize: '0.72rem' }}>{item.count}</strong>
+            </div>
+            <div className="progress-track" aria-hidden="true">
+              <span style={{ width: `${width}%` }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
     <section className="panel" aria-label={t('reports.aria', { defaultValue: 'Reports' })}>
       <header className="panel-head">
@@ -79,6 +138,48 @@ export default function ReportsPanel({
 
         <p className="dashboard-kicker">{t('reports.total', { defaultValue: 'Total issues' })}: {totalCount}</p>
       </header>
+
+      <section className="stats-overview" style={{ marginBottom: '1rem' }}>
+        <article className="stat-card">
+          <span>{t('reports.total', { defaultValue: 'Total issues' })}</span>
+          <strong>{totalCount}</strong>
+        </article>
+        <article className="stat-card">
+          <span>{t('issue.status.done', { defaultValue: 'Done' })}</span>
+          <strong>{doneCount}</strong>
+        </article>
+        <article className="stat-card">
+          <span>{t('issue.status.in_progress', { defaultValue: 'In Progress' })}</span>
+          <strong>{activeCount}</strong>
+        </article>
+        <article className="stat-card">
+          <span>{t('issue.status.in_review', { defaultValue: 'In Review' })}</span>
+          <strong>{reviewCount}</strong>
+        </article>
+      </section>
+
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
+        <article className="panel" style={{ padding: '0.9rem' }}>
+          <header className="panel-head">
+            <h2>{t('reports.byStatus', { defaultValue: 'By status' })}</h2>
+          </header>
+          {renderMiniBars(byStatus, (item) => t(`issue.status.${item.key}`, { defaultValue: item.key }))}
+        </article>
+
+        <article className="panel" style={{ padding: '0.9rem' }}>
+          <header className="panel-head">
+            <h2>{t('reports.byType', { defaultValue: 'By type' })}</h2>
+          </header>
+          {renderMiniBars(byType, (item) => t(`issue.type.${item.key}`, { defaultValue: item.key }))}
+        </article>
+
+        <article className="panel" style={{ padding: '0.9rem' }}>
+          <header className="panel-head">
+            <h2>{t('reports.byAssignee', { defaultValue: 'Team workload' })}</h2>
+          </header>
+          {renderMiniBars(byAssignee, (item) => item.label)}
+        </article>
+      </section>
 
       <div style={{ display: 'grid', gap: '0.55rem' }}>
         <label className="issue-search" htmlFor="reports-search" style={{ maxWidth: 'unset' }}>

@@ -45,7 +45,17 @@ FE đang xây một web kiểu Jira để quản lý flow công việc:
 Routes chính:
 
 - /login: chỉ cho user chưa đăng nhập
-- /home: chỉ cho user đã có token
+- /home: chỉ cho user đã có token, redirect mặc định sang /home/dashboard
+- /home/dashboard: dashboard workspace
+- /home/projects/board: Kanban board của project đang chọn
+- /home/projects/issues: issue browser dạng 2 pane
+- /home/projects/issues/:issueKey: issue browser dạng 2 pane, bên trái list issue, bên phải detail issue
+- /home/projects/reports: report theo filter hiện tại
+- /home/projects/archive: archive placeholder
+- /home/backlog: backlog/sprint planning
+- /home/team: team/member management
+- /home/issues/:issueKey: full-page issue detail cũ, vẫn giữ để tương thích link trực tiếp
+- /profile: hồ sơ user hiện tại
 - *: fallback điều hướng theo trạng thái token
 
 Guard behavior:
@@ -58,9 +68,10 @@ UI navigation behavior trong /home:
 - Top tabs + sidebar links đã có icon system đồng bộ theo react-icons/fi.
 - Chọn `Overview` (tab `Dashboard`) => dashboard metrics + recent projects + assigned-to-me.
 - Chọn `Board` (tab `Projects`) => Kanban board (load board detail + columns từ BE).
+- Chọn `Issues` trong sidebar => issue browser kiểu Jira, list issue bên trái và detail issue embedded bên phải.
 - Chọn tab `Backlog` => danh sách issue (ưu tiên cao lên trước) + dùng chung header search.
 - Chọn tab `Team` => members list + invite (search user + add member).
-- Các mục sidebar khác vẫn hiển thị placeholder panel (để mở rộng module sau).
+- URL được đồng bộ với tab/sidebar; không dùng state UI đơn thuần để quyết định route.
 
 ## 5) Auth State Data Flow
 
@@ -171,29 +182,29 @@ Ghi chú trạng thái:
 ### Issues (`src/features/issues/api/issueApi.js`)
 
 - ✅ `POST /api/projects/{projectID}/issues`
-- ✅ `GET /api/projects/{projectID}/issues` (supports `search`, `page`, `per_page`, `assignee=me`...)
-- 🧩 `GET /api/issues/{issueKey}`
-- 🧩 `PATCH /api/issues/{issueKey}`
-- 🧩 `DELETE /api/issues/{issueKey}`
+- ✅ `GET /api/projects/{projectID}/issues` (supports `search`, `page`, `per_page`, `assignee=me`, `reporter`, `label`...)
+- ✅ `GET /api/issues/{issueKey}` (detail payload gồm labels, assignee, reporter, sprint nếu BE có dữ liệu)
+- ✅ `PATCH /api/issues/{issueKey}`
+- ✅ `DELETE /api/issues/{issueKey}`
 - ✅ `PUT /api/issues/{issueKey}/status` (drag-drop status change; optimistic update + rollback)
-- 🧩 `PUT /api/issues/{issueKey}/assign`
-- 🧩 `GET /api/issues/{issueKey}/subtasks`
+- ✅ `PUT /api/issues/{issueKey}/assign`
+- ✅ `GET /api/issues/{issueKey}/subtasks`
 
 ### Comments (`src/features/comments/api/commentApi.js`)
 
-- 🧩 `POST /api/issues/{issueKey}/comments`
-- 🧩 `GET /api/issues/{issueKey}/comments`
-- 🧩 `PATCH /api/comments/{commentID}`
-- 🧩 `DELETE /api/comments/{commentID}`
+- ✅ `POST /api/issues/{issueKey}/comments`
+- ✅ `GET /api/issues/{issueKey}/comments`
+- ✅ `PATCH /api/comments/{commentID}`
+- ✅ `DELETE /api/comments/{commentID}`
 
 ### Labels (`src/features/labels/api/labelApi.js`)
 
-- 🧩 `POST /api/projects/{projectID}/labels`
-- 🧩 `GET /api/projects/{projectID}/labels`
-- 🧩 `PATCH /api/labels/{labelID}`
-- 🧩 `DELETE /api/labels/{labelID}`
-- 🧩 `POST /api/issues/{issueKey}/labels`
-- 🧩 `DELETE /api/issues/{issueKey}/labels/{labelID}`
+- ✅ `POST /api/projects/{projectID}/labels`
+- ✅ `GET /api/projects/{projectID}/labels`
+- ✅ `PATCH /api/labels/{labelID}`
+- ✅ `DELETE /api/labels/{labelID}`
+- ✅ `POST /api/issues/{issueKey}/labels`
+- ✅ `DELETE /api/issues/{issueKey}/labels/{labelID}`
 
 ### Chưa cover theo swagger
 
@@ -452,7 +463,17 @@ wsClientRef.current.disconnect()
 
 - VITE_API_BASE_URL
 
-## 16) Coding Notes For Copilot (FE)
+## 16) Jira-Like UI Additions (NEW)
+
+- `FE/my-react-app/src/features/issues/pages/IssuesPage.jsx`: issue browser 2 pane. Left pane handles search/sort/list, right pane renders `IssueDetailsPage` with `embedded`.
+- `IssuesPage` has an `active` prop. Keep it tied to `location.pathname.startsWith('/home/projects/issues')` so the auto-select effect does not redirect the user back into an issue while navigating to another page.
+- `IssueDetailsPage` supports full-page and embedded modes. Embedded mode hides the old detail header and fits inside the issue browser detail pane.
+- `FE/my-react-app/src/shared/components/FilterBar.jsx`: reusable report/list filters for status, type, priority, assignee, label, sprint, reporter.
+- `FE/my-react-app/src/shared/components/GlobalSearch.jsx`: topbar search integration.
+- `FE/my-react-app/src/features/kanban/components/TeamPanel.jsx`, `features/sprints/components/BacklogView.jsx`, `features/sprints/components/SprintPanel.jsx`, `features/labels/components/LabelManager.jsx`, `features/users/pages/ProfilePage.jsx`: split UI modules extracted from the previously oversized App flow.
+- Visual rule from product owner: do not reintroduce CSS gradients in FE. Current styling intentionally uses solid surfaces, borders, and shadows.
+
+## 17) Coding Notes For Copilot (FE)
 
 - Khi sửa auth UI, kiểm tra đồng bộ Login, AuthContext, authApi, httpClient và guard trong App.
 - Khi BE đổi contract auth/response, cập nhật parser ở shared/api/httpClient trước để tránh vỡ toàn bộ feature.

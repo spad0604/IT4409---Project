@@ -231,6 +231,15 @@ ReorderColumns:
 - CRUD labels: Gắn theo project, yêu cầu PermissionChecker
 - Gắn/gỡ label cho issue: Thông qua bảng junction issue_labels
 - Mỗi label có name + color (mặc định #6366f1)
+- Label attach/detach route nhận issueKey trên path (`/api/issues/{issueKey}/labels`), usecase resolve issueKey sang issue.ID trước khi thao tác bảng junction.
+
+## 8.3) Issue Detail/List Contract (Enhanced)
+
+- `GET /api/projects/{projectID}/issues` hỗ trợ filter: `status`, `type`, `priority`, `assignee` (UUID hoặc `me`), `reporter`, `label`, `sprint` (UUID hoặc `backlog`), `search`, `page`, `per_page`.
+- Issue list DTO đã enrich `labels` để FE render board/list/report không cần gọi detail từng issue.
+- `GET /api/issues/{issueKey}` trả `IssueDetailDTO` gồm issue base fields, `labels`, `assignee`, `reporter`, `sprint` nếu có dữ liệu liên quan.
+- `PATCH /api/issues/{issueKey}` vẫn là endpoint chỉnh sửa chính cho title/description/status/priority/type/due date/metadata, FE issue detail đang gọi trực tiếp endpoint này.
+- Activity log cho issue update/status/assign/comment là best-effort: lỗi ghi activity không làm fail action chính.
 
 ## 9) Handler Route Registration Pattern
 
@@ -289,10 +298,11 @@ Defined trong domain/errors.go:
 - Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.
 - Issue key tự tạo theo pattern PROJECT_KEY-NUMBER (VD: MYPRJ-1), dùng atomic increment trên project_issue_counters.
 - CreateIssue dùng txManager.WithTx: NextIssueNumberTx + CreateTx trong 1 transaction.
+- Issue DTO/detail hiện là contract quan trọng cho FE Jira-like pages; khi thêm field mới nên cập nhật cả list DTO và detail DTO nếu FE cần render ở board/list/detail.
 - Bảng comments dùng cột user_id (theo migration 007 thực tế), code map thành Comment.UserID.
 - Comment edit chỉ cho author; delete cho author hoặc project admin.
 - Issue GET/status/assign/subtasks dùng issueKey (VD: MYPRJ-42) làm path param, không dùng UUID.
-- Filter issues: status, type, priority, assignee (UUID hoặc "me"), sprint (UUID hoặc "backlog"), search (ILIKE title).
+- Filter issues: status, type, priority, assignee (UUID hoặc "me"), reporter, label, sprint (UUID hoặc "backlog"), search (ILIKE title).
 - Sprint: mỗi project chỉ được 1 sprint active. HasActiveSprint kiểm tra trước khi start.
 - CompleteSprint dùng IssueRepo.ClearSprintID(sprintID) để chuyển issues chưa done về backlog (sprint_id = NULL).
 - SprintUsecase inject cả SprintRepo + IssueRepo + ProjectRepo + TxManager.
