@@ -25,6 +25,8 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
+		r.Get("/oauth/{provider}/start", h.OAuthStart)
+		r.Get("/oauth/{provider}/callback", h.OAuthCallback)
 	})
 }
 
@@ -141,6 +143,39 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Message: "success",
 		Data:    AuthData{Token: out.Token, User: toUserDTO(out.User)},
 	})
+}
+
+// OAuthStart redirects the browser to the selected OAuth2 provider.
+func (h *AuthHandler) OAuthStart(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+	redirectURL, err := h.auth.OAuthStartURL(provider)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// OAuthCallback handles provider redirects, creates/loads the user, then redirects to FE.
+func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if providerErr := r.URL.Query().Get("error"); providerErr != "" {
+		http.Redirect(w, r, h.auth.OAuthErrorRedirect(providerErr), http.StatusFound)
+		return
+	}
+
+	out, err := h.auth.OAuthCallback(
+		r.Context(),
+		chi.URLParam(r, "provider"),
+		r.URL.Query().Get("code"),
+		r.URL.Query().Get("state"),
+	)
+	if err != nil {
+		http.Redirect(w, r, h.auth.OAuthErrorRedirect("oauth_failed"), http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, h.auth.OAuthSuccessRedirect(out.Token), http.StatusFound)
 }
 
 // Me godoc

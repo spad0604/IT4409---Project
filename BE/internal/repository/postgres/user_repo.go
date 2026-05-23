@@ -21,12 +21,12 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 
 func (r *UserRepo) Create(ctx context.Context, user domain.User) (domain.User, error) {
 	const q = `
-		insert into public.users (email, password_hash, name)
-		values ($1, $2, $3)
+		insert into public.users (email, password_hash, name, avatar_url)
+		values ($1, $2, $3, $4)
 		returning id, email, password_hash, name, COALESCE(avatar_url, ''), updated_at, created_at
 	`
 
-	row := r.pool.QueryRow(ctx, q, user.Email, user.PasswordHash, nullIfEmpty(user.Name))
+	row := r.pool.QueryRow(ctx, q, user.Email, user.PasswordHash, nullIfEmpty(user.Name), nullIfEmpty(user.AvatarURL))
 	var out domain.User
 	if err := row.Scan(&out.ID, &out.Email, &out.PasswordHash, &out.Name, &out.AvatarURL, &out.UpdatedAt, &out.CreatedAt); err != nil {
 		var pgErr *pgconn.PgError
