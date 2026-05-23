@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -30,105 +29,114 @@ func (h *LabelHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *LabelHandler) CreateLabel(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
-	if userID == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	userID, ok := requireUserID(w, r)
+	if !ok {
 		return
 	}
 	projectID := chi.URLParam(r, "projectID")
 
 	var label domain.Label
-	if err := json.NewDecoder(r.Body).Decode(&label); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := parseBody(r, &label); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	label.ProjectID = projectID
 
 	created, err := h.labelUC.CreateLabel(r.Context(), userID, &label)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(created)
+	writeSuccess(w, http.StatusCreated, created)
 }
 
 func (h *LabelHandler) ListLabels(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	projectID := chi.URLParam(r, "projectID")
 
 	labels, err := h.labelUC.ListLabels(r.Context(), userID, projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(labels)
+	writeSuccess(w, http.StatusOK, labels)
 }
 
 func (h *LabelHandler) UpdateLabel(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	labelID := chi.URLParam(r, "labelID")
 
 	var patch domain.LabelPatch
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := parseBody(r, &patch); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	label, err := h.labelUC.UpdateLabel(r.Context(), userID, labelID, &patch)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(label)
+	writeSuccess(w, http.StatusOK, label)
 }
 
 func (h *LabelHandler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	labelID := chi.URLParam(r, "labelID")
 
 	if err := h.labelUC.DeleteLabel(r.Context(), userID, labelID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeSuccess(w, http.StatusOK, nil)
 }
 
-// AttachToIssue gắn nhãn vào công việc.
-// Lưu ý: issueKey ở đây là issue ID (do Người A quyết định format).
+// AttachToIssue gắn nhãn vào công việc theo issue key (VD: PRJ-1).
 func (h *LabelHandler) AttachToIssue(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	issueKey := chi.URLParam(r, "issueKey")
 
 	var req struct {
 		LabelID string `json:"labelId"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := parseBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.labelUC.AttachToIssue(r.Context(), userID, issueKey, req.LabelID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
+	writeSuccess(w, http.StatusCreated, nil)
 }
 
 func (h *LabelHandler) DetachFromIssue(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
+	userID, ok := requireUserID(w, r)
+	if !ok {
+		return
+	}
 	issueKey := chi.URLParam(r, "issueKey")
 	labelID := chi.URLParam(r, "labelID")
 
 	if err := h.labelUC.DetachFromIssue(r.Context(), userID, issueKey, labelID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeDomainError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeSuccess(w, http.StatusOK, nil)
 }

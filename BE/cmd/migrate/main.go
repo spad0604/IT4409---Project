@@ -95,6 +95,12 @@ func main() {
 				  created_at  timestamptz NOT NULL DEFAULT now()
 				);
 				CREATE INDEX IF NOT EXISTS idx_labels_project ON public.labels(project_id);
+
+				CREATE TABLE IF NOT EXISTS public.issue_labels (
+				  issue_id    uuid NOT NULL REFERENCES public.issues(id) ON DELETE CASCADE,
+				  label_id    uuid NOT NULL REFERENCES public.labels(id) ON DELETE CASCADE,
+				  PRIMARY KEY (issue_id, label_id)
+				);
 			`,
 		},
 		{
