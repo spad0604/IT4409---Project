@@ -56,6 +56,84 @@
                 }
             }
         },
+        "/api/auth/oauth/{provider}/callback": {
+            "get": {
+                "description": "Handles Google/GitHub callback and redirects back to frontend login with a JWT token in the URL fragment.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OAuth2 callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "enum": [
+                            "google",
+                            "github"
+                        ],
+                        "description": "OAuth provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Signed state",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Provider error",
+                        "name": "error",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to frontend"
+                    }
+                }
+            }
+        },
+        "/api/auth/oauth/{provider}/start": {
+            "get": {
+                "description": "Redirects the browser to Google or GitHub OAuth authorization page.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Start OAuth2 login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "enum": [
+                            "google",
+                            "github"
+                        ],
+                        "description": "OAuth provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to OAuth provider"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorEnvelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "consumes": [
