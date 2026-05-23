@@ -113,12 +113,10 @@ export const en = {
       title: 'Execution Ledger',
       subtitle:
         'The list relies on spacing and tonal shifts for separation. High priority is indicated by a subtle 4px red tab on the left edge.',
-      emptySubtitle: 'There are no issues on this board yet.',
       flowProgress: 'Flow Progress',
       completed: 'completed',
       completion: 'sprint flow completion',
       cards: 'cards',
-      columnsCount: 'columns',
       addCardTo: 'Add card to {{column}}',
       columns: {
         todo: 'To do',
@@ -197,9 +195,6 @@ export const en = {
     auth: {
       signOut: 'Sign out',
       loginFailed: 'Sign in failed. Please check your credentials.',
-      oauthSigningIn: 'Completing sign in...',
-      oauthFailedTitle: 'Unable to sign in',
-      oauthFailed: 'The OAuth sign-in session is invalid or expired.',
       login: {
         brand: 'Ledger Project',
         headlineLine1: 'Architecture for',

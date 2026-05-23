@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
 import { oauthStartUrl } from '../api/authApi'
+import { setToken } from '../../../shared/storage/token'
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Login.css'
@@ -43,7 +44,7 @@ function GithubIcon() {
 export default function Login() {
     const { t } = useTranslation()
     const navigate = useNavigate()
-    const { signIn } = useAuth()
+    const { signIn, refreshMe } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -52,8 +53,43 @@ export default function Login() {
     const [submitting, setSubmitting] = useState(false)
     const [oauthSubmitting, setOauthSubmitting] = useState('')
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        const oauthToken = params.get('token')
+        const oauthError = params.get('error')
+
+        if (oauthError) {
+            setError(t('auth.loginFailed'))
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+        }
+
+        if (!oauthToken) return
+
+        let cancelled = false
+        setSubmitting(true)
+        setToken(oauthToken)
+
+        refreshMe()
+            .then(() => {
+                if (!cancelled) window.location.replace('/home')
+            })
+            .catch(() => {
+                setToken(null)
+                if (!cancelled) {
+                    setError(t('auth.loginFailed'))
+                    setSubmitting(false)
+                    window.history.replaceState(null, '', window.location.pathname)
+                }
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [refreshMe, t])
+
     const handleOAuthStart = (provider) => {
-        if (oauthSubmitting) return
+        if (submitting || oauthSubmitting) return
         setError('')
         setOauthSubmitting(provider)
         window.location.assign(oauthStartUrl(provider))
@@ -123,7 +159,7 @@ export default function Login() {
                             type="button"
                             className="social-btn"
                             onClick={() => handleOAuthStart('google')}
-                            disabled={Boolean(oauthSubmitting)}
+                            disabled={submitting || Boolean(oauthSubmitting)}
                         >
                             <GoogleIcon />
                             {t('auth.login.continueGoogle')}
@@ -133,7 +169,7 @@ export default function Login() {
                             type="button"
                             className="social-btn"
                             onClick={() => handleOAuthStart('github')}
-                            disabled={Boolean(oauthSubmitting)}
+                            disabled={submitting || Boolean(oauthSubmitting)}
                         >
                             <GithubIcon />
                             {t('auth.login.continueGithub')}

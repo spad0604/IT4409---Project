@@ -174,11 +174,6 @@
     background: #e4e8ee;
 }
 
-.social-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.72;
-}
-
 .divider {
     display: flex;
     align-items: center;
@@ -283,11 +278,6 @@
     margin: 0 0 0.85rem;
     color: #b91c1c;
     font-size: 1.05rem;
-}
-
-.oauth-callback-box {
-    width: min(420px, calc(100vw - 32px));
-    margin: auto;
 }
 
 .login-btn {

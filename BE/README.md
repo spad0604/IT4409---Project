@@ -19,7 +19,7 @@ Các biến môi trường chính:
 - `JWT_ISSUER`, `JWT_TTL_MINUTES`: cấu hình token
 - `OAUTH_REDIRECT_BASE_URL`: public API base URL dùng cho OAuth callback, mặc định `http://localhost:8080`
 - `FRONTEND_URL`: frontend base URL, mặc định `http://localhost:5173`
-- `FRONTEND_OAUTH_CALLBACK_URL`: callback route của FE sau khi OAuth thành công, mặc định `http://localhost:5173/oauth/callback`
+- `FRONTEND_OAUTH_CALLBACK_URL`: route FE nhận JWT sau khi OAuth thành công, mặc định `http://localhost:5173/login`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: Google OAuth client
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`: GitHub OAuth app
 

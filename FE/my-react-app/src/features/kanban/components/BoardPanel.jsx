@@ -31,13 +31,9 @@ export default function BoardPanel({
     <section className="board-shell" aria-label="Draggable board">
       <header className="board-hero panel">
         <div className="board-hero-copy">
-          <p className="dashboard-kicker">{t('board.kicker')}</p>
+          <p className="dashboard-kicker">{t('boardShell.contentTitle')}</p>
           <h1>{boardDetail?.name || t('board.title')}</h1>
-          <p className="board-subtitle">
-            {boardTaskTotal > 0
-              ? t('board.subtitle')
-              : t('board.emptySubtitle', { defaultValue: 'Chưa có vấn đề nào trong bảng này.' })}
-          </p>
+          <p className="board-subtitle">{t('boardShell.contentSubtitle')}</p>
         </div>
 
         <div className="board-hero-meta">
@@ -50,10 +46,15 @@ export default function BoardPanel({
             <strong>{boardDoneCount}</strong>
           </div>
           <div className="board-metric">
-            <span>{t('board.columnsCount', { defaultValue: 'cột' })}</span>
+            <span>{t('board.columns.todo')}</span>
             <strong>{totalColumns}</strong>
           </div>
           <div className="board-hero-actions">
+            <div className="mini-avatars" aria-hidden="true">
+              <span>AN</span>
+              <span>AR</span>
+              <span>MT</span>
+            </div>
             <button type="button" className="filter-btn">{t('common.filters')}</button>
           </div>
         </div>

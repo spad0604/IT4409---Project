@@ -32,7 +32,7 @@ func Load() (Config, error) {
 		JWTSecret:                os.Getenv("JWT_SECRET"),
 		JWTIssuer:                getEnv("JWT_ISSUER", "it4409"),
 		OAuthRedirectBaseURL:     strings.TrimRight(getEnv("OAUTH_REDIRECT_BASE_URL", "http://localhost:"+port), "/"),
-		FrontendOAuthCallbackURL: getEnv("FRONTEND_OAUTH_CALLBACK_URL", frontendURL+"/oauth/callback"),
+		FrontendOAuthCallbackURL: getEnv("FRONTEND_OAUTH_CALLBACK_URL", frontendURL+"/login"),
 		GoogleClientID:           os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret:       os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GitHubClientID:           os.Getenv("GITHUB_CLIENT_ID"),

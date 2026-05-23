@@ -5,7 +5,6 @@ import { StatsOverview } from './shared/components/stats-overview/StatsOverview.
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
-import OAuthCallback from './features/auth/pages/OAuthCallback'
 import { useAuth } from './features/auth/model/AuthContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
 import { useKanbanState } from './features/kanban/hooks'
@@ -332,20 +331,13 @@ function Kanban() {
     const baseCards = t('statsOverview.cards', { returnObjects: true })
     const list = Array.isArray(baseCards) ? baseCards : []
     return list.map((card) => {
-      const cleanCard = { ...card, badge: '' }
-      if (card?.id === 'totalTasks') return { ...cleanCard, value: String(issuesData?.total ?? issueItems.length) }
-      if (card?.id === 'overdue') return { ...cleanCard, value: String(overdueCount) }
-      if (card?.id === 'completed') {
-        return {
-          ...cleanCard,
-          value: String(boardDoneCount),
-          badge: boardTaskTotal > 0 ? `${boardCompletion}%` : '',
-        }
-      }
-      if (card?.id === 'activeProjects') return { ...cleanCard, value: String(projects.length) }
-      return cleanCard
+      if (card?.id === 'totalTasks') return { ...card, value: String(issuesData?.total ?? issueItems.length) }
+      if (card?.id === 'overdue') return { ...card, value: String(overdueCount) }
+      if (card?.id === 'completed') return { ...card, value: String(boardDoneCount) }
+      if (card?.id === 'activeProjects') return { ...card, value: String(projects.length) }
+      return card
     })
-  }, [t, issuesData?.total, issueItems.length, overdueCount, boardDoneCount, boardCompletion, boardTaskTotal, projects.length])
+  }, [t, issuesData?.total, issueItems.length, overdueCount, boardDoneCount, projects.length])
 
   const kanbanColumns = useMemo(() => {
     const columns = Array.isArray(boardColumnsMeta) && boardColumnsMeta.length > 0
@@ -1563,9 +1555,9 @@ function Kanban() {
         <div className="home-body">
           <aside className="home-sidebar" aria-label={t('boardShell.sideNavLabel')}>
             <div className="team-summary">
-              <span className="team-avatar">{toInitials(activeProject?.name) || '?'}</span>
+              <span className="team-avatar">{toInitials(activeProject?.name || t('boardShell.teamName')) || 'A'}</span>
               <div>
-                <p className="team-name">{activeProject?.name || t('projects.noProjectSelected')}</p>
+                <p className="team-name">{activeProject?.name || t('boardShell.teamName')}</p>
                 <p className="team-type">
                   {activeProject?.key ? `${activeProject.key} · ${t('boardShell.teamType')}` : t('boardShell.teamType')}
                 </p>
@@ -1875,8 +1867,6 @@ function App() {
             </PublicOnly>
           )}
         />
-
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         <Route
           path="/home"
