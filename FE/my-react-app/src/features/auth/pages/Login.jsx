@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
+import { oauthStartUrl } from '../api/authApi'
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Login.css'
@@ -49,6 +50,14 @@ export default function Login() {
     const [keepSignedIn, setKeepSignedIn] = useState(true)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [oauthSubmitting, setOauthSubmitting] = useState('')
+
+    const handleOAuthStart = (provider) => {
+        if (oauthSubmitting) return
+        setError('')
+        setOauthSubmitting(provider)
+        window.location.assign(oauthStartUrl(provider))
+    }
 
     const handleSubmit = async (event) => {
         event.preventDefault()
@@ -110,12 +119,22 @@ export default function Login() {
                         <h2>{t('auth.login.welcomeBack')}</h2>
                         <p className="sub">{t('auth.login.welcomeSub')}</p>
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('google')}
+                            disabled={Boolean(oauthSubmitting)}
+                        >
                             <GoogleIcon />
                             {t('auth.login.continueGoogle')}
                         </button>
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('github')}
+                            disabled={Boolean(oauthSubmitting)}
+                        >
                             <GithubIcon />
                             {t('auth.login.continueGithub')}
                         </button>

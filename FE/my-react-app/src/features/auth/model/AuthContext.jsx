@@ -33,6 +33,13 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [saveToken])
 
+  const completeOAuth = useCallback(async (nextToken) => {
+    saveToken(nextToken)
+    const data = await authApi.me()
+    setUser(data?.user ?? null)
+    return data
+  }, [saveToken])
+
   const serverSignOut = useCallback(async () => {
     try {
       await authApi.logout()
@@ -52,8 +59,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ token, user, signIn, signUp, signOut, serverSignOut, refreshMe }),
-    [token, user, signIn, signUp, signOut, serverSignOut, refreshMe],
+    () => ({ token, user, signIn, signUp, signOut, serverSignOut, refreshMe, completeOAuth }),
+    [token, user, signIn, signUp, signOut, serverSignOut, refreshMe, completeOAuth],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

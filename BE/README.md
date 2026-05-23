@@ -17,8 +17,18 @@ Các biến môi trường chính:
 - `DATABASE_URL`: connection string Postgres (Supabase)
 - `JWT_SECRET`: secret ký JWT (bắt buộc)
 - `JWT_ISSUER`, `JWT_TTL_MINUTES`: cấu hình token
+- `OAUTH_REDIRECT_BASE_URL`: public API base URL dùng cho OAuth callback, mặc định `http://localhost:8080`
+- `FRONTEND_URL`: frontend base URL, mặc định `http://localhost:5173`
+- `FRONTEND_OAUTH_CALLBACK_URL`: callback route của FE sau khi OAuth thành công, mặc định `http://localhost:5173/oauth/callback`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: Google OAuth client
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`: GitHub OAuth app
 
 Xem mẫu: `.env.example`.
+
+OAuth callback cần khai báo trong Google/GitHub app:
+
+- Google: `http://localhost:8080/api/auth/oauth/google/callback`
+- GitHub: `http://localhost:8080/api/auth/oauth/github/callback`
 
 ## 2.1) Chuẩn response của BE
 

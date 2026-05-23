@@ -113,10 +113,12 @@ export const vi = {
       title: 'Nhật ký',
       subtitle:
         'Danh sách sử dụng khoảng cách và thay đổi nền để tách biệt thông tin. Ưu tiên cao được đánh dấu bằng thanh đỏ 4px ở cạnh trái.',
+      emptySubtitle: 'Chưa có vấn đề nào trong bảng này.',
       flowProgress: 'Tiến độ luồng công việc',
       completed: 'hoàn thành',
       completion: 'hoàn thành luồng sprint',
       cards: 'thẻ',
+      columnsCount: 'cột',
       addCardTo: 'Thêm thẻ vào cột {{column}}',
       columns: {
         todo: 'Cần làm',
@@ -195,6 +197,9 @@ export const vi = {
     auth: {
       signOut: 'Đăng xuất',
       loginFailed: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.',
+      oauthSigningIn: 'Đang hoàn tất đăng nhập...',
+      oauthFailedTitle: 'Không thể đăng nhập',
+      oauthFailed: 'Phiên đăng nhập OAuth không hợp lệ hoặc đã hết hạn.',
       login: {
         brand: 'Ledger Project',
         headlineLine1: 'Kiến trúc cho sự',

@@ -1,5 +1,5 @@
 import { StatsOverview } from '../../../shared/components/stats-overview/StatsOverview.jsx'
-import { formatShortDate, priorityDisplay, toInitials } from '../kanbanUtils'
+import { formatShortDate, priorityDisplay } from '../kanbanUtils'
 import { RecentProjects } from '../../../shared/components/recent-projects/RecentProjects.jsx'
 
 export default function OverviewPanel({
@@ -26,11 +26,6 @@ export default function OverviewPanel({
         </div>
 
         <div className="dashboard-actions">
-          <div className="mini-avatars" aria-hidden="true">
-            <span>SC</span>
-            <span>AR</span>
-            <span>MT</span>
-          </div>
           <button type="button" className="filter-btn">{t('common.filter')}</button>
         </div>
       </header>

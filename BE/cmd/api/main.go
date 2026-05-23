@@ -34,6 +34,9 @@ import (
 	_ "it4409/docs"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
+	githuboauth "golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
 )
 
 func main() {
@@ -75,7 +78,7 @@ func main() {
 	wsHub := ws.NewHub()
 
 	// ── Usecases ────────────────────────────────────────────────
-	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
+	authUC := usecase.NewAuthUsecaseWithOAuth(userRepo, jwtSvc, oauthProviders(cfg), cfg.FrontendOAuthCallbackURL)
 	userUC := usecase.NewUserUsecase(userRepo)
 	permChecker := usecase.NewPermissionChecker(projectRepo)
 	projectUC := usecase.NewProjectUsecase(projectRepo, txManager, permChecker)
@@ -167,4 +170,36 @@ func loadDotEnv() {
 	}
 
 	_ = godotenv.Load()
+}
+
+func oauthProviders(cfg config.Config) map[string]usecase.OAuthProvider {
+	providers := map[string]usecase.OAuthProvider{}
+
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
+		providers["google"] = usecase.OAuthProvider{
+			Config: oauth2.Config{
+				ClientID:     cfg.GoogleClientID,
+				ClientSecret: cfg.GoogleClientSecret,
+				RedirectURL:  cfg.OAuthRedirectBaseURL + "/api/auth/oauth/google/callback",
+				Scopes:       []string{"openid", "email", "profile"},
+				Endpoint:     google.Endpoint,
+			},
+			ProfileFunc: usecase.GoogleProfile,
+		}
+	}
+
+	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
+		providers["github"] = usecase.OAuthProvider{
+			Config: oauth2.Config{
+				ClientID:     cfg.GitHubClientID,
+				ClientSecret: cfg.GitHubClientSecret,
+				RedirectURL:  cfg.OAuthRedirectBaseURL + "/api/auth/oauth/github/callback",
+				Scopes:       []string{"read:user", "user:email"},
+				Endpoint:     githuboauth.Endpoint,
+			},
+			ProfileFunc: usecase.GitHubProfile,
+		}
+	}
+
+	return providers
 }
