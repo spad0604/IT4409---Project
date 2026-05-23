@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"it4409/internal/domain"
@@ -10,20 +11,26 @@ import (
 )
 
 type CommentUsecase struct {
-	commentRepo repository.CommentRepository
-	issueRepo   repository.IssueRepository
-	perm        *PermissionChecker
+	commentRepo  repository.CommentRepository
+	issueRepo    repository.IssueRepository
+	activityRepo repository.ActivityRepository
+	perm         *PermissionChecker
+	events       EventPublisher
 }
 
 func NewCommentUsecase(
 	commentRepo repository.CommentRepository,
 	issueRepo repository.IssueRepository,
 	perm *PermissionChecker,
+	activityRepo repository.ActivityRepository,
+	events EventPublisher,
 ) *CommentUsecase {
 	return &CommentUsecase{
-		commentRepo: commentRepo,
-		issueRepo:   issueRepo,
-		perm:        perm,
+		commentRepo:  commentRepo,
+		issueRepo:    issueRepo,
+		activityRepo: activityRepo,
+		perm:         perm,
+		events:       events,
 	}
 }
 
@@ -49,7 +56,15 @@ func (uc *CommentUsecase) AddComment(ctx context.Context, userID, issueKey, cont
 		UserID:  userID,
 		Content: content,
 	}
-	return uc.commentRepo.Create(ctx, comment)
+	created, err := uc.commentRepo.Create(ctx, comment)
+	if err != nil {
+		return nil, err
+	}
+
+	uc.logCommentActivity(ctx, issue.ID, userID, content)
+	uc.publishCommentAdded(issue, created)
+
+	return created, nil
 }
 
 // ListComments liệt kê bình luận của issue. Yêu cầu viewer+ trong project.
@@ -109,4 +124,34 @@ func (uc *CommentUsecase) DeleteComment(ctx context.Context, userID, commentID s
 	}
 
 	return uc.commentRepo.Delete(ctx, commentID)
+}
+
+func (uc *CommentUsecase) logCommentActivity(ctx context.Context, issueID, userID, content string) {
+	if uc.activityRepo == nil {
+		return
+	}
+	if runes := []rune(content); len(runes) > 200 {
+		content = string(runes[:200])
+	}
+	err := uc.activityRepo.Create(ctx, &domain.Activity{
+		IssueID:  issueID,
+		UserID:   userID,
+		Action:   domain.ActivityCommented,
+		NewValue: content,
+	})
+	if err != nil {
+		log.Printf("[WARN] failed to log comment activity: %v", err)
+	}
+}
+
+func (uc *CommentUsecase) publishCommentAdded(issue *domain.Issue, comment *domain.Comment) {
+	if uc.events == nil || issue == nil || comment == nil {
+		return
+	}
+	uc.events.Publish("comment_added", map[string]any{
+		"projectId": issue.ProjectID,
+		"issueId":   issue.ID,
+		"issueKey":  issue.Key,
+		"commentId": comment.ID,
+	})
 }

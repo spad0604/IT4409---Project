@@ -35,7 +35,7 @@ FE đang xây một web kiểu Jira để quản lý flow công việc:
 - FE/my-react-app/src/features/auth/model/AuthContext.jsx: auth state/actions
 - FE/my-react-app/src/features/auth/pages/Login.jsx: login UI
 - FE/my-react-app/src/shared/api/httpClient.js: fetch wrapper + error normalization
-- FE/my-react-app/src/shared/ws/wsClient.js: connect WebSocket `/api/ws?token=...`
+- FE/my-react-app/src/shared/ws/wsClient.js: connect WebSocket `/ws?token=...`
 - FE/my-react-app/src/shared/storage/token.js: localStorage token
 - FE/my-react-app/src/shared/config/env.js: đọc VITE_API_BASE_URL
 - FE/my-react-app/src/shared/i18n: language resources + persistence
@@ -212,7 +212,7 @@ Ghi chú trạng thái:
 	- FE wrapper: `FE/my-react-app/src/features/attachments/api/attachmentApi.js` (upload dùng `FormData`, download trả về Blob).
 - 🧩 Search: `GET /api/search`
 	- FE wrapper: `FE/my-react-app/src/features/search/api/searchApi.js`.
-- 🧩 WebSocket: `/api/ws`
+- 🧩 WebSocket: `/ws`
 	- FE wrapper: `FE/my-react-app/src/shared/ws/wsClient.js` (kết nối tối giản theo swagger: query `token`).
 - 🧩 Health: `/api/health`
 	- FE wrapper: `FE/my-react-app/src/features/system/api/healthApi.js`.
@@ -392,7 +392,7 @@ Kết quả:
 **Location**: `FE/my-react-app/src/shared/ws/wsClient.js` + `App.jsx` useEffect
 
 **WsClient Class** (Enhanced):
-- `.connect(token?)` - connect to `/api/ws?token=...`
+- `.connect(token?)` - connect to `/ws?token=...`
 - `.disconnect()` - close connection + stop auto-reconnect
 - `.on(event, callback)` - register event listener
 - `.off(event, callback)` - unregister listener

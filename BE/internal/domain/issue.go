@@ -1,6 +1,11 @@
 package domain
 
-import "time"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 // ─── Issue Type Enum ────────────────────────────────────────────────────────
 
@@ -91,6 +96,99 @@ type IssuePatch struct {
 	SprintID    *string    `json:"sprintId"`
 	SortOrder   *float64   `json:"sortOrder"`
 	DueDate     *time.Time `json:"dueDate"`
+
+	AssigneeIDSet bool `json:"-"`
+	ParentIDSet   bool `json:"-"`
+	SprintIDSet   bool `json:"-"`
+	DueDateSet    bool `json:"-"`
+}
+
+func (p *IssuePatch) UnmarshalJSON(data []byte) error {
+	type scalarPatch struct {
+		Title       *string  `json:"title"`
+		Description *string  `json:"description"`
+		Type        *string  `json:"type"`
+		Priority    *string  `json:"priority"`
+		SortOrder   *float64 `json:"sortOrder"`
+	}
+
+	var scalar scalarPatch
+	if err := json.Unmarshal(data, &scalar); err != nil {
+		return err
+	}
+	p.Title = scalar.Title
+	p.Description = scalar.Description
+	p.Type = scalar.Type
+	p.Priority = scalar.Priority
+	p.SortOrder = scalar.SortOrder
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	var err error
+	p.AssigneeID, p.AssigneeIDSet, err = decodeNullableString(raw, "assigneeId")
+	if err != nil {
+		return err
+	}
+	p.ParentID, p.ParentIDSet, err = decodeNullableString(raw, "parentId")
+	if err != nil {
+		return err
+	}
+	p.SprintID, p.SprintIDSet, err = decodeNullableString(raw, "sprintId")
+	if err != nil {
+		return err
+	}
+	p.DueDate, p.DueDateSet, err = decodeNullableTime(raw, "dueDate")
+	return err
+}
+
+func decodeNullableString(raw map[string]json.RawMessage, key string) (*string, bool, error) {
+	value, ok := raw[key]
+	if !ok {
+		return nil, false, nil
+	}
+	if isJSONNull(value) {
+		return nil, true, nil
+	}
+
+	var s string
+	if err := json.Unmarshal(value, &s); err != nil {
+		return nil, true, fmt.Errorf("%s must be string or null", key)
+	}
+	return &s, true, nil
+}
+
+func decodeNullableTime(raw map[string]json.RawMessage, key string) (*time.Time, bool, error) {
+	value, ok := raw[key]
+	if !ok {
+		return nil, false, nil
+	}
+	if isJSONNull(value) {
+		return nil, true, nil
+	}
+
+	var s string
+	if err := json.Unmarshal(value, &s); err != nil {
+		return nil, true, fmt.Errorf("%s must be date string or null", key)
+	}
+	if s == "" {
+		return nil, true, nil
+	}
+
+	for _, layout := range []string{"2006-01-02", time.RFC3339Nano, time.RFC3339} {
+		t, err := time.Parse(layout, s)
+		if err == nil {
+			return &t, true, nil
+		}
+	}
+
+	return nil, true, fmt.Errorf("%s must be YYYY-MM-DD or RFC3339", key)
+}
+
+func isJSONNull(raw json.RawMessage) bool {
+	return bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
 }
 
 // ─── Issue Filter (for list endpoint) ───────────────────────────────────────

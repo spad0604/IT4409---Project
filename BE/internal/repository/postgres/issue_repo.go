@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -209,24 +210,69 @@ func (r *IssueRepo) List(ctx context.Context, projectID string, filter domain.Is
 // ─── Write Methods ──────────────────────────────────────────────────────────
 
 func (r *IssueRepo) Update(ctx context.Context, id string, patch *domain.IssuePatch) (*domain.Issue, error) {
-	const q = `
-		UPDATE public.issues
-		SET title       = COALESCE($2, title),
-			description = COALESCE($3, description),
-			type        = COALESCE($4, type),
-			priority    = COALESCE($5, priority),
-			assignee_id = COALESCE($6, assignee_id),
-			parent_id   = COALESCE($7, parent_id),
-			sprint_id   = COALESCE($8, sprint_id),
-			sort_order  = COALESCE($9, sort_order),
-			due_date    = COALESCE($10, due_date)
-		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING ` + issueColumns
+	sets := []string{}
+	args := []any{id}
+	argIdx := 2
 
-	return scanIssue(r.pool.QueryRow(ctx, q, id,
-		patch.Title, patch.Description, patch.Type, patch.Priority,
-		patch.AssigneeID, patch.ParentID, patch.SprintID, patch.SortOrder, patch.DueDate,
-	))
+	addSet := func(column string, value any) {
+		sets = append(sets, fmt.Sprintf("%s = $%d", column, argIdx))
+		args = append(args, value)
+		argIdx++
+	}
+	nullableStringArg := func(value *string) any {
+		if value == nil {
+			return nil
+		}
+		return *value
+	}
+	nullableTimeArg := func(value *time.Time) any {
+		if value == nil {
+			return nil
+		}
+		return *value
+	}
+
+	if patch.Title != nil {
+		addSet("title", *patch.Title)
+	}
+	if patch.Description != nil {
+		addSet("description", *patch.Description)
+	}
+	if patch.Type != nil {
+		addSet("type", *patch.Type)
+	}
+	if patch.Priority != nil {
+		addSet("priority", *patch.Priority)
+	}
+	if patch.AssigneeIDSet {
+		addSet("assignee_id", nullableStringArg(patch.AssigneeID))
+	}
+	if patch.ParentIDSet {
+		addSet("parent_id", nullableStringArg(patch.ParentID))
+	}
+	if patch.SprintIDSet {
+		addSet("sprint_id", nullableStringArg(patch.SprintID))
+	}
+	if patch.SortOrder != nil {
+		addSet("sort_order", *patch.SortOrder)
+	}
+	if patch.DueDateSet {
+		addSet("due_date", nullableTimeArg(patch.DueDate))
+	}
+
+	if len(sets) == 0 {
+		return r.GetByID(ctx, id)
+	}
+
+	sets = append(sets, "updated_at = now()")
+	q := fmt.Sprintf(`
+		UPDATE public.issues
+		SET %s
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING %s
+	`, strings.Join(sets, ", "), issueColumns)
+
+	return scanIssue(r.pool.QueryRow(ctx, q, args...))
 }
 
 func (r *IssueRepo) SoftDelete(ctx context.Context, id string) error {

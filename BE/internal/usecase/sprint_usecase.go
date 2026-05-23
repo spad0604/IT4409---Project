@@ -10,11 +10,12 @@ import (
 )
 
 type SprintUsecase struct {
-	sprintRepo repository.SprintRepository
-	issueRepo  repository.IssueRepository
+	sprintRepo  repository.SprintRepository
+	issueRepo   repository.IssueRepository
 	projectRepo repository.ProjectRepository
-	txManager  repository.TxManager
-	perm       *PermissionChecker
+	txManager   repository.TxManager
+	perm        *PermissionChecker
+	events      EventPublisher
 }
 
 func NewSprintUsecase(
@@ -23,6 +24,7 @@ func NewSprintUsecase(
 	projectRepo repository.ProjectRepository,
 	txManager repository.TxManager,
 	perm *PermissionChecker,
+	events EventPublisher,
 ) *SprintUsecase {
 	return &SprintUsecase{
 		sprintRepo:  sprintRepo,
@@ -30,14 +32,15 @@ func NewSprintUsecase(
 		projectRepo: projectRepo,
 		txManager:   txManager,
 		perm:        perm,
+		events:      events,
 	}
 }
 
 // ─── Input Types ────────────────────────────────────────────────────────────
 
 type CreateSprintInput struct {
-	Name      string `json:"name"`
-	Goal      string `json:"goal"`
+	Name string `json:"name"`
+	Goal string `json:"goal"`
 }
 
 // ─── Create Sprint ──────────────────────────────────────────────────────────
@@ -122,7 +125,12 @@ func (uc *SprintUsecase) StartSprint(ctx context.Context, userID, sprintID strin
 		return nil, domain.ErrSprintActive
 	}
 
-	return uc.sprintRepo.Start(ctx, sprintID)
+	started, err := uc.sprintRepo.Start(ctx, sprintID)
+	if err != nil {
+		return nil, err
+	}
+	uc.publishSprintEvent("sprint_started", started)
+	return started, nil
 }
 
 // ─── Complete Sprint ────────────────────────────────────────────────────────
@@ -151,6 +159,8 @@ func (uc *SprintUsecase) CompleteSprint(ctx context.Context, userID, sprintID st
 		return nil, err
 	}
 
+	uc.publishSprintEvent("sprint_completed", completed)
+
 	return completed, nil
 }
 
@@ -170,4 +180,14 @@ func (uc *SprintUsecase) GetBacklog(ctx context.Context, userID, projectID strin
 
 	issues, _, err := uc.issueRepo.List(ctx, projectID, filter)
 	return issues, err
+}
+
+func (uc *SprintUsecase) publishSprintEvent(eventType string, sprint *domain.Sprint) {
+	if uc.events == nil || sprint == nil {
+		return
+	}
+	uc.events.Publish(eventType, map[string]any{
+		"projectId": sprint.ProjectID,
+		"sprintId":  sprint.ID,
+	})
 }
