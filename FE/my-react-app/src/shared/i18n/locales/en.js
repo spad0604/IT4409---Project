@@ -265,16 +265,6 @@ export const en = {
       },
     },
 
-    activity: {
-      actions: {
-        status_changed: 'Status changed',
-        issue_created: 'Issue created',
-        issue_updated: 'Issue updated',
-        comment_added: 'Comment added',
-        issue_assigned: 'Assignee changed',
-      },
-    },
-
     overview: {
       kicker: 'Workspace Dashboard',
       title: 'System Overview',
@@ -424,6 +414,13 @@ export const en = {
       changed: 'Changed status',
       assigned: 'Assigned to',
       commented: 'Commented on',
+      actions: {
+        status_changed: 'Status changed',
+        issue_created: 'Issue created',
+        issue_updated: 'Issue updated',
+        comment_added: 'Comment added',
+        issue_assigned: 'Assignee changed',
+      },
     },
 
   },

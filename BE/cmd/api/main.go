@@ -34,6 +34,9 @@ import (
 	_ "it4409/docs"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
+	githuboauth "golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
 )
 
 func main() {
@@ -75,15 +78,15 @@ func main() {
 	wsHub := ws.NewHub()
 
 	// ── Usecases ────────────────────────────────────────────────
-	authUC := usecase.NewAuthUsecase(userRepo, jwtSvc)
+	authUC := usecase.NewAuthUsecaseWithOAuth(userRepo, jwtSvc, oauthProviders(cfg), cfg.FrontendOAuthCallbackURL)
 	userUC := usecase.NewUserUsecase(userRepo)
 	permChecker := usecase.NewPermissionChecker(projectRepo)
 	projectUC := usecase.NewProjectUsecase(projectRepo, txManager, permChecker)
 	boardUC := usecase.NewBoardUsecase(boardRepo, projectRepo, txManager, permChecker)
-	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
-	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker, activityRepo)
-	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker)
-	sprintUC := usecase.NewSprintUsecase(sprintRepo, issueRepo, projectRepo, txManager, permChecker)
+	labelUC := usecase.NewLabelUsecase(labelRepo, issueRepo, permChecker)
+	issueUC := usecase.NewIssueUsecase(issueRepo, projectRepo, txManager, permChecker, activityRepo, wsHub)
+	commentUC := usecase.NewCommentUsecase(commentRepo, issueRepo, permChecker, activityRepo, wsHub)
+	sprintUC := usecase.NewSprintUsecase(sprintRepo, issueRepo, projectRepo, txManager, permChecker, wsHub)
 	activityUC := usecase.NewActivityUsecase(activityRepo, issueRepo, permChecker)
 	attUC := usecase.NewAttachmentUsecase(attRepo, issueRepo, permChecker, fs)
 	searchUC := usecase.NewSearchUsecase(issueRepo, projectRepo)
@@ -94,7 +97,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectUC)
 	boardHandler := handler.NewBoardHandler(boardUC)
 	labelHandler := handler.NewLabelHandler(labelUC)
-	issueHandler := handler.NewIssueHandler(issueUC)
+	issueHandler := handler.NewIssueHandler(issueUC, userRepo, labelRepo, sprintRepo)
 	commentHandler := handler.NewCommentHandler(commentUC)
 	sprintHandler := handler.NewSprintHandler(sprintUC)
 	activityHandler := handler.NewActivityHandler(activityUC)
@@ -167,4 +170,36 @@ func loadDotEnv() {
 	}
 
 	_ = godotenv.Load()
+}
+
+func oauthProviders(cfg config.Config) map[string]usecase.OAuthProvider {
+	providers := map[string]usecase.OAuthProvider{}
+
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
+		providers["google"] = usecase.OAuthProvider{
+			Config: oauth2.Config{
+				ClientID:     cfg.GoogleClientID,
+				ClientSecret: cfg.GoogleClientSecret,
+				RedirectURL:  cfg.OAuthRedirectBaseURL + "/api/auth/oauth/google/callback",
+				Scopes:       []string{"openid", "email", "profile"},
+				Endpoint:     google.Endpoint,
+			},
+			ProfileFunc: usecase.GoogleProfile,
+		}
+	}
+
+	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
+		providers["github"] = usecase.OAuthProvider{
+			Config: oauth2.Config{
+				ClientID:     cfg.GitHubClientID,
+				ClientSecret: cfg.GitHubClientSecret,
+				RedirectURL:  cfg.OAuthRedirectBaseURL + "/api/auth/oauth/github/callback",
+				Scopes:       []string{"read:user", "user:email"},
+				Endpoint:     githuboauth.Endpoint,
+			},
+			ProfileFunc: usecase.GitHubProfile,
+		}
+	}
+
+	return providers
 }

@@ -9,12 +9,14 @@ import (
 
 type LabelUsecase struct {
 	labelRepo   repository.LabelRepository
+	issueRepo   repository.IssueRepository
 	permChecker *PermissionChecker
 }
 
-func NewLabelUsecase(labelRepo repository.LabelRepository, permChecker *PermissionChecker) *LabelUsecase {
+func NewLabelUsecase(labelRepo repository.LabelRepository, issueRepo repository.IssueRepository, permChecker *PermissionChecker) *LabelUsecase {
 	return &LabelUsecase{
 		labelRepo:   labelRepo,
+		issueRepo:   issueRepo,
 		permChecker: permChecker,
 	}
 }
@@ -61,8 +63,12 @@ func (uc *LabelUsecase) DeleteLabel(ctx context.Context, userID, labelID string)
 
 // === Gắn/gỡ nhãn vào công việc ===
 
-func (uc *LabelUsecase) AttachToIssue(ctx context.Context, userID, issueID, labelID string) error {
-	// Lấy projectID từ labelID để kiểm tra quyền
+func (uc *LabelUsecase) AttachToIssue(ctx context.Context, userID, issueKey, labelID string) error {
+	issue, err := uc.issueRepo.GetByKey(ctx, issueKey)
+	if err != nil {
+		return err
+	}
+
 	projectID, err := uc.labelRepo.GetProjectIDByLabelID(ctx, labelID)
 	if err != nil {
 		return err
@@ -71,10 +77,15 @@ func (uc *LabelUsecase) AttachToIssue(ctx context.Context, userID, issueID, labe
 	if err := uc.permChecker.Check(ctx, projectID, userID, "member"); err != nil {
 		return err
 	}
-	return uc.labelRepo.AttachToIssue(ctx, issueID, labelID)
+	return uc.labelRepo.AttachToIssue(ctx, issue.ID, labelID)
 }
 
-func (uc *LabelUsecase) DetachFromIssue(ctx context.Context, userID, issueID, labelID string) error {
+func (uc *LabelUsecase) DetachFromIssue(ctx context.Context, userID, issueKey, labelID string) error {
+	issue, err := uc.issueRepo.GetByKey(ctx, issueKey)
+	if err != nil {
+		return err
+	}
+
 	projectID, err := uc.labelRepo.GetProjectIDByLabelID(ctx, labelID)
 	if err != nil {
 		return err
@@ -82,7 +93,7 @@ func (uc *LabelUsecase) DetachFromIssue(ctx context.Context, userID, issueID, la
 	if err := uc.permChecker.Check(ctx, projectID, userID, "member"); err != nil {
 		return err
 	}
-	return uc.labelRepo.DetachFromIssue(ctx, issueID, labelID)
+	return uc.labelRepo.DetachFromIssue(ctx, issue.ID, labelID)
 }
 
 func (uc *LabelUsecase) ListByIssue(ctx context.Context, issueID string) ([]*domain.Label, error) {

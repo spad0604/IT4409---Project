@@ -11,12 +11,23 @@ import (
 )
 
 type AuthUsecase struct {
-	users repository.UserRepository
-	jwt   jwtutil.Service
+	users                    repository.UserRepository
+	jwt                      jwtutil.Service
+	oauthProviders           map[string]OAuthProvider
+	frontendOAuthCallbackURL string
 }
 
 func NewAuthUsecase(users repository.UserRepository, jwtSvc jwtutil.Service) *AuthUsecase {
-	return &AuthUsecase{users: users, jwt: jwtSvc}
+	return NewAuthUsecaseWithOAuth(users, jwtSvc, nil, "")
+}
+
+func NewAuthUsecaseWithOAuth(users repository.UserRepository, jwtSvc jwtutil.Service, oauthProviders map[string]OAuthProvider, frontendOAuthCallbackURL string) *AuthUsecase {
+	return &AuthUsecase{
+		users:                    users,
+		jwt:                      jwtSvc,
+		oauthProviders:           oauthProviders,
+		frontendOAuthCallbackURL: frontendOAuthCallbackURL,
+	}
 }
 
 type RegisterInput struct {

@@ -129,6 +129,20 @@ export default function BoardPanel({
                       <span className={`board-card-chip tone-${pr.tone}`}>{t(`priority.${pr.tone}`, { defaultValue: pr.label })}</span>
                     </div>
 
+                    {Array.isArray(item?.labels) && item.labels.length > 0 ? (
+                      <div className="label-row" style={{ marginTop: '0.45rem' }}>
+                        {item.labels.slice(0, 3).map((label) => (
+                          <span
+                            key={label?.id || label?.name}
+                            className="label-chip"
+                            style={label?.color ? { background: label.color } : undefined}
+                          >
+                            {label?.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
                     <div className="board-progress-track compact" aria-hidden="true">
                       <span style={{ width: `${BOARD_STAGE_PROGRESS[column.id] ?? 25}%` }} />
                     </div>

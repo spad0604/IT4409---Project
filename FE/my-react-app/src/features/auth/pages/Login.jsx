@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
+import { oauthStartUrl } from '../api/authApi'
+import { setToken } from '../../../shared/storage/token'
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Login.css'
@@ -42,13 +44,56 @@ function GithubIcon() {
 export default function Login() {
     const { t } = useTranslation()
     const navigate = useNavigate()
-    const { signIn } = useAuth()
+    const { signIn, refreshMe } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [keepSignedIn, setKeepSignedIn] = useState(true)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [oauthSubmitting, setOauthSubmitting] = useState('')
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        const oauthToken = params.get('token')
+        const oauthError = params.get('error')
+
+        if (oauthError) {
+            setError(t('auth.loginFailed'))
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+        }
+
+        if (!oauthToken) return
+
+        let cancelled = false
+        setSubmitting(true)
+        setToken(oauthToken)
+
+        refreshMe()
+            .then(() => {
+                if (!cancelled) window.location.replace('/home/dashboard')
+            })
+            .catch(() => {
+                setToken(null)
+                if (!cancelled) {
+                    setError(t('auth.loginFailed'))
+                    setSubmitting(false)
+                    window.history.replaceState(null, '', window.location.pathname)
+                }
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [refreshMe, t])
+
+    const handleOAuthStart = (provider) => {
+        if (submitting || oauthSubmitting) return
+        setError('')
+        setOauthSubmitting(provider)
+        window.location.assign(oauthStartUrl(provider))
+    }
 
     const handleSubmit = async (event) => {
         event.preventDefault()
@@ -59,7 +104,7 @@ export default function Login() {
 
         try {
             await signIn({ email, password })
-            navigate('/home', { replace: true, state: { keepSignedIn } })
+            navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
             const apiMessage = err?.message
             setError(apiMessage || t('auth.loginFailed'))
@@ -74,7 +119,7 @@ export default function Login() {
                 <section
                     className="login-visual"
                     style={{
-                        backgroundImage: `linear-gradient(174deg, rgb(8 42 250 / 76%) 8%, rgb(20 48 240 / 88%) 100%), url(${heroImage})`,
+                        backgroundImage: `url(${heroImage})`,
                     }}
                 >
                     <div className="visual-content">
@@ -110,12 +155,22 @@ export default function Login() {
                         <h2>{t('auth.login.welcomeBack')}</h2>
                         <p className="sub">{t('auth.login.welcomeSub')}</p>
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('google')}
+                            disabled={submitting || Boolean(oauthSubmitting)}
+                        >
                             <GoogleIcon />
                             {t('auth.login.continueGoogle')}
                         </button>
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('github')}
+                            disabled={submitting || Boolean(oauthSubmitting)}
+                        >
                             <GithubIcon />
                             {t('auth.login.continueGithub')}
                         </button>

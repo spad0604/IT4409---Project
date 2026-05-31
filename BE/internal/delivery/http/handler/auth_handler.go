@@ -25,6 +25,8 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/login", h.Login)
+		r.Get("/oauth/{provider}/start", h.OAuthStart)
+		r.Get("/oauth/{provider}/callback", h.OAuthCallback)
 	})
 }
 
@@ -141,6 +143,55 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Message: "success",
 		Data:    AuthData{Token: out.Token, User: toUserDTO(out.User)},
 	})
+}
+
+// OAuthStart godoc
+// @Summary Start OAuth2 login
+// @Description Redirects the browser to Google or GitHub OAuth authorization page.
+// @Tags auth
+// @Param provider path string true "OAuth provider" Enums(google,github)
+// @Success 302 "Redirect to OAuth provider"
+// @Failure 400 {object} Envelope
+// @Router /api/auth/oauth/{provider}/start [get]
+func (h *AuthHandler) OAuthStart(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+	redirectURL, err := h.auth.OAuthStartURL(provider)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// OAuthCallback godoc
+// @Summary OAuth2 callback
+// @Description Handles Google/GitHub callback and redirects back to frontend login with a JWT token in the URL fragment.
+// @Tags auth
+// @Param provider path string true "OAuth provider" Enums(google,github)
+// @Param code query string false "Authorization code"
+// @Param state query string false "Signed state"
+// @Param error query string false "Provider error"
+// @Success 302 "Redirect to frontend"
+// @Router /api/auth/oauth/{provider}/callback [get]
+func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if providerErr := r.URL.Query().Get("error"); providerErr != "" {
+		http.Redirect(w, r, h.auth.OAuthErrorRedirect(providerErr), http.StatusFound)
+		return
+	}
+
+	out, err := h.auth.OAuthCallback(
+		r.Context(),
+		chi.URLParam(r, "provider"),
+		r.URL.Query().Get("code"),
+		r.URL.Query().Get("state"),
+	)
+	if err != nil {
+		http.Redirect(w, r, h.auth.OAuthErrorRedirect("oauth_failed"), http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, h.auth.OAuthSuccessRedirect(out.Token), http.StatusFound)
 }
 
 // Me godoc
