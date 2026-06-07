@@ -1,14 +1,8 @@
-<<<<<<< HEAD
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../model/AuthContext'
-=======
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
 import { oauthStartUrl } from '../api/authApi'
 import { setToken } from '../../../shared/storage/token'
->>>>>>> main
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Auth.css'
@@ -35,12 +29,7 @@ function GithubIcon() {
 export default function Login() {
     const { t } = useTranslation()
     const navigate = useNavigate()
-<<<<<<< HEAD
-    const { signIn } = useAuth()
-
-=======
     const { signIn, refreshMe } = useAuth()
->>>>>>> main
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -102,13 +91,8 @@ export default function Login() {
             await signIn({ email, password })
             navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
-<<<<<<< HEAD
-            const apiMessage = err?.response?.data?.message
-            setError(apiMessage || t('login.error'))
-=======
             const apiMessage = err?.message
             setError(apiMessage || t('auth.loginFailed'))
->>>>>>> main
         } finally {
             setSubmitting(false)
         }
@@ -124,14 +108,6 @@ export default function Login() {
                     }}
                 >
                     <div className="visual-content">
-<<<<<<< HEAD
-                        <p className="visual-logo">{t('login.projectName')}</p>
-                        <h1>
-                            {t('login.titleLine1')} <br />
-                            {t('login.titleLine2')}
-                        </h1>
-                        <p className="visual-desc">{t('login.description')}</p>
-=======
                         <p className="visual-logo">{t('auth.login.brand')}</p>
                         <h1>
                             {t('auth.login.headlineLine1')}
@@ -147,7 +123,6 @@ export default function Login() {
                         <span />
                         <span />
                         <span />
->>>>>>> main
                     </div>
 
                     <div className="social-proof">
@@ -156,23 +131,14 @@ export default function Login() {
                             <span>N</span>
                             <span>T</span>
                         </div>
-<<<<<<< HEAD
-                        <p>{t('login.socialProof')}</p>
-=======
                         <p>{t('auth.login.socialProof')}</p>
->>>>>>> main
                     </div>
                 </section>
 
                 <section className="auth-form-wrap">
                     <form className="form-box" onSubmit={handleSubmit}>
-<<<<<<< HEAD
-                        <h2>{t('login.welcome')}</h2>
-                        <p className="sub">{t('login.subtitle')}</p>
-=======
                         <h2>{t('auth.login.welcomeBack')}</h2>
                         <p className="sub">{t('auth.login.welcomeSub')}</p>
->>>>>>> main
 
                         <button
                             type="button"
@@ -181,11 +147,7 @@ export default function Login() {
                             disabled={submitting || Boolean(oauthSubmitting)}
                         >
                             <GoogleIcon />
-<<<<<<< HEAD
-                            {t('login.google')}
-=======
                             {t('auth.login.continueGoogle')}
->>>>>>> main
                         </button>
 
                         <button
@@ -195,41 +157,23 @@ export default function Login() {
                             disabled={submitting || Boolean(oauthSubmitting)}
                         >
                             <GithubIcon />
-<<<<<<< HEAD
-                            {t('login.github')}
-                        </button>
-
-                        <div className="divider">{t('login.or')}</div>
-
-                        <label className="field-label">{t('login.email')}</label>
-=======
                             {t('auth.login.continueGithub')}
                         </button>
 
                         <div className="divider">{t('auth.login.divider')}</div>
 
                         <label className="field-label" htmlFor="login-email">{t('auth.login.emailLabel')}</label>
->>>>>>> main
                         <input
                             type="text"
-<<<<<<< HEAD
-                            placeholder={t('login.emailPlaceholder')}
-=======
                             placeholder={t('auth.login.emailPlaceholder')}
->>>>>>> main
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
 
                         <div className="password-row">
-<<<<<<< HEAD
-                            <label className="field-label">{t('login.password')}</label>
-
-=======
                             <label className="field-label" htmlFor="login-password">{t('auth.login.passwordLabel')}</label>
                             <button type="button" className="text-link">{t('auth.login.forgotPassword')}</button>
->>>>>>> main
                         </div>
 
                         <div className="password-input-wrap">
@@ -243,16 +187,10 @@ export default function Login() {
                             <button
                                 type="button"
                                 className="password-toggle"
-<<<<<<< HEAD
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? t('login.hide') : t('login.show')}
-=======
                                 aria-label={showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
                                 onClick={() => setShowPassword((current) => !current)}
                             >
                                 {showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
->>>>>>> main
                             </button>
                         </div>
 
@@ -266,30 +204,11 @@ export default function Login() {
                                 checked={keepSignedIn}
                                 onChange={(e) => setKeepSignedIn(e.target.checked)}
                             />
-<<<<<<< HEAD
-                            {t('login.remember')}
-=======
                             {t('auth.login.keepSignedIn')}
->>>>>>> main
                         </label>
 
                         {error && <p className="form-error">{error}</p>}
 
-<<<<<<< HEAD
-                        <button className="login-btn" type="submit">
-                            {submitting ? t('login.signingIn') : t('login.signIn')}
-                        </button>
-
-                        <p className="register-link">
-                            {t('login.noAccount')}{' '}
-                            <Link to="/register" className="link">
-                                {t('login.create')}
-                            </Link>
-                        </p>
-
-                        <p className="mock-note">{t('login.mock')}</p>
-                    </form>
-=======
                         <button className="login-btn" type="submit" disabled={submitting}>
                             {submitting ? t('auth.login.signingIn') : t('auth.login.signIn')}
                         </button>
@@ -304,7 +223,6 @@ export default function Login() {
                         <p className="tip-kicker">◎+</p>
                         <p>{t('auth.login.focusTip')}</p>
                     </aside>
->>>>>>> main
                 </section>
             </div>
         </div>
