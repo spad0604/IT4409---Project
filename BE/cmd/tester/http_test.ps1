@@ -37,11 +37,11 @@ Assert-OK "Get Profile" ($me.data.email -eq $email)
 Write-Host "`n=== PROJECTS ==="
 $projBody = "{`"name`":`"Test Project $ts`",`"key`":`"TP$ts`",`"description`":`"Full test`",`"type`":`"kanban`"}"
 $proj = Invoke-RestMethod -Uri "http://localhost:8080/api/projects" -Method POST -Body $projBody -ContentType "application/json" -Headers $headers
-$projectId = $proj.id
+$projectId = $proj.data.id
 Assert-OK "Create Project" ($projectId.Length -eq 36)
 
 $projList = Invoke-RestMethod -Uri "http://localhost:8080/api/projects" -Method GET -Headers $headers
-Assert-OK "List Projects" ($projList.Count -ge 1)
+Assert-OK "List Projects" ($projList.data.Count -ge 1)
 
 # ═══════════════════════════════════════
 # 4. Board + Columns

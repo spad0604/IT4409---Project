@@ -5,6 +5,7 @@ import { StatsOverview } from './shared/components/stats-overview/StatsOverview.
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Login from './features/auth/pages/Login'
+import Register from './features/auth/pages/Register'
 import { useAuth } from './features/auth/model/AuthContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
 import IssuesPage from './features/issues/pages/IssuesPage'
@@ -518,7 +519,7 @@ function Kanban() {
   }, [t])
 
   useEffect(() => {
-    refreshMe().catch(() => {})
+    refreshMe().catch(() => { })
   }, [refreshMe])
 
   // ─── Sprint Handlers ───────────────────────────────────────────────────────
@@ -1604,15 +1605,15 @@ function Kanban() {
                 const TabIcon = TOP_TAB_ICON_MAP[tab.id] || FiGrid
 
                 return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`top-tab ${tab.id === activeTopTab ? 'is-active' : ''}`}
-                  onClick={() => handleTopTabClick(tab.id)}
-                >
-                  <span className="tab-icon" aria-hidden="true"><TabIcon /></span>
-                  {tab.label}
-                </button>
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`top-tab ${tab.id === activeTopTab ? 'is-active' : ''}`}
+                    onClick={() => handleTopTabClick(tab.id)}
+                  >
+                    <span className="tab-icon" aria-hidden="true"><TabIcon /></span>
+                    {tab.label}
+                  </button>
                 )
               })}
             </nav>
@@ -1787,15 +1788,15 @@ function Kanban() {
                 const LinkIcon = SIDE_LINK_ICON_MAP[link.id] || FiGrid
 
                 return (
-                <button
-                  key={link.id}
-                  type="button"
-                  className={`sidebar-link ${link.id === activeSideLink ? 'is-active' : ''}`}
-                  onClick={() => handleSideLinkClick(link.id)}
-                >
-                  <span className="sidebar-icon" aria-hidden="true"><LinkIcon /></span>
-                  {link.label}
-                </button>
+                  <button
+                    key={link.id}
+                    type="button"
+                    className={`sidebar-link ${link.id === activeSideLink ? 'is-active' : ''}`}
+                    onClick={() => handleSideLinkClick(link.id)}
+                  >
+                    <span className="sidebar-icon" aria-hidden="true"><LinkIcon /></span>
+                    {link.label}
+                  </button>
                 )
               })}
             </nav>
@@ -2019,6 +2020,24 @@ function App() {
           element={(
             <PublicOnly>
               <Login />
+            </PublicOnly>
+          )}
+        />
+
+        <Route
+          path="/register"
+          element={(
+            <PublicOnly>
+              <Register />
+            </PublicOnly>
+          )}
+        />
+
+        <Route
+          path="/register"
+          element={(
+            <PublicOnly>
+              <Register />
             </PublicOnly>
           )}
         />
