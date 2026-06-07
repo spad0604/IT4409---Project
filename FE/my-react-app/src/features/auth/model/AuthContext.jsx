@@ -15,22 +15,7 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async ({ email, password }) => {
     const normalizedEmail = String(email ?? '').trim().toLowerCase()
-    if (normalizedEmail === 'admin' && password === 'admin') {
-      const data = {
-        token: 'mock-admin-token',
-        user: {
-          id: 'mock-admin',
-          email: 'admin',
-          name: 'Administrator',
-          role: 'admin',
-        },
-      }
-      saveToken(data.token)
-      setUser(data.user)
-      return data
-    }
-
-    const data = await authApi.login({ email, password })
+    const data = await authApi.login({ email: normalizedEmail, password })
     saveToken(data?.token)
     setUser(data?.user ?? null)
     return data
@@ -48,6 +33,17 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [saveToken])
 
+  const serverSignOut = useCallback(async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // ignore logout errors (token is client-side)
+    } finally {
+      saveToken(null)
+      setUser(null)
+    }
+  }, [saveToken])
+
   const refreshMe = useCallback(async () => {
     if (!getToken()) return null
     const data = await authApi.me()
@@ -55,7 +51,10 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  const value = useMemo(() => ({ token, user, signIn, signUp, signOut, refreshMe }), [token, user, signIn, signUp, signOut, refreshMe])
+  const value = useMemo(
+    () => ({ token, user, signIn, signUp, signOut, serverSignOut, refreshMe }),
+    [token, user, signIn, signUp, signOut, serverSignOut, refreshMe],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

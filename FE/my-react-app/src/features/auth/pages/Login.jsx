@@ -1,6 +1,14 @@
+<<<<<<< HEAD
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../model/AuthContext'
+=======
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../model/AuthContext'
+import { oauthStartUrl } from '../api/authApi'
+import { setToken } from '../../../shared/storage/token'
+>>>>>>> main
 import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Auth.css'
@@ -27,14 +35,61 @@ function GithubIcon() {
 export default function Login() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+<<<<<<< HEAD
     const { signIn } = useAuth()
 
+=======
+    const { signIn, refreshMe } = useAuth()
+>>>>>>> main
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [keepSignedIn, setKeepSignedIn] = useState(true)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [oauthSubmitting, setOauthSubmitting] = useState('')
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        const oauthToken = params.get('token')
+        const oauthError = params.get('error')
+
+        if (oauthError) {
+            setError(t('auth.loginFailed'))
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+        }
+
+        if (!oauthToken) return
+
+        let cancelled = false
+        setSubmitting(true)
+        setToken(oauthToken)
+
+        refreshMe()
+            .then(() => {
+                if (!cancelled) window.location.replace('/home/dashboard')
+            })
+            .catch(() => {
+                setToken(null)
+                if (!cancelled) {
+                    setError(t('auth.loginFailed'))
+                    setSubmitting(false)
+                    window.history.replaceState(null, '', window.location.pathname)
+                }
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [refreshMe, t])
+
+    const handleOAuthStart = (provider) => {
+        if (submitting || oauthSubmitting) return
+        setError('')
+        setOauthSubmitting(provider)
+        window.location.assign(oauthStartUrl(provider))
+    }
 
     const handleSubmit = async (event) => {
         event.preventDefault()
@@ -45,10 +100,15 @@ export default function Login() {
 
         try {
             await signIn({ email, password })
-            navigate('/home', { replace: true, state: { keepSignedIn } })
+            navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
+<<<<<<< HEAD
             const apiMessage = err?.response?.data?.message
             setError(apiMessage || t('login.error'))
+=======
+            const apiMessage = err?.message
+            setError(apiMessage || t('auth.loginFailed'))
+>>>>>>> main
         } finally {
             setSubmitting(false)
         }
@@ -60,16 +120,34 @@ export default function Login() {
                 <section
                     className="auth-visual"
                     style={{
-                        backgroundImage: `linear-gradient(174deg, rgb(8 42 250 / 76%) 8%, rgb(20 48 240 / 88%) 100%), url(${heroImage})`,
+                        backgroundImage: `url(${heroImage})`,
                     }}
                 >
                     <div className="visual-content">
+<<<<<<< HEAD
                         <p className="visual-logo">{t('login.projectName')}</p>
                         <h1>
                             {t('login.titleLine1')} <br />
                             {t('login.titleLine2')}
                         </h1>
                         <p className="visual-desc">{t('login.description')}</p>
+=======
+                        <p className="visual-logo">{t('auth.login.brand')}</p>
+                        <h1>
+                            {t('auth.login.headlineLine1')}
+                            <br />
+                            {t('auth.login.headlineLine2')}
+                        </h1>
+                        <p className="visual-desc">
+                            {t('auth.login.description')}
+                        </p>
+                    </div>
+
+                    <div className="visual-underline" aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+>>>>>>> main
                     </div>
 
                     <div className="social-proof">
@@ -78,39 +156,80 @@ export default function Login() {
                             <span>N</span>
                             <span>T</span>
                         </div>
+<<<<<<< HEAD
                         <p>{t('login.socialProof')}</p>
+=======
+                        <p>{t('auth.login.socialProof')}</p>
+>>>>>>> main
                     </div>
                 </section>
 
                 <section className="auth-form-wrap">
                     <form className="form-box" onSubmit={handleSubmit}>
+<<<<<<< HEAD
                         <h2>{t('login.welcome')}</h2>
                         <p className="sub">{t('login.subtitle')}</p>
+=======
+                        <h2>{t('auth.login.welcomeBack')}</h2>
+                        <p className="sub">{t('auth.login.welcomeSub')}</p>
+>>>>>>> main
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('google')}
+                            disabled={submitting || Boolean(oauthSubmitting)}
+                        >
                             <GoogleIcon />
+<<<<<<< HEAD
                             {t('login.google')}
+=======
+                            {t('auth.login.continueGoogle')}
+>>>>>>> main
                         </button>
 
-                        <button type="button" className="social-btn">
+                        <button
+                            type="button"
+                            className="social-btn"
+                            onClick={() => handleOAuthStart('github')}
+                            disabled={submitting || Boolean(oauthSubmitting)}
+                        >
                             <GithubIcon />
+<<<<<<< HEAD
                             {t('login.github')}
                         </button>
 
                         <div className="divider">{t('login.or')}</div>
 
                         <label className="field-label">{t('login.email')}</label>
+=======
+                            {t('auth.login.continueGithub')}
+                        </button>
+
+                        <div className="divider">{t('auth.login.divider')}</div>
+
+                        <label className="field-label" htmlFor="login-email">{t('auth.login.emailLabel')}</label>
+>>>>>>> main
                         <input
                             type="text"
+<<<<<<< HEAD
                             placeholder={t('login.emailPlaceholder')}
+=======
+                            placeholder={t('auth.login.emailPlaceholder')}
+>>>>>>> main
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
 
                         <div className="password-row">
+<<<<<<< HEAD
                             <label className="field-label">{t('login.password')}</label>
 
+=======
+                            <label className="field-label" htmlFor="login-password">{t('auth.login.passwordLabel')}</label>
+                            <button type="button" className="text-link">{t('auth.login.forgotPassword')}</button>
+>>>>>>> main
                         </div>
 
                         <div className="password-input-wrap">
@@ -124,9 +243,16 @@ export default function Login() {
                             <button
                                 type="button"
                                 className="password-toggle"
+<<<<<<< HEAD
                                 onClick={() => setShowPassword(!showPassword)}
                             >
                                 {showPassword ? t('login.hide') : t('login.show')}
+=======
+                                aria-label={showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
+                                onClick={() => setShowPassword((current) => !current)}
+                            >
+                                {showPassword ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
+>>>>>>> main
                             </button>
                         </div>
 
@@ -140,11 +266,16 @@ export default function Login() {
                                 checked={keepSignedIn}
                                 onChange={(e) => setKeepSignedIn(e.target.checked)}
                             />
+<<<<<<< HEAD
                             {t('login.remember')}
+=======
+                            {t('auth.login.keepSignedIn')}
+>>>>>>> main
                         </label>
 
                         {error && <p className="form-error">{error}</p>}
 
+<<<<<<< HEAD
                         <button className="login-btn" type="submit">
                             {submitting ? t('login.signingIn') : t('login.signIn')}
                         </button>
@@ -158,6 +289,22 @@ export default function Login() {
 
                         <p className="mock-note">{t('login.mock')}</p>
                     </form>
+=======
+                        <button className="login-btn" type="submit" disabled={submitting}>
+                            {submitting ? t('auth.login.signingIn') : t('auth.login.signIn')}
+                        </button>
+
+                        <p className="register-link">
+                            {t('auth.login.registerPrompt')} <a href="#">{t('auth.login.createAccount')}</a>
+                        </p>
+                        <p className="mock-note">{t('auth.login.mockNote')}</p>
+                    </form>
+
+                    <aside className="focus-tip" aria-hidden="true">
+                        <p className="tip-kicker">◎+</p>
+                        <p>{t('auth.login.focusTip')}</p>
+                    </aside>
+>>>>>>> main
                 </section>
             </div>
         </div>

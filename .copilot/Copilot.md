@@ -22,5 +22,20 @@
 ## Quick Notes
 
 - FE hiện đang tích hợp auth flow với route guard /login và /home.
-- BE runtime chính hiện đang wiring auth APIs; project module đã có code nhưng chưa mount route ở entrypoint API.
+- BE đang wiring đầy đủ auth + user + project + board + label + issue + comment + sprint + activity modules. Tất cả routes đã active.
 - FE parse response theo envelope payload.data từ BE.
+- GET /api/me giữ backward compat. Endpoint chính là GET /api/users/me.
+- Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ handler/response.go.
+- Swagger UI tại /swagger/index.html — phục vụ file docs/swagger.yaml tĩnh (không dùng swag generate).
+- Board tự tạo 4 cột mặc định khi khởi tạo (To Do, In Progress, In Review, Done).
+- Khi dùng PgBouncer (Supabase), cần thêm `&default_query_exec_mode=simple_protocol` vào DATABASE_URL.
+- Sprint: mỗi project chỉ được 1 sprint active tại 1 thời điểm. CompleteSprint chuyển issues chưa done về backlog.
+- Activity log tự ghi khi issue được tạo, đổi status, assign, update, delete (best-effort, không fail operation).
+- IssueRepository.ClearSprintID(sprintID): bulk-update undone issues khi complete sprint.
+
+## Recent Backend Integration Notes
+
+- Issue PATCH hien phan biet absent/value/null; `sprintId:null` move issue ve backlog, `dueDate` nhan YYYY-MM-DD/RFC3339/null.
+- WebSocket BE route la `/ws?token=<jwt>` va broadcast global cac event `issue_updated`, `comment_added`, `sprint_started`, `sprint_completed`.
+- BoardHandler va LabelHandler da dung envelope/shared helpers; delete/reorder/detach tra 200 voi `data:null`.
+- Real DB smoke test: `cd BE && go test -tags integration ./internal/integration -run TestRealDBIssueCommentSprintBoardLabelSmoke -v`.

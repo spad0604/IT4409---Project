@@ -47,3 +47,8 @@ func isRoleSufficient(actual, required string) bool {
 	}
 	return hierarchy[actual] >= hierarchy[required]
 }
+
+// RequireMember kiểm tra user có ít nhất role member trong project.
+func (pc *PermissionChecker) RequireMember(ctx context.Context, projectID, userID string) error {
+	return pc.Check(ctx, projectID, userID, "member")
+}

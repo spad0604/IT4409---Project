@@ -11,12 +11,23 @@ import (
 )
 
 type AuthUsecase struct {
-	users repository.UserRepository
-	jwt   jwtutil.Service
+	users                    repository.UserRepository
+	jwt                      jwtutil.Service
+	oauthProviders           map[string]OAuthProvider
+	frontendOAuthCallbackURL string
 }
 
 func NewAuthUsecase(users repository.UserRepository, jwtSvc jwtutil.Service) *AuthUsecase {
-	return &AuthUsecase{users: users, jwt: jwtSvc}
+	return NewAuthUsecaseWithOAuth(users, jwtSvc, nil, "")
+}
+
+func NewAuthUsecaseWithOAuth(users repository.UserRepository, jwtSvc jwtutil.Service, oauthProviders map[string]OAuthProvider, frontendOAuthCallbackURL string) *AuthUsecase {
+	return &AuthUsecase{
+		users:                    users,
+		jwt:                      jwtSvc,
+		oauthProviders:           oauthProviders,
+		frontendOAuthCallbackURL: frontendOAuthCallbackURL,
+	}
 }
 
 type RegisterInput struct {
@@ -97,4 +108,44 @@ func (u *AuthUsecase) Me(ctx context.Context, userID string) (domain.User, error
 	}
 	user.PasswordHash = ""
 	return user, nil
+}
+
+// ChangePassword verifies the old password then updates to the new one.
+func (u *AuthUsecase) ChangePassword(ctx context.Context, userID, oldPwd, newPwd string) error {
+	if strings.TrimSpace(userID) == "" {
+		return domain.ErrUnauthorized
+	}
+	if len(newPwd) < 6 {
+		return domain.ErrInvalidInput
+	}
+
+	user, err := u.users.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := password.Compare(user.PasswordHash, oldPwd); err != nil {
+		return domain.ErrUnauthorized
+	}
+
+	hash, err := password.Hash(newPwd)
+	if err != nil {
+		return err
+	}
+
+	return u.users.UpdatePassword(ctx, userID, hash)
+}
+
+// RefreshToken issues a new JWT for the given user.
+func (u *AuthUsecase) RefreshToken(ctx context.Context, userID string) (string, error) {
+	if strings.TrimSpace(userID) == "" {
+		return "", domain.ErrUnauthorized
+	}
+
+	user, err := u.users.GetByID(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return u.jwt.Sign(user.ID, user.Email)
 }

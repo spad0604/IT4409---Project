@@ -27,36 +27,87 @@ BE phục vụ cho một web app kiểu Jira để quản lý flow công việc:
 - BE/internal/repository/postgres: triển khai SQL thực tế
 - BE/internal/usecase: business logic và permission checks
 - BE/internal/delivery/http/handler: parse request, call usecase, trả response
-- BE/internal/delivery/http/middleware: JWT middleware
+- BE/internal/delivery/http/handler/response.go: shared response helpers dùng chung
+- BE/internal/delivery/http/middleware: JWT middleware + CORS middleware
 - BE/internal/delivery/http/router: register routes
 - BE/internal/infra/db: tạo pgx pool
 - BE/internal/pkg/jwtutil: sign/parse JWT
+- BE/internal/pkg/ws: WebSocket Hub/Client, global broadcast event `{ type, data }`
 - BE/internal/pkg/password: hash/compare mật khẩu
+- BE/internal/integration: integration tests co build tag `integration`, dung DB that trong `.env`
 
 ## 4) Runtime Wiring (Current State)
 
-API server chính đang wiring auth module:
+API server đang wiring auth + user + project + board + label + issue + comment + sprint + activity modules:
 
 1. config.Load
 2. db.NewPostgres
-3. postgres.NewUserRepo
-4. usecase.NewAuthUsecase
-5. handler.NewAuthHandler
-6. router.New với AuthHandler và JWT middleware
+3. postgres.NewUserRepo + postgres.NewProjectRepo + postgres.NewBoardRepo + postgres.NewLabelRepo + postgres.NewIssueRepo + postgres.NewCommentRepo + postgres.NewSprintRepo + postgres.NewActivityRepo + postgres.NewPgTxManager
+4. usecase.NewAuthUsecase + usecase.NewUserUsecase
+5. usecase.NewPermissionChecker + usecase.NewProjectUsecase + usecase.NewBoardUsecase + usecase.NewLabelUsecase + usecase.NewIssueUsecase(+activityRepo,+wsHub) + usecase.NewCommentUsecase(+activityRepo,+wsHub) + usecase.NewSprintUsecase(+wsHub) + usecase.NewActivityUsecase
+6. handler.NewAuthHandler + handler.NewUserHandler + handler.NewProjectHandler + handler.NewBoardHandler + handler.NewLabelHandler + handler.NewIssueHandler + handler.NewCommentHandler + handler.NewSprintHandler + handler.NewActivityHandler + handler.NewWSHandler
+7. router.New với tất cả handlers + JWT + CORS middleware
 
-Routes active trong entrypoint chính:
+Routes active:
 
 - GET /api/health
 - POST /api/auth/register
 - POST /api/auth/login
-- GET /api/me
+- POST /api/auth/logout (protected)
+- POST /api/auth/change-password (protected)
+- POST /api/auth/refresh (protected)
+- GET /api/me (protected, backward compat cho FE cũ)
+- GET /api/users/me (protected)
+- PATCH /api/users/me (protected)
+- GET /api/users/{userID} (protected)
+- GET /api/users?search=keyword (protected)
+- POST /api/projects (protected, Người B)
+- GET /api/projects (protected, Người B)
+- GET /api/projects/{id} (protected, Người B)
+- PATCH /api/projects/{id} (protected, Người B)
+- DELETE /api/projects/{id} (protected, Người B)
+- GET /api/projects/{id}/members (protected, Người B)
+- POST /api/projects/{id}/members (protected, Người B)
+- PUT /api/projects/{id}/members/{userID} (protected, Người B)
+- DELETE /api/projects/{id}/members/{userID} (protected, Người B)
+- POST /api/projects/{projectID}/boards (protected, Người B)
+- GET /api/projects/{projectID}/boards (protected, Người B)
+- GET /api/boards/{boardID} (protected, Người B)
+- PATCH /api/boards/{boardID} (protected, Người B)
+- DELETE /api/boards/{boardID} (protected, Người B)
+- POST /api/boards/{boardID}/columns (protected, Người B)
+- PATCH /api/boards/{boardID}/columns/{columnID} (protected, Người B)
+- DELETE /api/boards/{boardID}/columns/{columnID} (protected, Người B)
+- PUT /api/boards/{boardID}/columns/reorder (protected, Người B)
+- POST /api/projects/{projectID}/labels (protected, Người B)
+- GET /api/projects/{projectID}/labels (protected, Người B)
+- PATCH /api/labels/{labelID} (protected, Người B)
+- DELETE /api/labels/{labelID} (protected, Người B)
+- POST /api/issues/{issueKey}/labels (protected, Người B)
+- DELETE /api/issues/{issueKey}/labels/{labelID} (protected, Người B)
+- POST /api/projects/{projectID}/issues (protected, Người A)
+- GET /api/projects/{projectID}/issues (protected, Người A)
+- GET /api/issues/{issueKey} (protected, Người A)
+- PATCH /api/issues/{issueKey} (protected, Người A)
+- DELETE /api/issues/{issueKey} (protected, Người A)
+- PUT /api/issues/{issueKey}/status (protected, Người A)
+- PUT /api/issues/{issueKey}/assign (protected, Người A)
+- GET /api/issues/{issueKey}/subtasks (protected, Người A)
+- POST /api/issues/{issueKey}/comments (protected, Người A)
+- GET /api/issues/{issueKey}/comments (protected, Người A)
+- PATCH /api/comments/{commentID} (protected, Người A)
+- DELETE /api/comments/{commentID} (protected, Người A)
+- POST /api/projects/{projectID}/sprints (protected, Người A)
+- GET /api/projects/{projectID}/sprints (protected, Người A)
+- GET /api/sprints/{sprintID} (protected, Người A)
+- PATCH /api/sprints/{sprintID} (protected, Người A)
+- POST /api/sprints/{sprintID}/start (protected, Người A)
+- POST /api/sprints/{sprintID}/complete (protected, Người A)
+- GET /api/projects/{projectID}/backlog (protected, Người A)
+- GET /api/issues/{issueKey}/activity (protected, Người A)
+- GET /api/projects/{projectID}/activity (protected, Người A)
+- GET /ws?token=<jwt> (WebSocket, query-token auth, outside /api)
 - GET /swagger/*
-
-Lưu ý:
-
-- Project module (handler/usecase/repo) đã có code.
-- Chưa được mount vào router của API entrypoint hiện tại.
-- Luồng project đang được exercise trong BE/cmd/tester/main.go.
 
 ## 5) Response Contract
 
@@ -69,6 +120,24 @@ BE dùng envelope JSON:
 }
 
 FE đang phụ thuộc vào việc lấy payload.data ở nhánh success.
+
+Shared helpers trong handler/response.go:
+
+- writeJSON(w, status, body): encode JSON
+- writeSuccess(w, status, data): envelope success
+- writeError(w, status, message): envelope error
+- writeDomainError(w, err): map domain error → HTTP status
+- parseBody(r, dst): decode JSON body
+- parseUUID(w, raw): validate UUID format
+- parsePagination(r): extract page/per_page → limit/offset
+- requireUserID(w, r): extract userID from JWT context
+
+BoardHandler va LabelHandler da duoc chuan hoa sang shared helpers:
+
+- Dung requireUserID thay vi fallback X-User-ID.
+- Dung parseBody thay vi json.NewDecoder truc tiep.
+- Dung writeSuccess/writeDomainError/writeError thay vi http.Error/raw json encoder.
+- Delete/reorder/detach tra 200 envelope voi `data: null` thay vi 204.
 
 ## 6) Auth Data Flow (HTTP -> DB)
 
@@ -96,11 +165,50 @@ FE đang phụ thuộc vào việc lấy payload.data ở nhánh success.
 1. JWT middleware đọc Authorization
 2. Hỗ trợ cả "Bearer <token>" và "<token>"
 3. Parse token và lấy subject làm user id
-4. Gắn user id vào request context
+4. Gắn user id vào request context (struct key ctxKeyUserID{})
 5. Handler gọi usecase.Me
 6. Repo.GetByID và trả envelope 200
 
-## 7) Project/Permission Flow (Usecase Level)
+### Change Password (Protected)
+
+1. POST /api/auth/change-password
+2. requireUserID lấy userID từ context
+3. Usecase verify old password bằng bcrypt
+4. Validate new password >= 6 chars
+5. Hash new password và update DB
+6. Trả envelope 200
+
+### Refresh Token (Protected)
+
+1. POST /api/auth/refresh
+2. requireUserID lấy userID từ context
+3. Usecase verify user exists
+4. Ký JWT mới
+5. Trả envelope 200 (token)
+
+## 7) User Profile Flow
+
+### Get Profile
+
+1. GET /api/users/me
+2. requireUserID lấy userID
+3. UserUsecase.GetProfile → UserRepo.GetByID
+4. Clear PasswordHash
+5. Trả envelope 200 với avatar_url, updated_at
+
+### Update Profile
+
+1. PATCH /api/users/me với body { name, avatar_url }
+2. UserUsecase.UpdateProfile → merge fields → UserRepo.Update
+3. Trả envelope 200
+
+### Search Users
+
+1. GET /api/users?search=keyword&page=1&per_page=20
+2. UserUsecase.SearchUsers → UserRepo.Search (ILIKE trên name và email)
+3. Trả envelope 200
+
+## 8) Project/Permission Flow (Usecase Level)
 
 CreateProject dùng transaction gộp:
 
@@ -114,16 +222,152 @@ Permission model:
 - Hierarchy: admin > member > viewer
 - PermissionChecker xác minh role trước khi update/delete/manage members
 
-## 8) Environment Contract (BE)
+## 8.1) Board/Column Flow (Usecase Level)
+
+CreateBoard dùng transaction gộp:
+
+1. Create board row
+2. Tạo 4 cột mặc định: To Do (todo), In Progress (in_progress), In Review (in_review), Done (done)
+3. Commit nếu thành công toàn bộ
+
+ReorderColumns:
+- Nhận mảng columnIds theo thứ tự mới
+- Cập nhật position cho từng cột trong 1 transaction
+
+## 8.2) Label Flow (Usecase Level)
+
+- CRUD labels: Gắn theo project, yêu cầu PermissionChecker
+- Gắn/gỡ label cho issue: Thông qua bảng junction issue_labels
+- Mỗi label có name + color (mặc định #6366f1)
+- Label attach/detach route nhận issueKey trên path (`/api/issues/{issueKey}/labels`), usecase resolve issueKey sang issue.ID trước khi thao tác bảng junction.
+
+## 8.3) Issue Detail/List Contract (Enhanced)
+
+Current PATCH issue behavior:
+
+- `IssuePatch` custom UnmarshalJSON phan biet field absent/value/null.
+- Nullable fields ho tro clear bang JSON null: `assigneeId`, `parentId`, `sprintId`, `dueDate`.
+- `sprintId: null` set `issues.sprint_id = NULL`, dung de move issue ve backlog.
+- `dueDate` chap nhan `YYYY-MM-DD`, RFC3339/RFC3339Nano, va `null`; `YYYY-MM-DD` duoc parse thanh midnight UTC.
+- `IssueRepo.Update` build dynamic SQL SET, khong dung COALESCE cho nullable fields nua.
+- Patch khong gui nullable field nao thi DB giu nguyen field do.
+
+Activity/Event behavior:
+
+- Issue create/update/status/assign/delete ghi activity best-effort va publish `issue_updated`.
+- Update issue ghi activity `updated` cho cac field that su thay doi: `title`, `description`, `type`, `priority`, `assignee`, `parent`, `sprint`, `due_date`, `sort_order`.
+- Add comment ghi activity `commented` voi `new_value` la noi dung comment rut gon va publish `comment_added`.
+- Start/complete sprint publish `sprint_started` / `sprint_completed`.
+- Activity log loi thi chi log warning, khong fail thao tac chinh.
+
+- `GET /api/projects/{projectID}/issues` hỗ trợ filter: `status`, `type`, `priority`, `assignee` (UUID hoặc `me`), `reporter`, `label`, `sprint` (UUID hoặc `backlog`), `search`, `page`, `per_page`.
+- Issue list DTO đã enrich `labels` để FE render board/list/report không cần gọi detail từng issue.
+- `GET /api/issues/{issueKey}` trả `IssueDetailDTO` gồm issue base fields, `labels`, `assignee`, `reporter`, `sprint` nếu có dữ liệu liên quan.
+- `PATCH /api/issues/{issueKey}` vẫn là endpoint chỉnh sửa chính cho title/description/status/priority/type/due date/metadata, FE issue detail đang gọi trực tiếp endpoint này.
+- Activity log cho issue update/status/assign/comment là best-effort: lỗi ghi activity không làm fail action chính.
+
+## 8.4) WebSocket Contract
+
+- Route: `GET /ws?token=<jwt>`; khong nam duoi `/api`.
+- Auth: WSHandler parse JWT tu query param `token`, lay claims.Subject lam `Client.UserID`.
+- Hub broadcast global cho tat ca clients dang connect; chua co project-level subscribe/filter.
+- Message format BE -> FE:
+
+```json
+{
+  "type": "issue_updated",
+  "data": {}
+}
+```
+
+- Event types hien co: `issue_updated`, `comment_added`, `sprint_started`, `sprint_completed`.
+- Payload issue event co `projectId`, `issueId`, `issueKey`, `action`.
+- Payload comment event co `projectId`, `issueId`, `issueKey`, `commentId`.
+- Payload sprint event co `projectId`, `sprintId`.
+- Usecase chi phu thuoc interface `EventPublisher`; `ws.Hub` implement `Publish(eventType, data)`.
+
+## 9) Handler Route Registration Pattern
+
+Mỗi handler tự đăng ký routes qua method RegisterRoutes:
+
+```
+AuthHandler.RegisterRoutes(r)           // public: /auth/register, /auth/login
+AuthHandler.RegisterProtectedRoutes(r)  // protected: /auth/logout, /auth/change-password, /auth/refresh
+UserHandler.RegisterRoutes(r)           // protected: /users/me, /users/{userID}, /users?search=
+ProjectHandler.RegisterRoutes(r)        // protected: /projects/...
+BoardHandler.RegisterRoutes(r)          // protected: /boards/..., /projects/{id}/boards
+LabelHandler.RegisterRoutes(r)          // protected: /labels/..., /projects/{id}/labels
+IssueHandler.RegisterRoutes(r)          // protected: /projects/{id}/issues, /issues/{key}/*
+CommentHandler.RegisterRoutes(r)        // protected: /issues/{key}/comments, /comments/{id}
+SprintHandler.RegisterRoutes(r)         // protected: /projects/{id}/sprints, /sprints/{id}/*, /projects/{id}/backlog
+ActivityHandler.RegisterRoutes(r)       // protected: /issues/{key}/activity, /projects/{id}/activity
+WSHandler.RegisterRoutes(r)             // public upgrade route: /ws?token=<jwt>
+```
+
+router.go dùng r.Group cho protected routes (tránh duplicate mount /api).
+
+## 10) Environment Contract (BE)
 
 - PORT
-- DATABASE_URL
+- DATABASE_URL (cần thêm `&default_query_exec_mode=simple_protocol` khi dùng PgBouncer)
 - JWT_SECRET
 - JWT_ISSUER
 - JWT_TTL_MINUTES
+- UPLOAD_DIR (cho attachment module sau)
+- MAX_FILE_SIZE_MB (cho attachment module sau)
 
-## 9) Coding Notes For Copilot (BE)
+## 10.1) Verification / Real DB Smoke Tests
+
+- Unit/default test: `cd BE && go test ./...`
+- Real DB smoke test: `cd BE && go test -tags integration ./internal/integration -run TestRealDBIssueCommentSprintBoardLabelSmoke -v`
+- Integration test dung `.env` that, tao user/project/sprint/issue/comment/board/label rieng theo timestamp va cleanup sau test.
+- Integration test da cover: `sprintId:null` ve backlog, `dueDate` YYYY-MM-DD/RFC3339/null, activity update/comment, event publisher issue/comment/sprint, Board/Label envelope qua HTTP handler.
+- Neu DB that thieu bang `issue_labels`, chay `go run ./cmd/migrate`; `cmd/migrate` phai tao ca `labels` va `issue_labels` cho migration 008.
+
+## 11) Domain Errors
+
+Defined trong domain/errors.go:
+
+- ErrNotFound → 404
+- ErrConflict → 409
+- ErrUnauthorized → 401
+- ErrForbidden → 403
+- ErrInvalidInput → 400
+- ErrInternal → 500
+- ErrSprintActive → 409 (another sprint is already active)
+- ErrSprintNotActive → 409 (sprint must be active to complete)
+- ErrInvalidStatus → 400 (invalid status transition)
+
+## 12) Coding Notes For Copilot (BE)
 
 - Khi sửa auth, giữ response envelope tương thích FE parser.
-- Khi mount project APIs vào runtime chính, cần wiring repo/usecase/handler trong main.go và register route trong router.
+- Khi thêm handler mới, dùng RegisterRoutes pattern và shared helpers từ response.go.
+- Dùng requireUserID(w, r) thay vì tự đọc context — đảm bảo dùng đúng struct key ctxKeyUserID{}.
 - Không đưa logic nghiệp vụ vào repository layer; giữ usecase là nơi điều phối transaction và permission.
+- GET /api/me giữ backward compat cho FE cũ. Sau khi FE chuyển sang /api/users/me thì xóa.
+- Migration 002_user_extend tạo hàm update_updated_at() dùng chung — các migration sau chỉ cần CREATE TRIGGER, không cần tạo lại function.
+- avatar_url trong users có thể NULL — dùng COALESCE(avatar_url, '') trong SQL khi scan vào Go string.
+- Khi dùng PgBouncer (Supabase), phải dùng simple_protocol để tránh lỗi prepared statement.
+- Board handler va Label handler dung requireUserID/parseBody/writeSuccess/writeDomainError; khong dung getUserID fallback X-User-ID nua.
+- Swagger UI phục vụ file YAML tĩnh tại /swagger/swagger.yaml — cập nhật docs/swagger.yaml khi thêm endpoint mới.
+- Issue key tự tạo theo pattern PROJECT_KEY-NUMBER (VD: MYPRJ-1), dùng atomic increment trên project_issue_counters.
+- CreateIssue dùng txManager.WithTx: NextIssueNumberTx + CreateTx trong 1 transaction.
+- Issue DTO/detail hiện là contract quan trọng cho FE Jira-like pages; khi thêm field mới nên cập nhật cả list DTO và detail DTO nếu FE cần render ở board/list/detail.
+- Bảng comments dùng cột user_id (theo migration 007 thực tế), code map thành Comment.UserID.
+- Comment edit chỉ cho author; delete cho author hoặc project admin.
+- Issue GET/status/assign/subtasks dùng issueKey (VD: MYPRJ-42) làm path param, không dùng UUID.
+- Filter issues: status, type, priority, assignee (UUID hoặc "me"), reporter, label, sprint (UUID hoặc "backlog"), search (ILIKE title).
+- Sprint: mỗi project chỉ được 1 sprint active. HasActiveSprint kiểm tra trước khi start.
+- CompleteSprint dùng IssueRepo.ClearSprintID(sprintID) để chuyển issues chưa done về backlog (sprint_id = NULL).
+- SprintUsecase inject cả SprintRepo + IssueRepo + ProjectRepo + TxManager.
+- Activity log: bảng activity_log không có cột project_id, query project-level dùng JOIN issues.project_id.
+- IssueUsecase inject ActivityRepository và gọi logActivity() sau mỗi hành động (best-effort, không fail operation).
+- Migrations: 006_sprints (bảng sprints + FK issues.sprint_id), 010_activity_log (bảng activity_log).
+
+## 13) Recent Integration Update Notes
+
+- IssueUsecase inject ActivityRepository va EventPublisher; log activity best-effort va publish `issue_updated` sau create/update/status/assign/delete.
+- CommentUsecase inject ActivityRepository va EventPublisher; AddComment log `commented` va publish `comment_added`.
+- SprintUsecase inject EventPublisher; StartSprint/CompleteSprint publish `sprint_started`/`sprint_completed`.
+- Migrations current: 006_sprints (bang sprints + FK issues.sprint_id), 008_labels (labels + issue_labels), 010_activity_log (bang activity_log).
+- `cmd/migrate` da duoc dong bo de tao ca `issue_labels`; DB that da chay migration thanh cong.

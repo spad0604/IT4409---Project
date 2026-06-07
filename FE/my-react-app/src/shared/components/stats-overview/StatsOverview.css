@@ -6,12 +6,12 @@
 
 .stats-card {
   position: relative;
-  min-height: 220px;
-  border-radius: 1.1rem;
+  min-height: 132px;
+  border-radius: 0.5rem;
   border: 1px solid #e7eaf0;
-  background: #fbfbfc;
-  padding: 1.3rem 1.45rem 1.4rem;
-  box-shadow: 0 14px 35px rgb(11 18 35 / 6%);
+  background: #ffffff;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 6px 18px rgb(11 18 35 / 5%);
   overflow: hidden;
   animation: card-reveal 420ms cubic-bezier(0.23, 0.79, 0.24, 1) both;
 }
@@ -34,8 +34,8 @@
 }
 
 .stats-card.variant-highlight {
-  border: 0;
-  background: linear-gradient(145deg, #0726d7 0%, #1332e8 55%, #2449ff 100%);
+  border-color: #1d4ed8;
+  background: #1d4ed8;
   color: #ffffff;
 }
 
@@ -47,17 +47,17 @@
 }
 
 .card-icon {
-  width: 3.1rem;
-  height: 3.1rem;
-  border-radius: 0.85rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.45rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .card-icon svg {
-  width: 1.52rem;
-  height: 1.52rem;
+  width: 1rem;
+  height: 1rem;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -87,8 +87,8 @@
 
 .card-badge {
   border-radius: 999px;
-  padding: 0.33rem 0.72rem;
-  font-size: 1.38rem;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.62rem;
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -115,18 +115,18 @@
 }
 
 .card-label {
-  margin-top: 1.2rem;
+  margin-top: 0.72rem;
   color: #2a3144;
-  font-size: 2.2rem;
+  font-size: 0.68rem;
   line-height: 1.18;
   font-weight: 500;
 }
 
 .card-value {
-  margin-top: 0.82rem;
+  margin-top: 0.24rem;
   color: #0f172a;
   font-family: var(--font-display);
-  font-size: clamp(2.45rem, 3.2vw, 2.95rem);
+  font-size: 1.95rem;
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -138,15 +138,7 @@
 }
 
 .card-decor {
-  position: absolute;
-  right: -0.55rem;
-  bottom: -0.42rem;
-  width: 7.8rem;
-  height: 4.1rem;
-  opacity: 0.2;
-  border: 7px solid #b8d0ff;
-  border-radius: 0.8rem;
-  transform: rotate(34deg);
+  display: none;
 }
 
 .card-decor::before,
@@ -189,7 +181,7 @@
   }
 
   .stats-card {
-    min-height: 190px;
+    min-height: 120px;
   }
 
   .card-label {
