@@ -32,3 +32,10 @@
 - Sprint: mỗi project chỉ được 1 sprint active tại 1 thời điểm. CompleteSprint chuyển issues chưa done về backlog.
 - Activity log tự ghi khi issue được tạo, đổi status, assign, update, delete (best-effort, không fail operation).
 - IssueRepository.ClearSprintID(sprintID): bulk-update undone issues khi complete sprint.
+
+## Recent Backend Integration Notes
+
+- Issue PATCH hien phan biet absent/value/null; `sprintId:null` move issue ve backlog, `dueDate` nhan YYYY-MM-DD/RFC3339/null.
+- WebSocket BE route la `/ws?token=<jwt>` va broadcast global cac event `issue_updated`, `comment_added`, `sprint_started`, `sprint_completed`.
+- BoardHandler va LabelHandler da dung envelope/shared helpers; delete/reorder/detach tra 200 voi `data:null`.
+- Real DB smoke test: `cd BE && go test -tags integration ./internal/integration -run TestRealDBIssueCommentSprintBoardLabelSmoke -v`.

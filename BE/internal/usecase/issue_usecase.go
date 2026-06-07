@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"it4409/internal/domain"
@@ -17,6 +19,7 @@ type IssueUsecase struct {
 	txManager    repository.TxManager
 	perm         *PermissionChecker
 	activityRepo repository.ActivityRepository
+	events       EventPublisher
 }
 
 func NewIssueUsecase(
@@ -25,6 +28,7 @@ func NewIssueUsecase(
 	txManager repository.TxManager,
 	perm *PermissionChecker,
 	activityRepo repository.ActivityRepository,
+	events EventPublisher,
 ) *IssueUsecase {
 	return &IssueUsecase{
 		issueRepo:    issueRepo,
@@ -32,6 +36,7 @@ func NewIssueUsecase(
 		txManager:    txManager,
 		perm:         perm,
 		activityRepo: activityRepo,
+		events:       events,
 	}
 }
 
@@ -51,6 +56,18 @@ func (uc *IssueUsecase) logActivity(ctx context.Context, issueID, userID, action
 	if err != nil {
 		log.Printf("[WARN] failed to log activity: %v", err)
 	}
+}
+
+func (uc *IssueUsecase) publishIssueEvent(issue *domain.Issue, action string) {
+	if uc.events == nil || issue == nil {
+		return
+	}
+	uc.events.Publish("issue_updated", map[string]any{
+		"projectId": issue.ProjectID,
+		"issueId":   issue.ID,
+		"issueKey":  issue.Key,
+		"action":    action,
+	})
 }
 
 // ─── Input Types ────────────────────────────────────────────────────────────
@@ -135,6 +152,7 @@ func (uc *IssueUsecase) CreateIssue(ctx context.Context, userID, projectID strin
 	}
 
 	uc.logActivity(ctx, created.ID, userID, domain.ActivityCreated, "", "", "")
+	uc.publishIssueEvent(created, domain.ActivityCreated)
 
 	return created, nil
 }
@@ -186,7 +204,15 @@ func (uc *IssueUsecase) UpdateIssue(ctx context.Context, userID, issueKey string
 		return nil, fmt.Errorf("%w: invalid priority", domain.ErrInvalidInput)
 	}
 
-	return uc.issueRepo.Update(ctx, issue.ID, patch)
+	updated, err := uc.issueRepo.Update(ctx, issue.ID, patch)
+	if err != nil {
+		return nil, err
+	}
+
+	uc.logIssueUpdates(ctx, userID, issue, updated, patch)
+	uc.publishIssueEvent(updated, domain.ActivityUpdated)
+
+	return updated, nil
 }
 
 // ─── Delete Issue ───────────────────────────────────────────────────────────
@@ -214,6 +240,7 @@ func (uc *IssueUsecase) DeleteIssue(ctx context.Context, userID, issueKey string
 	}
 
 	uc.logActivity(ctx, issue.ID, userID, domain.ActivityDeleted, "", "", "")
+	uc.publishIssueEvent(issue, domain.ActivityDeleted)
 
 	return nil
 }
@@ -240,6 +267,7 @@ func (uc *IssueUsecase) ChangeStatus(ctx context.Context, userID, issueKey, newS
 	}
 
 	uc.logActivity(ctx, issue.ID, userID, domain.ActivityStatusChanged, "status", oldStatus, newStatus)
+	uc.publishIssueEvent(updated, domain.ActivityStatusChanged)
 
 	return updated, nil
 }
@@ -270,6 +298,7 @@ func (uc *IssueUsecase) AssignIssue(ctx context.Context, userID, issueKey string
 	}
 
 	uc.logActivity(ctx, issue.ID, userID, domain.ActivityAssigned, "assignee", oldAssignee, newAssignee)
+	uc.publishIssueEvent(updated, domain.ActivityAssigned)
 
 	return updated, nil
 }
@@ -286,4 +315,62 @@ func (uc *IssueUsecase) ListSubtasks(ctx context.Context, userID, issueKey strin
 	}
 
 	return uc.issueRepo.ListSubtasks(ctx, issue.ID)
+}
+
+func (uc *IssueUsecase) logIssueUpdates(ctx context.Context, userID string, before, after *domain.Issue, patch *domain.IssuePatch) {
+	if before == nil || after == nil || patch == nil {
+		return
+	}
+
+	logIfChanged := func(field, oldVal, newVal string) {
+		if oldVal != newVal {
+			uc.logActivity(ctx, after.ID, userID, domain.ActivityUpdated, field, oldVal, newVal)
+		}
+	}
+
+	if patch.Title != nil {
+		logIfChanged("title", before.Title, after.Title)
+	}
+	if patch.Description != nil {
+		logIfChanged("description", before.Description, after.Description)
+	}
+	if patch.Type != nil {
+		logIfChanged("type", before.Type, after.Type)
+	}
+	if patch.Priority != nil {
+		logIfChanged("priority", before.Priority, after.Priority)
+	}
+	if patch.AssigneeIDSet {
+		logIfChanged("assignee", optionalString(before.AssigneeID), optionalString(after.AssigneeID))
+	}
+	if patch.ParentIDSet {
+		logIfChanged("parent", optionalString(before.ParentID), optionalString(after.ParentID))
+	}
+	if patch.SprintIDSet {
+		logIfChanged("sprint", optionalString(before.SprintID), optionalString(after.SprintID))
+	}
+	if patch.DueDateSet {
+		logIfChanged("due_date", optionalTime(before.DueDate), optionalTime(after.DueDate))
+	}
+	if patch.SortOrder != nil {
+		logIfChanged(
+			"sort_order",
+			strconv.FormatFloat(before.SortOrder, 'f', -1, 64),
+			strconv.FormatFloat(after.SortOrder, 'f', -1, 64),
+		)
+	}
+}
+
+func optionalString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func optionalTime(v *time.Time) string {
+	if v == nil {
+		return ""
+	}
+	return v.UTC().Format(time.RFC3339)
 }

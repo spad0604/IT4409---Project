@@ -1,0 +1,74 @@
+.recent-project-card {
+    cursor: pointer;
+}
+
+.recent-project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.project-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project-card-header h3 {
+    margin: 0.2rem 0;
+    font-size: 1rem;
+}
+
+.project-status {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.project-summary {
+    color: #4b5563;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin-top: 0.7rem;
+}
+
+.project-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+
+.project-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.project-progress-bar span {
+    display: block;
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 999px;
+}
+
+.project-owners {
+    display: flex;
+    margin-top: 1rem;
+}
+
+.owner-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: -8px;
+    border: 2px solid white;
+}

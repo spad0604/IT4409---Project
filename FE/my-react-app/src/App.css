@@ -1,15 +1,15 @@
 .home-page {
-  max-width: 1380px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1rem 0.75rem 1.45rem;
+  padding: 0.9rem 0.75rem 1.45rem;
 }
 
 .home-frame {
-  border-radius: 0.55rem;
-  border: 1px solid #1f2434;
-  background: #f0f2f4;
+  border-radius: 0.5rem;
+  border: 1px solid #d7dde7;
+  background: #f6f7f9;
   overflow: hidden;
-  box-shadow: 0 20px 52px rgb(8 13 25 / 18%);
+  box-shadow: 0 16px 38px rgb(15 23 42 / 10%);
 }
 
 .home-topbar {
@@ -53,7 +53,7 @@
   gap: 0.28rem;
   font-size: 0.72rem;
   padding: 0.3rem 0.42rem;
-  border-radius: 0.36rem;
+  border-radius: 0.3rem;
   cursor: pointer;
 }
 
@@ -70,7 +70,7 @@
 
 .top-tab.is-active {
   color: #1438de;
-  background: #e3e9ff;
+  background: #e8edff;
   font-weight: 700;
 }
 
@@ -86,7 +86,7 @@
   height: 30px;
   padding: 0 0.45rem;
   border-radius: 0.42rem;
-  background: #e8ebf0;
+  background: #eef1f5;
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
@@ -116,7 +116,7 @@
   max-width: 300px;
   padding: 0 0.45rem;
   border-radius: 0.42rem;
-  background: #e8ebf0;
+  background: #eef1f5;
   color: #6b7280;
 }
 
@@ -139,7 +139,7 @@
 }
 
 .create-issue-btn {
-  border: 0;
+  border: 1px solid #1438de;
   height: 30px;
   padding: 0 0.62rem;
   border-radius: 0.4rem;
@@ -183,7 +183,7 @@
   font-size: 0.64rem;
   font-weight: 700;
   color: #19486a;
-  background: linear-gradient(145deg, #ffd89c, #9cd7ff);
+  background: #dbeafe;
   border: 0;
   cursor: pointer;
 }
@@ -257,7 +257,7 @@
 }
 
 .home-sidebar {
-  background: #eceef1;
+  background: #eef1f5;
   border-right: 1px solid #e1e5eb;
   padding: 0.88rem 0.62rem 0.8rem;
   display: flex;
@@ -313,7 +313,7 @@
   align-items: center;
   gap: 0.48rem;
   padding: 0.48rem 0.4rem;
-  border-radius: 0.42rem;
+  border-radius: 0.35rem;
   font-size: 0.66rem;
   cursor: pointer;
 }
@@ -345,9 +345,9 @@
 .invite-member-btn {
   margin-top: auto;
   border: 0;
-  border-radius: 999px;
-  background: #d7d8ff;
-  color: #19269b;
+  border-radius: 0.4rem;
+  background: #e8edff;
+  color: #1438de;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -383,7 +383,7 @@
 
 .dashboard-main {
   padding: 0.95rem;
-  background: #f2f3f5;
+  background: #f6f7f9;
 }
 
 .dashboard-header {
@@ -429,8 +429,8 @@
   margin-left: -7px;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, #ffd7a1, #9fd5ff);
-  color: #0f2548;
+  background: #e2e8f0;
+  color: #334155;
   font-size: 0.5rem;
   font-weight: 700;
 }
@@ -527,9 +527,9 @@
 }
 
 .panel {
-  border-radius: 0.55rem;
-  background: #f7f8fa;
-  border: 1px solid #e5e8ee;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e7ef;
   padding: 0.72rem;
 }
 
@@ -902,7 +902,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2055ff, #45a0ff);
+  background: #2563eb;
 }
 
 .activity-list {
@@ -1025,11 +1025,9 @@
   gap: 0.85rem;
   margin-bottom: 0;
   padding: 0.95rem 1rem;
-  background:
-    radial-gradient(circle at top right, rgb(61 90 254 / 10%), transparent 24%),
-    linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
-  border-color: #dde4fb;
-  box-shadow: 0 14px 34px rgb(15 23 42 / 6%);
+  background: #ffffff;
+  border-color: #e2e7ef;
+  box-shadow: none;
 }
 
 .board-hero-copy h1 {
@@ -1055,7 +1053,7 @@
   min-width: 3.9rem;
   padding: 0.48rem 0.62rem;
   border-radius: 0.6rem;
-  background: rgb(255 255 255 / 78%);
+  background: #f8fafc;
   border: 1px solid #e3e8f5;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
 }
@@ -1186,7 +1184,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #3154ff 0%, #48b6ff 100%);
+  background: #2563eb;
   transition: width 180ms ease;
 }
 
@@ -1197,17 +1195,16 @@
 }
 
 .board-column {
-  border-radius: 0.8rem;
+  border-radius: 0.5rem;
   border: 1px solid #dde4ee;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 88%) 0%, rgb(248 250 252 / 92%) 100%);
+  background: #f8fafc;
   min-height: 440px;
   padding: 0.72rem;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 0.72rem;
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
-  box-shadow: 0 10px 30px rgb(15 23 42 / 4%);
+  box-shadow: none;
 }
 
 .board-column.is-drop-target {
@@ -1239,13 +1236,13 @@
   border: 0;
   width: 1.9rem;
   height: 1.9rem;
-  border-radius: 0.55rem;
-  background: linear-gradient(180deg, #f0f4ff 0%, #e2e8ff 100%);
+  border-radius: 0.4rem;
+  background: #e8edff;
   color: #1d4ed8;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(29 78 216 / 12%);
+  box-shadow: none;
 }
 
 .board-card-list {
@@ -1255,12 +1252,12 @@
 }
 
 .board-card {
-  border-radius: 0.72rem;
+  border-radius: 0.5rem;
   border: 1px solid #e4e7ec;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  background: #ffffff;
   padding: 0.72rem;
   cursor: grab;
-  box-shadow: 0 8px 22px rgb(15 23 42 / 6%);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease, border-color 120ms ease;
   position: relative;
   overflow: hidden;
@@ -1288,7 +1285,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: linear-gradient(180deg, #3154ff 0%, #5eead4 100%);
+  background: #2563eb;
   opacity: 0.22;
 }
 
@@ -1435,8 +1432,8 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, #ffd7a1, #9fd5ff);
-  color: #0f2548;
+  background: #dbeafe;
+  color: #1d4ed8;
   font-size: 0.48rem;
   font-weight: 700;
 }
@@ -1444,9 +1441,8 @@
 .quick-action-btn {
   justify-self: end;
   border: 1px solid #d6def8;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffffff 0%, #eef3ff 100%);
-  color: #fff;
+  border-radius: 0.4rem;
+  background: #ffffff;
   color: #1732b8;
   font-size: 0.62rem;
   display: inline-flex;
@@ -1581,5 +1577,405 @@
     margin: 0.8rem auto 0;
     display: block;
     width: fit-content;
+  }
+}
+.label-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 0.22rem 0.55rem;
+  background: #667085;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card {
+  min-height: 86px;
+  border: 1px solid #e2e7ef;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.8rem 0.9rem;
+  display: grid;
+  align-content: center;
+  gap: 0.28rem;
+}
+
+.stat-card span {
+  display: block;
+  color: #667085;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.stat-card strong {
+  display: block;
+  color: #111827;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.global-search-modal {
+  max-width: 880px;
+}
+
+.shortcut-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.shortcut-list p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #344054;
+}
+
+.backlog-board {
+  display: grid;
+  gap: 1rem;
+}
+
+.backlog-group {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.backlog-issue-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.sprint-panel-card {
+  padding: 1rem;
+}
+
+.sprint-panel-meta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sprint-panel-meta p {
+  margin: 0;
+  color: #475467;
+  font-size: 0.7rem;
+}
+
+.color-swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.color-swatch.is-active {
+  border-color: #111827;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+  gap: 0.85rem;
+}
+
+.issues-browser {
+  height: calc(100vh - 154px);
+  min-height: 620px;
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  border: 1px solid #dbe1ea;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.issues-list-pane {
+  min-width: 0;
+  border-right: 1px solid #dbe1ea;
+  background: #f8fafc;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.issues-list-head {
+  min-height: 64px;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid #e2e7ef;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.issues-list-head h2,
+.issues-detail-head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.issues-list-head p {
+  margin: 0.2rem 0 0;
+  color: #667085;
+  font-size: 0.62rem;
+}
+
+.issues-list-tools {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e7ef;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.issues-search {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.issues-list {
+  overflow: auto;
+  display: grid;
+  align-content: start;
+}
+
+.issues-list-message {
+  padding: 0.75rem;
+}
+
+.issues-list-item {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #e2e7ef;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.issues-list-item:hover {
+  background: #eef3fb;
+}
+
+.issues-list-item.is-active {
+  background: #dbeafe;
+}
+
+.issue-type-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #64748b;
+  margin-top: 0.15rem;
+}
+
+.issue-type-dot svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.issue-type-dot.is-bug {
+  background: #dc2626;
+}
+
+.issue-type-dot.is-story {
+  background: #16a34a;
+}
+
+.issue-type-dot.is-epic {
+  background: #7c3aed;
+}
+
+.issue-type-dot.is-task,
+.issue-type-dot.is-subtask {
+  background: #2563eb;
+}
+
+.issues-list-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.issues-list-key {
+  color: #2563eb;
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.issues-list-copy strong {
+  color: #111827;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issues-list-copy span:last-child {
+  color: #667085;
+  font-size: 0.58rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issues-empty {
+  padding: 1rem;
+}
+
+.issues-empty h3 {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.issues-empty p {
+  margin: 0.25rem 0 0;
+  color: #667085;
+  font-size: 0.64rem;
+}
+
+.issues-detail-pane {
+  min-width: 0;
+  overflow: auto;
+  padding: 1rem 1.15rem;
+  background: #ffffff;
+}
+
+.issues-detail-head {
+  min-height: 48px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.issues-position {
+  color: #667085;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.issues-no-selection {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  color: #667085;
+}
+
+.issues-no-selection h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.issues-no-selection p {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+}
+
+.team-section {
+  border: 1px solid #e2e7ef;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.8rem;
+}
+
+.team-search {
+  max-width: none;
+  width: 100%;
+}
+
+.team-role-field {
+  margin-top: 0.65rem;
+  max-width: 220px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.profile-panel {
+  max-width: 720px;
+  margin: 2rem auto;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-avatar-preview {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 1100px) {
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .filter-grid,
+  .backlog-issue-row,
+  .team-grid,
+  .issues-browser {
+    grid-template-columns: 1fr;
+  }
+
+  .issues-browser {
+    height: auto;
+  }
+
+  .issues-list-pane {
+    max-height: 420px;
+    border-right: 0;
+    border-bottom: 1px solid #dbe1ea;
+  }
+
+  .profile-hero {
+    align-items: flex-start;
   }
 }

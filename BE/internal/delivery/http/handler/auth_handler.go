@@ -145,7 +145,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// OAuthStart redirects the browser to the selected OAuth2 provider.
+// OAuthStart godoc
+// @Summary Start OAuth2 login
+// @Description Redirects the browser to Google or GitHub OAuth authorization page.
+// @Tags auth
+// @Param provider path string true "OAuth provider" Enums(google,github)
+// @Success 302 "Redirect to OAuth provider"
+// @Failure 400 {object} Envelope
+// @Router /api/auth/oauth/{provider}/start [get]
 func (h *AuthHandler) OAuthStart(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	redirectURL, err := h.auth.OAuthStartURL(provider)
@@ -157,7 +164,16 @@ func (h *AuthHandler) OAuthStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
-// OAuthCallback handles provider redirects, creates/loads the user, then redirects to FE.
+// OAuthCallback godoc
+// @Summary OAuth2 callback
+// @Description Handles Google/GitHub callback and redirects back to frontend login with a JWT token in the URL fragment.
+// @Tags auth
+// @Param provider path string true "OAuth provider" Enums(google,github)
+// @Param code query string false "Authorization code"
+// @Param state query string false "Signed state"
+// @Param error query string false "Provider error"
+// @Success 302 "Redirect to frontend"
+// @Router /api/auth/oauth/{provider}/callback [get]
 func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if providerErr := r.URL.Query().Get("error"); providerErr != "" {
 		http.Redirect(w, r, h.auth.OAuthErrorRedirect(providerErr), http.StatusFound)

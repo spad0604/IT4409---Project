@@ -5,17 +5,31 @@ import (
 	"time"
 
 	"it4409/internal/domain"
+	"it4409/internal/repository"
 	"it4409/internal/usecase"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type IssueHandler struct {
-	issueUC *usecase.IssueUsecase
+	issueUC    *usecase.IssueUsecase
+	userRepo   repository.UserRepository
+	labelRepo  repository.LabelRepository
+	sprintRepo repository.SprintRepository
 }
 
-func NewIssueHandler(uc *usecase.IssueUsecase) *IssueHandler {
-	return &IssueHandler{issueUC: uc}
+func NewIssueHandler(
+	uc *usecase.IssueUsecase,
+	userRepo repository.UserRepository,
+	labelRepo repository.LabelRepository,
+	sprintRepo repository.SprintRepository,
+) *IssueHandler {
+	return &IssueHandler{
+		issueUC:    uc,
+		userRepo:   userRepo,
+		labelRepo:  labelRepo,
+		sprintRepo: sprintRepo,
+	}
 }
 
 // RegisterRoutes registers issue-related routes.
@@ -53,6 +67,29 @@ type IssueDTO struct {
 	DueDate     *time.Time `json:"dueDate"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
+	Labels      []LabelDTO `json:"labels,omitempty"`
+}
+
+type LabelDTO struct {
+	ID        string    `json:"id"`
+	ProjectID string    `json:"projectId"`
+	Name      string    `json:"name"`
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type UserSummaryDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatarUrl"`
+}
+
+type IssueDetailDTO struct {
+	IssueDTO
+	Assignee *UserSummaryDTO `json:"assignee,omitempty"`
+	Reporter *UserSummaryDTO `json:"reporter,omitempty"`
+	Sprint   *SprintDTO      `json:"sprint,omitempty"`
 }
 
 func toIssueDTO(i *domain.Issue) IssueDTO {
@@ -65,6 +102,68 @@ func toIssueDTO(i *domain.Issue) IssueDTO {
 		SortOrder: i.SortOrder, DueDate: i.DueDate,
 		CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt,
 	}
+}
+
+func toUserSummaryDTO(u domain.User) *UserSummaryDTO {
+	return &UserSummaryDTO{
+		ID:        u.ID,
+		Name:      u.Name,
+		Email:     u.Email,
+		AvatarURL: u.AvatarURL,
+	}
+}
+
+func toLabelDTO(l *domain.Label) LabelDTO {
+	return LabelDTO{
+		ID:        l.ID,
+		ProjectID: l.ProjectID,
+		Name:      l.Name,
+		Color:     l.Color,
+		CreatedAt: l.CreatedAt,
+	}
+}
+
+func (h *IssueHandler) enrichIssueDTO(r *http.Request, issue *domain.Issue) IssueDTO {
+	dto := toIssueDTO(issue)
+	if h.labelRepo == nil {
+		return dto
+	}
+
+	labels, err := h.labelRepo.ListByIssue(r.Context(), issue.ID)
+	if err != nil {
+		return dto
+	}
+
+	dto.Labels = make([]LabelDTO, len(labels))
+	for i, label := range labels {
+		dto.Labels[i] = toLabelDTO(label)
+	}
+	return dto
+}
+
+func (h *IssueHandler) buildIssueDetailDTO(r *http.Request, issue *domain.Issue) IssueDetailDTO {
+	dto := IssueDetailDTO{
+		IssueDTO: h.enrichIssueDTO(r, issue),
+	}
+
+	if h.userRepo != nil && issue.AssigneeID != nil && *issue.AssigneeID != "" {
+		if user, err := h.userRepo.GetByID(r.Context(), *issue.AssigneeID); err == nil {
+			dto.Assignee = toUserSummaryDTO(user)
+		}
+	}
+	if h.userRepo != nil && issue.ReporterID != "" {
+		if user, err := h.userRepo.GetByID(r.Context(), issue.ReporterID); err == nil {
+			dto.Reporter = toUserSummaryDTO(user)
+		}
+	}
+	if h.sprintRepo != nil && issue.SprintID != nil && *issue.SprintID != "" {
+		if sprint, err := h.sprintRepo.GetByID(r.Context(), *issue.SprintID); err == nil {
+			sprintDTO := toSprintDTO(sprint)
+			dto.Sprint = &sprintDTO
+		}
+	}
+
+	return dto
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -103,7 +202,7 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusCreated, toIssueDTO(issue))
+	writeSuccess(w, http.StatusCreated, h.enrichIssueDTO(r, issue))
 }
 
 // ListIssues godoc
@@ -116,6 +215,8 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 // @Param type query string false "Filter by type"
 // @Param priority query string false "Filter by priority"
 // @Param assignee query string false "Filter by assignee UUID or 'me'"
+// @Param reporter query string false "Filter by reporter UUID"
+// @Param label query string false "Filter by label UUID"
 // @Param sprint query string false "Filter by sprint UUID or 'backlog'"
 // @Param search query string false "Search by title"
 // @Param page query int false "Page number (0-based)"
@@ -140,6 +241,8 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 		Type:       q.Get("type"),
 		Priority:   q.Get("priority"),
 		AssigneeID: q.Get("assignee"),
+		ReporterID: q.Get("reporter"),
+		LabelID:    q.Get("label"),
 		SprintID:   q.Get("sprint"),
 		ParentID:   q.Get("parent"),
 		Search:     q.Get("search"),
@@ -147,7 +250,6 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 		Order:      q.Get("order"),
 	}
 
-	// Pagination: dùng parsePagination cho limit/offset, rồi chuyển sang page/perPage
 	limit, offset := parsePagination(r)
 	filter.PerPage = limit
 	if limit > 0 {
@@ -162,7 +264,7 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	dtos := make([]IssueDTO, len(issues))
 	for i, issue := range issues {
-		dtos[i] = toIssueDTO(issue)
+		dtos[i] = h.enrichIssueDTO(r, issue)
 	}
 
 	writeSuccess(w, http.StatusOK, map[string]any{
@@ -195,7 +297,7 @@ func (h *IssueHandler) GetIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, toIssueDTO(issue))
+	writeSuccess(w, http.StatusOK, h.buildIssueDetailDTO(r, issue))
 }
 
 // UpdateIssue godoc
@@ -227,7 +329,7 @@ func (h *IssueHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, toIssueDTO(issue))
+	writeSuccess(w, http.StatusOK, h.enrichIssueDTO(r, issue))
 }
 
 // DeleteIssue godoc
@@ -283,7 +385,7 @@ func (h *IssueHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, toIssueDTO(issue))
+	writeSuccess(w, http.StatusOK, h.enrichIssueDTO(r, issue))
 }
 
 // AssignIssue godoc
@@ -317,7 +419,7 @@ func (h *IssueHandler) AssignIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, http.StatusOK, toIssueDTO(issue))
+	writeSuccess(w, http.StatusOK, h.enrichIssueDTO(r, issue))
 }
 
 // ListSubtasks godoc
@@ -343,7 +445,7 @@ func (h *IssueHandler) ListSubtasks(w http.ResponseWriter, r *http.Request) {
 
 	dtos := make([]IssueDTO, len(issues))
 	for i, issue := range issues {
-		dtos[i] = toIssueDTO(issue)
+		dtos[i] = h.enrichIssueDTO(r, issue)
 	}
 
 	writeSuccess(w, http.StatusOK, dtos)

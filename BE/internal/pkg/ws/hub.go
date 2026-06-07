@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 )
@@ -54,4 +55,16 @@ func (h *Hub) BroadcastToUser(userID string, msg []byte) {
 			}
 		}
 	}
+}
+
+func (h *Hub) Publish(eventType string, data any) {
+	msg, err := json.Marshal(map[string]any{
+		"type": eventType,
+		"data": data,
+	})
+	if err != nil {
+		log.Printf("[WS] marshal event %s: %v", eventType, err)
+		return
+	}
+	h.Broadcast(msg)
 }

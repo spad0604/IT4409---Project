@@ -388,6 +388,51 @@ paths:
         401:
           description: Sai email hoặc mật khẩu
 
+  /api/auth/oauth/{provider}/start:
+    get:
+      tags: [Auth]
+      summary: Start OAuth2 login
+      description: Redirects the browser to Google or GitHub OAuth authorization page.
+      produces: [application/json]
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          type: string
+          enum: [google, github]
+      responses:
+        302:
+          description: Redirect to OAuth provider
+        400:
+          description: Invalid or unconfigured provider
+
+  /api/auth/oauth/{provider}/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth2 callback
+      description: Handles Google/GitHub callback, issues an app JWT, and redirects to frontend /login#token=...
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          type: string
+          enum: [google, github]
+        - in: query
+          name: code
+          required: false
+          type: string
+        - in: query
+          name: state
+          required: false
+          type: string
+        - in: query
+          name: error
+          required: false
+          type: string
+      responses:
+        302:
+          description: Redirect to frontend
+
   /api/auth/change-password:
     post:
       tags: [Auth]

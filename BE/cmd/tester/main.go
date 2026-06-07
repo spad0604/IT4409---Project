@@ -271,7 +271,7 @@ func main() {
 			fmt.Printf("[FAIL] LỖ HỔNG: Người lạ đã sửa được dự án!\n")
 		}
 	}
-	
+
 	// 7. Test Module Bảng (Boards + Columns)
 	fmt.Println("\n--- BẮT ĐẦU CHẠY TEST BOARD + COLUMN ---")
 	boardRepo := postgres.NewBoardRepo(pool)
@@ -321,7 +321,8 @@ func main() {
 	// 8. Test Module Nhãn (Labels)
 	fmt.Println("\n--- BẮT ĐẦU CHẠY TEST LABEL ---")
 	labelRepo := postgres.NewLabelRepo(pool)
-	labelUC := usecase.NewLabelUsecase(labelRepo, permChecker)
+	issueRepo := postgres.NewIssueRepo(pool)
+	labelUC := usecase.NewLabelUsecase(labelRepo, issueRepo, permChecker)
 
 	if ucCreated != nil {
 		// Tạo nhãn mới
