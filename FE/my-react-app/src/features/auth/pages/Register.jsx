@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Auth.css'
 
+import { register } from '../api/authApi'
+
 function GoogleIcon() {
     return (
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -34,11 +36,29 @@ export default function Register() {
     const [showPassword, setShowPassword] = useState(false)
     const [agree, setAgree] = useState(false)
 
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        if (!agree) return setError('Vui lòng đồng ý với điều khoản')
+        setError('')
+        setSubmitting(true)
+        try {
+            await register({ name, email, password })
+            navigate('/login')
+        } catch (err) {
+            setError(err?.message || 'Đăng ký thất bại')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
     return (
-        <div className="auth-page">
-            <div className="auth-shell">
+        <div className="login-page">
+            <div className="login-shell">
                 <section
-                    className="auth-visual"
+                    className="login-visual"
                     style={{
                         backgroundImage: `linear-gradient(174deg, rgb(8 42 250 / 76%) 8%, rgb(20 48 240 / 88%) 100%), url(${heroImage})`,
                     }}
@@ -70,8 +90,8 @@ export default function Register() {
                     </div>
                 </section>
 
-                <section className="auth-form-wrap">
-                    <form className="form-box">
+                <section className="login-form-wrap">
+                    <form className="form-box" onSubmit={handleSubmit}>
                         <h2>{t('register.create')}</h2>
                         <p className="sub">{t('register.subtitle')}</p>
 
@@ -146,8 +166,9 @@ export default function Register() {
                             <span>{t('register.terms')}</span>
                         </label>
 
-                        <button className="register-btn">
-                            {t('register.submit')}
+                        {error && <p className="form-error">{error}</p>}
+                        <button className="login-btn" type="submit" disabled={submitting}>
+                            {submitting ? 'Đang tạo...' : t('register.submit')}
                         </button>
 
                         <p className="register-link">
