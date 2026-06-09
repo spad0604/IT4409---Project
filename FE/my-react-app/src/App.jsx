@@ -12,6 +12,7 @@ import IssuesPage from './features/issues/pages/IssuesPage'
 import ProfilePage from './features/users/pages/ProfilePage'
 import { useKanbanState } from './features/kanban/hooks'
 import { OverviewPanel, BoardPanel, ReportsPanel, ArchivePanel, TeamPanel } from './features/kanban/components'
+import LabelManager from './features/labels/components/LabelManager'
 import * as projectApi from './features/projects/api/projectApi'
 import * as boardApi from './features/boards/api/boardApi'
 import * as issueApi from './features/issues/api/issueApi'
@@ -64,6 +65,7 @@ const SIDE_LINK_ICON_MAP = {
   board: FiLayers,
   issues: FiFileText,
   reports: FiBarChart2,
+  labels: FiTarget,
   archive: FiArchive,
 }
 
@@ -889,7 +891,7 @@ function Kanban() {
     if (projectMatch) {
       const nextLink = projectMatch[1]
       setActiveTopTab('projects')
-      setActiveSideLink(['board', 'issues', 'reports', 'archive'].includes(nextLink) ? nextLink : 'board')
+      setActiveSideLink(['board', 'issues', 'reports', 'labels', 'archive'].includes(nextLink) ? nextLink : 'board')
     }
   }, [activeIssueKey, location.pathname, navigate])
 
@@ -904,6 +906,7 @@ function Kanban() {
     if (linkID === 'overview') navigate('/home/dashboard')
     if (linkID === 'board') navigate('/home/projects/board')
     if (linkID === 'reports') navigate('/home/projects/reports')
+    if (linkID === 'labels') navigate('/home/projects/labels')
     if (linkID === 'archive') navigate('/home/projects/archive')
     if (linkID === 'issues') navigate('/home/projects/issues')
   }, [navigate])
@@ -1954,6 +1957,16 @@ function Kanban() {
                 activeLocale={activeLocale}
                 usersById={usersById}
                 onOpenIssueDetails={handleOpenIssueDetails}
+              />
+            ) : null}
+
+            {isBoardView && !activeIssueKey && activeSideLink === 'labels' ? (
+              <LabelManager
+                t={t}
+                projectId={activeProjectId}
+                labels={projectLabels}
+                loading={false}
+                onLabelsChanged={() => refetchProjectLabels(activeProjectId)}
               />
             ) : null}
 
