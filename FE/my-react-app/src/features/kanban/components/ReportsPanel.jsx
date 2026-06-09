@@ -1,13 +1,54 @@
 import { useMemo, useState } from 'react'
 import { formatShortDate, priorityDisplay, safeLower, toInitials } from '../kanbanUtils'
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
+} from 'recharts'
 
 const STATUS_OPTIONS = ['todo', 'in_progress', 'in_review', 'done', 'cancelled']
 const PRIORITY_OPTIONS = ['critical', 'high', 'medium', 'low', 'trivial']
 const TYPE_OPTIONS = ['task', 'bug', 'story', 'epic', 'subtask']
 
+const STATUS_COLORS = {
+  todo: '#94a3b8',
+  in_progress: '#3b82f6',
+  in_review: '#f59e0b',
+  done: '#22c55e',
+  cancelled: '#ef4444',
+  unknown: '#d1d5db',
+}
+
+const TYPE_COLORS = {
+  task: '#6366f1',
+  bug: '#ef4444',
+  story: '#22c55e',
+  epic: '#8b5cf6',
+  subtask: '#06b6d4',
+  unknown: '#d1d5db',
+}
+
+const PRIORITY_COLORS = {
+  critical: '#dc2626',
+  high: '#f97316',
+  medium: '#eab308',
+  low: '#22c55e',
+  trivial: '#94a3b8',
+}
+
+const TEAM_COLORS = ['#6366f1', '#3b82f6', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6']
+
 function normalizeText(value) {
   return String(value ?? '').trim().toLowerCase()
 }
+
+function formatFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
+const REPORT_TABS = ['summary', 'workload', 'progress']
 
 export default function ReportsPanel({
   t,
@@ -20,6 +61,7 @@ export default function ReportsPanel({
   usersById,
   onOpenIssueDetails,
 }) {
+  const [activeTab, setActiveTab] = useState('summary')
   const [search, setSearch] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
   const [status, setStatus] = useState('')
@@ -69,13 +111,19 @@ export default function ReportsPanel({
     ? Number(issuesTotal)
     : sorted.length
 
+  // ─── Chart Data ───────────────────────────────────────────────────────────
+
   const byStatus = useMemo(() => {
     const counts = new Map()
     for (const issue of issueItems) {
       const key = safeLower(issue?.status) || 'unknown'
       counts.set(key, (counts.get(key) || 0) + 1)
     }
-    return Array.from(counts.entries()).map(([key, count]) => ({ key, count }))
+    return Array.from(counts.entries()).map(([key, count]) => ({
+      name: key,
+      value: count,
+      fill: STATUS_COLORS[key] || STATUS_COLORS.unknown,
+    }))
   }, [issueItems])
 
   const byType = useMemo(() => {
@@ -84,7 +132,27 @@ export default function ReportsPanel({
       const key = safeLower(issue?.type) || 'unknown'
       counts.set(key, (counts.get(key) || 0) + 1)
     }
-    return Array.from(counts.entries()).map(([key, count]) => ({ key, count }))
+    return Array.from(counts.entries()).map(([key, count]) => ({
+      name: key,
+      value: count,
+      fill: TYPE_COLORS[key] || TYPE_COLORS.unknown,
+    }))
+  }, [issueItems])
+
+  const byPriority = useMemo(() => {
+    const counts = new Map()
+    for (const issue of issueItems) {
+      const key = safeLower(issue?.priority) || 'medium'
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    const order = ['critical', 'high', 'medium', 'low', 'trivial']
+    return order
+      .filter((k) => counts.has(k))
+      .map((key) => ({
+        name: key,
+        value: counts.get(key) || 0,
+        fill: PRIORITY_COLORS[key] || '#94a3b8',
+      }))
   }, [issueItems])
 
   const byAssignee = useMemo(() => {
@@ -95,38 +163,79 @@ export default function ReportsPanel({
     }
     return Array.from(counts.entries())
       .map(([key, count]) => ({
-        key,
-        count,
-        label: key === 'unassigned'
+        name: key === 'unassigned'
           ? t('common.unassigned', { defaultValue: 'Unassigned' })
-          : usersById?.[key]?.name || usersById?.[key]?.email || key,
+          : usersById?.[key]?.name || usersById?.[key]?.email || key.slice(0, 8),
+        value: count,
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8)
   }, [issueItems, t, usersById])
+
+  // Build a burn-up / progress timeline from issue createdAt dates
+  const progressData = useMemo(() => {
+    if (issueItems.length === 0) return []
+
+    const sorted = [...issueItems].sort((a, b) => {
+      const da = new Date(a?.createdAt || 0).getTime()
+      const db = new Date(b?.createdAt || 0).getTime()
+      return da - db
+    })
+
+    // Group by date
+    const dayMap = new Map()
+    let cumTotal = 0
+    let cumDone = 0
+
+    for (const issue of sorted) {
+      const d = issue?.createdAt ? new Date(issue.createdAt) : null
+      if (!d || Number.isNaN(d.getTime())) continue
+      const key = d.toISOString().slice(0, 10)
+
+      cumTotal += 1
+      if (safeLower(issue?.status) === 'done') cumDone += 1
+
+      dayMap.set(key, { date: key, total: cumTotal, done: cumDone })
+    }
+
+    // Also count done issues that were created earlier but completed
+    // Re-calculate done correctly: we need cumulative done
+    const allDates = Array.from(dayMap.values())
+    // Recalculate done as running total of done items up to that date
+    let runningDone = 0
+    const doneByDate = new Map()
+    for (const issue of sorted) {
+      if (safeLower(issue?.status) === 'done') {
+        const d = issue?.updatedAt ? new Date(issue.updatedAt) : (issue?.createdAt ? new Date(issue.createdAt) : null)
+        if (d && !Number.isNaN(d.getTime())) {
+          const key = d.toISOString().slice(0, 10)
+          doneByDate.set(key, (doneByDate.get(key) || 0) + 1)
+        }
+      }
+    }
+
+    // Build final data - use last 14 entries max for readability
+    const result = allDates.slice(-14)
+    return result
+  }, [issueItems])
 
   const doneCount = issueItems.filter((issue) => safeLower(issue?.status) === 'done').length
   const activeCount = issueItems.filter((issue) => safeLower(issue?.status) === 'in_progress').length
   const reviewCount = issueItems.filter((issue) => safeLower(issue?.status) === 'in_review').length
+  const todoCount = issueItems.filter((issue) => safeLower(issue?.status) === 'todo').length
 
-  const renderMiniBars = (items, labelRenderer) => (
-    <div style={{ display: 'grid', gap: '0.6rem' }}>
-      {items.map((item) => {
-        const width = totalCount > 0 ? Math.max(8, Math.round((item.count / totalCount) * 100)) : 0
-        return (
-          <div key={item.key}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
-              <span style={{ fontSize: '0.72rem', color: '#344054' }}>{labelRenderer(item)}</span>
-              <strong style={{ fontSize: '0.72rem' }}>{item.count}</strong>
-            </div>
-            <div className="progress-track" aria-hidden="true">
-              <span style={{ width: `${width}%` }} />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+  const customPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    if (percent < 0.05) return null
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    )
+  }
 
   return (
     <section className="panel" aria-label={t('reports.aria', { defaultValue: 'Reports' })}>
@@ -135,10 +244,10 @@ export default function ReportsPanel({
           <h2>{t('reports.title', { defaultValue: 'Reports' })}</h2>
           <p>{projectName ? `${t('common.project')}: ${projectName}` : t('projects.noProjectSelected')}</p>
         </div>
-
         <p className="dashboard-kicker">{t('reports.total', { defaultValue: 'Total issues' })}: {totalCount}</p>
       </header>
 
+      {/* Stats Summary Cards */}
       <section className="stats-overview" style={{ marginBottom: '1rem' }}>
         <article className="stat-card">
           <span>{t('reports.total', { defaultValue: 'Total issues' })}</span>
@@ -146,42 +255,315 @@ export default function ReportsPanel({
         </article>
         <article className="stat-card">
           <span>{t('issue.status.done', { defaultValue: 'Done' })}</span>
-          <strong>{doneCount}</strong>
+          <strong style={{ color: '#22c55e' }}>{doneCount}</strong>
         </article>
         <article className="stat-card">
           <span>{t('issue.status.in_progress', { defaultValue: 'In Progress' })}</span>
-          <strong>{activeCount}</strong>
+          <strong style={{ color: '#3b82f6' }}>{activeCount}</strong>
         </article>
         <article className="stat-card">
           <span>{t('issue.status.in_review', { defaultValue: 'In Review' })}</span>
-          <strong>{reviewCount}</strong>
+          <strong style={{ color: '#f59e0b' }}>{reviewCount}</strong>
         </article>
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
-        <article className="panel" style={{ padding: '0.9rem' }}>
-          <header className="panel-head">
-            <h2>{t('reports.byStatus', { defaultValue: 'By status' })}</h2>
-          </header>
-          {renderMiniBars(byStatus, (item) => t(`issue.status.${item.key}`, { defaultValue: item.key }))}
-        </article>
+      {/* Tab Navigation */}
+      <div className="reports-tabs">
+        {REPORT_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={`reports-tab ${activeTab === tab ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {t(`reports.tabs.${tab}`, {
+              defaultValue: tab === 'summary' ? 'Summary' : tab === 'workload' ? 'Team Workload' : 'Progress',
+            })}
+          </button>
+        ))}
+      </div>
 
-        <article className="panel" style={{ padding: '0.9rem' }}>
-          <header className="panel-head">
-            <h2>{t('reports.byType', { defaultValue: 'By type' })}</h2>
-          </header>
-          {renderMiniBars(byType, (item) => t(`issue.type.${item.key}`, { defaultValue: item.key }))}
-        </article>
+      {/* Summary Tab — Pie Charts */}
+      {activeTab === 'summary' ? (
+        <section className="reports-charts-grid">
+          {/* By Status - Pie */}
+          <article className="reports-chart-card">
+            <h3>{t('reports.byStatus', { defaultValue: 'By Status' })}</h3>
+            {byStatus.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={byStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={customPieLabel}
+                    outerRadius={95}
+                    innerRadius={40}
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    {byStatus.map((entry, index) => (
+                      <Cell key={`status-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [value, t(`issue.status.${name}`, { defaultValue: name })]}
+                    contentStyle={{ borderRadius: '0.5rem', fontSize: '0.72rem', border: '1px solid #e6e9f0' }}
+                  />
+                  <Legend
+                    formatter={(value) => t(`issue.status.${value}`, { defaultValue: value })}
+                    wrapperStyle={{ fontSize: '0.68rem' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="muted">{t('reports.noData', { defaultValue: 'No data' })}</p>
+            )}
+          </article>
 
-        <article className="panel" style={{ padding: '0.9rem' }}>
-          <header className="panel-head">
-            <h2>{t('reports.byAssignee', { defaultValue: 'Team workload' })}</h2>
-          </header>
-          {renderMiniBars(byAssignee, (item) => item.label)}
-        </article>
-      </section>
+          {/* By Type - Pie */}
+          <article className="reports-chart-card">
+            <h3>{t('reports.byType', { defaultValue: 'By Type' })}</h3>
+            {byType.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={byType}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={customPieLabel}
+                    outerRadius={95}
+                    innerRadius={40}
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    {byType.map((entry, index) => (
+                      <Cell key={`type-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [value, t(`issue.type.${name}`, { defaultValue: name })]}
+                    contentStyle={{ borderRadius: '0.5rem', fontSize: '0.72rem', border: '1px solid #e6e9f0' }}
+                  />
+                  <Legend
+                    formatter={(value) => t(`issue.type.${value}`, { defaultValue: value })}
+                    wrapperStyle={{ fontSize: '0.68rem' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="muted">{t('reports.noData', { defaultValue: 'No data' })}</p>
+            )}
+          </article>
 
-      <div style={{ display: 'grid', gap: '0.55rem' }}>
+          {/* By Priority - Bar */}
+          <article className="reports-chart-card">
+            <h3>{t('reports.byPriority', { defaultValue: 'By Priority' })}</h3>
+            {byPriority.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={byPriority} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="name"
+                    tickFormatter={(v) => t(`priority.${v}`, { defaultValue: v })}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    formatter={(value, name) => [value, t('reports.issues', { defaultValue: 'Issues' })]}
+                    labelFormatter={(label) => t(`priority.${label}`, { defaultValue: label })}
+                    contentStyle={{ borderRadius: '0.5rem', fontSize: '0.72rem', border: '1px solid #e6e9f0' }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {byPriority.map((entry, index) => (
+                      <Cell key={`pri-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="muted">{t('reports.noData', { defaultValue: 'No data' })}</p>
+            )}
+          </article>
+        </section>
+      ) : null}
+
+      {/* Workload Tab — Bar Chart */}
+      {activeTab === 'workload' ? (
+        <section className="reports-charts-grid reports-charts-single">
+          <article className="reports-chart-card reports-chart-wide">
+            <h3>{t('reports.byAssignee', { defaultValue: 'Team Workload' })}</h3>
+            {byAssignee.length > 0 ? (
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={byAssignee} layout="vertical" margin={{ top: 10, right: 30, bottom: 0, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={120}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip
+                    formatter={(value) => [value, t('reports.issues', { defaultValue: 'Issues' })]}
+                    contentStyle={{ borderRadius: '0.5rem', fontSize: '0.72rem', border: '1px solid #e6e9f0' }}
+                  />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
+                    {byAssignee.map((entry, index) => (
+                      <Cell key={`assignee-${index}`} fill={TEAM_COLORS[index % TEAM_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="muted">{t('reports.noData', { defaultValue: 'No data' })}</p>
+            )}
+          </article>
+
+          {/* Status breakdown per assignee */}
+          <article className="reports-chart-card reports-chart-wide">
+            <h3>{t('reports.statusBreakdown', { defaultValue: 'Status Breakdown by Assignee' })}</h3>
+            <div className="reports-breakdown-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('common.assignee', { defaultValue: 'Assignee' })}</th>
+                    {STATUS_OPTIONS.map((s) => (
+                      <th key={s}>
+                        <span className="reports-status-dot" style={{ background: STATUS_COLORS[s] }} />
+                        {t(`issue.status.${s}`, { defaultValue: s })}
+                      </th>
+                    ))}
+                    <th>{t('reports.total', { defaultValue: 'Total' })}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assigneeOptions.map((opt) => {
+                    const userIssues = issueItems.filter((it) => String(it?.assigneeId) === opt.id)
+                    const statusCounts = {}
+                    for (const s of STATUS_OPTIONS) statusCounts[s] = 0
+                    for (const it of userIssues) {
+                      const st = safeLower(it?.status)
+                      if (st in statusCounts) statusCounts[st]++
+                    }
+                    return (
+                      <tr key={opt.id}>
+                        <td><strong>{opt.label}</strong></td>
+                        {STATUS_OPTIONS.map((s) => (
+                          <td key={s}>{statusCounts[s] || '-'}</td>
+                        ))}
+                        <td><strong>{userIssues.length}</strong></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      ) : null}
+
+      {/* Progress Tab — Area Chart */}
+      {activeTab === 'progress' ? (
+        <section className="reports-charts-grid reports-charts-single">
+          <article className="reports-chart-card reports-chart-wide">
+            <h3>{t('reports.burnup', { defaultValue: 'Burn-up Chart' })}</h3>
+            <p className="reports-chart-hint">
+              {t('reports.burnupHint', { defaultValue: 'Cumulative issues created vs completed over time' })}
+            </p>
+            {progressData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={progressData} margin={{ top: 10, right: 30, bottom: 0, left: -10 }}>
+                  <defs>
+                    <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradDone" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '0.5rem', fontSize: '0.72rem', border: '1px solid #e6e9f0' }}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '0.68rem' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name={t('reports.totalCreated', { defaultValue: 'Total Created' })}
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    fill="url(#gradTotal)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="done"
+                    name={t('reports.completed', { defaultValue: 'Completed' })}
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fill="url(#gradDone)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="muted">{t('reports.noProgressData', { defaultValue: 'Not enough data for chart' })}</p>
+            )}
+          </article>
+
+          {/* Completion Summary */}
+          <article className="reports-chart-card reports-chart-wide">
+            <h3>{t('reports.completion', { defaultValue: 'Completion Rate' })}</h3>
+            <div className="reports-completion-grid">
+              <div className="reports-completion-ring">
+                <ResponsiveContainer width={180} height={180}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'done', value: doneCount },
+                        { name: 'remaining', value: Math.max(0, totalCount - doneCount) },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      dataKey="value"
+                      strokeWidth={0}
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      <Cell fill="#22c55e" />
+                      <Cell fill="#f0f0f0" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="reports-ring-label">
+                  <strong>{totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0}%</strong>
+                  <span>{t('reports.completed', { defaultValue: 'Completed' })}</span>
+                </div>
+              </div>
+              <div className="reports-completion-stats">
+                <div><span className="reports-stat-dot" style={{ background: '#94a3b8' }} />{t('issue.status.todo')}: <strong>{todoCount}</strong></div>
+                <div><span className="reports-stat-dot" style={{ background: '#3b82f6' }} />{t('issue.status.in_progress')}: <strong>{activeCount}</strong></div>
+                <div><span className="reports-stat-dot" style={{ background: '#f59e0b' }} />{t('issue.status.in_review')}: <strong>{reviewCount}</strong></div>
+                <div><span className="reports-stat-dot" style={{ background: '#22c55e' }} />{t('issue.status.done')}: <strong>{doneCount}</strong></div>
+              </div>
+            </div>
+          </article>
+        </section>
+      ) : null}
+
+      {/* Issue List (always visible below) */}
+      <div style={{ display: 'grid', gap: '0.55rem', marginTop: '1.2rem' }}>
+        <h3 style={{ margin: 0, fontSize: '0.84rem' }}>{t('reports.issueList', { defaultValue: 'Issue List' })}</h3>
         <label className="issue-search" htmlFor="reports-search" style={{ maxWidth: 'unset' }}>
           <input
             id="reports-search"
