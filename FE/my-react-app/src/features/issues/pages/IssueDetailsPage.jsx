@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FiArrowLeft, FiClock, FiDownload, FiPlus, FiTrash2 } from 'react-icons/fi'
+import { FiArrowLeft, FiClock, FiDownload, FiPlus, FiTrash2, FiUploadCloud } from 'react-icons/fi'
 import * as issueApi from '../api/issueApi'
 import * as commentApi from '../../comments/api/commentApi'
 import * as attachmentApi from '../../attachments/api/attachmentApi'
@@ -75,6 +75,12 @@ function fieldLabel(t, key, fallback) {
   return t(key, { defaultValue: fallback })
 }
 
+function formatFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
 export default function IssueDetailsPage({
   issueKey,
   onBack,
@@ -100,6 +106,9 @@ export default function IssueDetailsPage({
 
   const [attachments, setAttachments] = useState([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
 
   const [subtasks, setSubtasks] = useState([])
   const [subtasksLoading, setSubtasksLoading] = useState(false)
@@ -287,6 +296,57 @@ export default function IssueDetailsPage({
     anchor.remove()
     URL.revokeObjectURL(url)
   }, [])
+
+  const handleUploadFiles = useCallback(async (files) => {
+    if (!issueKey || !files || files.length === 0) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      for (const file of Array.from(files)) {
+        await attachmentApi.uploadAttachment(issueKey, file)
+      }
+      await loadAttachments()
+      await loadActivity()
+    } catch (err) {
+      setUploadError(err?.message || t('common.actionFailed'))
+    } finally {
+      setUploading(false)
+    }
+  }, [issueKey, loadAttachments, loadActivity, t])
+
+  const handleDeleteAttachment = useCallback(async (attachmentId) => {
+    if (!attachmentId) return
+    if (!window.confirm(t('issues.detail.confirmDeleteAttachment', { defaultValue: 'Delete this attachment?' }))) return
+    try {
+      await attachmentApi.deleteAttachment(attachmentId)
+      await loadAttachments()
+      await loadActivity()
+    } catch (err) {
+      setUploadError(err?.message || t('common.actionFailed'))
+    }
+  }, [loadAttachments, loadActivity, t])
+
+  const handleDropZoneDrop = useCallback((event) => {
+    event.preventDefault()
+    setDragOver(false)
+    const files = event.dataTransfer?.files
+    if (files && files.length > 0) handleUploadFiles(files)
+  }, [handleUploadFiles])
+
+  const handleDropZoneDragOver = useCallback((event) => {
+    event.preventDefault()
+    setDragOver(true)
+  }, [])
+
+  const handleDropZoneDragLeave = useCallback(() => {
+    setDragOver(false)
+  }, [])
+
+  const handleFileInputChange = useCallback((event) => {
+    const files = event.target?.files
+    if (files && files.length > 0) handleUploadFiles(files)
+    event.target.value = ''
+  }, [handleUploadFiles])
 
   const patchIssueField = useCallback(async (field, value) => {
     if (!issueKey) return
@@ -605,7 +665,10 @@ export default function IssueDetailsPage({
             </section>
 
             <section className="issue-detail-section">
-              <h2>{t('issues.detail.attachments', { defaultValue: 'Attachments' })}</h2>
+              <div className="issue-section-head">
+                <h2>{t('issues.detail.attachments', { defaultValue: 'Attachments' })}</h2>
+                <span className="issue-count-pill">{attachments.length}</span>
+              </div>
               {attachmentsLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
               {!attachmentsLoading && attachments.length === 0 ? (
                 <p className="muted">{t('issues.detail.noAttachments', { defaultValue: 'No attachments' })}</p>
@@ -614,15 +677,47 @@ export default function IssueDetailsPage({
                 {attachments.map((att) => (
                   <article key={att?.id} className="issue-attachment">
                     <div>
-                      <p className="issue-attachment-name">{att?.originalName || att?.filename || t('common.untitled')}</p>
+                      <p className="issue-attachment-name">
+                        {att?.originalName || att?.filename || t('common.untitled')}
+                        {att?.fileSize ? <span className="attachment-size">({formatFileSize(att.fileSize)})</span> : null}
+                      </p>
                       <p className="issue-attachment-sub">{formatDateTime(att?.createdAt, locale)}</p>
                     </div>
-                    <button type="button" className="open-btn" onClick={() => handleDownloadAttachment(att)}>
-                      <FiDownload /> {t('common.download', { defaultValue: 'Download' })}
-                    </button>
+                    <div className="issue-attachment-actions">
+                      <button type="button" className="open-btn" onClick={() => handleDownloadAttachment(att)}>
+                        <FiDownload /> {t('common.download', { defaultValue: 'Download' })}
+                      </button>
+                      <button type="button" className="attachment-delete-btn" onClick={() => handleDeleteAttachment(att?.id)}>
+                        <FiTrash2 />
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
+
+              {/* Upload Zone */}
+              <div
+                className={`upload-zone ${dragOver ? 'is-drag-over' : ''}`}
+                onDrop={handleDropZoneDrop}
+                onDragOver={handleDropZoneDragOver}
+                onDragLeave={handleDropZoneDragLeave}
+                onClick={() => document.getElementById(`file-input-${issueKey}`)?.click()}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="upload-zone-icon"><FiUploadCloud /></div>
+                <p><strong>{t('issues.detail.uploadClick', { defaultValue: 'Click to upload' })}</strong> {t('issues.detail.uploadDrag', { defaultValue: 'or drag and drop' })}</p>
+                <p className="upload-zone-hint">{t('issues.detail.uploadHint', { defaultValue: 'Max 10MB per file' })}</p>
+                {uploading ? <p className="upload-progress">{t('issues.detail.uploading', { defaultValue: 'Uploading...' })}</p> : null}
+                {uploadError ? <p className="inline-error">{uploadError}</p> : null}
+              </div>
+              <input
+                id={`file-input-${issueKey}`}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleFileInputChange}
+              />
             </section>
 
             <section className="issue-detail-section">
