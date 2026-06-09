@@ -22,6 +22,7 @@ export const en = {
         { id: 'board', label: 'Board' },
         { id: 'issues', label: 'Issues' },
         { id: 'reports', label: 'Reports' },
+        { id: 'labels', label: 'Labels' },
         { id: 'archive', label: 'Archive' },
       ],
       inviteMember: 'Invite Member',

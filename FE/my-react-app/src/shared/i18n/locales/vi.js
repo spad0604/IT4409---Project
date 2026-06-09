@@ -22,6 +22,7 @@ export const vi = {
         { id: 'board', label: 'Bảng công việc' },
         { id: 'issues', label: 'Danh sách vấn đề' },
         { id: 'reports', label: 'Báo cáo' },
+        { id: 'labels', label: 'Nhãn' },
         { id: 'archive', label: 'Lưu trữ' },
       ],
       inviteMember: 'Mời thành viên',
