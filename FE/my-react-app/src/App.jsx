@@ -125,6 +125,7 @@ function Kanban() {
   })
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [showShortcutHelp, setShowShortcutHelp] = useState(false)
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [editingSprint, setEditingSprint] = useState(null)
   const {
     activeTopTab,
@@ -648,6 +649,46 @@ function Kanban() {
       // ignore
     }
   }, [activeProjectId, refetchSprints, refetchBacklog])
+
+  const handleEditProject = async () => {
+    const promptText = t('projects.edit.promptName', { defaultValue: 'Nhập tên mới cho dự án:' });
+    const newName = window.prompt(promptText, activeProject?.name);
+
+    if (!newName || newName === activeProject?.name) return;
+
+    try {
+      await projectApi.updateProject(activeProjectId, { name: newName });
+
+      alert(t('projects.edit.success', { defaultValue: 'Cập nhật dự án thành công!' }));
+
+      if (typeof refetchProjects === 'function') {
+        refetchProjects().catch(err => console.error("Lỗi khi load lại list:", err));
+      }
+
+    } catch (error) {
+      console.error("Lỗi API Update:", error);
+      alert(t('projects.edit.error', { defaultValue: 'Lỗi khi cập nhật dự án!' }));
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    const confirmText = t('projects.delete.confirm', {
+      defaultValue: 'Bạn có chắc chắn muốn xóa toàn bộ dự án này không? Thao tác này không thể hoàn tác!'
+    });
+    const confirm = window.confirm(confirmText);
+
+    if (!confirm) return;
+
+    try {
+      await projectApi.deleteProject(activeProjectId);
+      alert(t('projects.delete.success', { defaultValue: 'Đã xóa dự án!' }));
+      setActiveProjectId('');
+      refetchProjects();
+    } catch (error) {
+      console.error(error);
+      alert(t('projects.delete.error', { defaultValue: 'Lỗi khi xóa dự án. Có thể dự án đang chứa dữ liệu ràng buộc!' }));
+    }
+  };
 
   // ─── Activity Handlers ─────────────────────────────────────────────────────
 
@@ -1914,6 +1955,9 @@ function Kanban() {
                 onOpenCreateProject={handleOpenCreateProject}
                 onProjectSelect={handleProjectSelect}
                 onOpenIssueDetails={handleOpenIssueDetails}
+                activeProjectDetail={activeProject}
+                onEditProject={handleEditProject}
+                onDeleteProject={handleDeleteProject}
               />
             ) : null}
 
