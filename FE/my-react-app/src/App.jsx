@@ -1597,6 +1597,67 @@ function Kanban() {
     t,
   ])
 
+  const [createIssueColumnId, setCreateIssueColumnId] = useState(null)
+
+  const handleAddColumn = async () => {
+    // Sửa lại dòng lấy ID: Ưu tiên dùng activeBoardId, nếu không có thì lấy boardDetail.id
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) {
+      alert('Lỗi: Không tìm thấy ID của Bảng!');
+      return;
+    }
+
+    const title = window.prompt(t('board.columns.promptNew', { defaultValue: 'Nhập tên cột mới (VD: To Do, In Progress):' }))
+    if (!title) return
+
+    try {
+      await boardApi.addColumn(currentBoardId, { title, tone: 'neutral' })
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi tạo cột:', error)
+      alert(error?.message || t('board.columns.errorCreate', { defaultValue: 'Không thể tạo cột mới!' }))
+    }
+  }
+
+  // Sửa tương tự cho Edit
+  const handleEditColumn = async (columnId, currentTitle) => {
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) return;
+
+    const newTitle = window.prompt(t('board.columns.promptEdit', { defaultValue: 'Sửa tên cột:' }), currentTitle)
+    if (!newTitle || newTitle === currentTitle) return
+
+    try {
+      await boardApi.updateColumn(currentBoardId, columnId, { title: newTitle })
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi sửa cột:', error)
+      alert(error?.message || t('board.columns.errorEdit', { defaultValue: 'Không thể sửa cột!' }))
+    }
+  }
+
+  // Sửa tương tự cho Delete
+  const handleDeleteColumn = async (columnId) => {
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) return;
+
+    const confirmDelete = window.confirm(t('board.columns.confirmDelete', { defaultValue: 'Bạn có chắc muốn xóa cột này? Tất cả thẻ bên trong sẽ bị mất!' }))
+    if (!confirmDelete) return
+
+    try {
+      await boardApi.deleteColumn(currentBoardId, columnId)
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi xóa cột:', error)
+      alert(error?.message || t('board.columns.errorDelete', { defaultValue: 'Không thể xóa cột!' }))
+    }
+  }
+
+  const handleOpenAddCard = useCallback((columnId) => {
+    setCreateIssueColumnId(columnId)
+    handleOpenCreateIssue()
+  }, [handleOpenCreateIssue])
+
   return (
     <main className="home-page">
       <section className="home-frame" data-enter>
@@ -1913,6 +1974,11 @@ function Kanban() {
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDrop={handleColumnDrop}
                 onOpenIssueDetails={handleOpenIssueDetails}
+
+                onAddColumn={handleAddColumn}
+                onEditColumn={handleEditColumn}
+                onDeleteColumn={handleDeleteColumn}
+                onAddCard={handleOpenAddCard}
               />
             ) : null}
 
