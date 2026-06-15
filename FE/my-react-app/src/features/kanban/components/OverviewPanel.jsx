@@ -1,3 +1,4 @@
+import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { StatsOverview } from '../../../shared/components/stats-overview/StatsOverview.jsx'
 import { formatShortDate, priorityDisplay, toInitials } from '../kanbanUtils'
 import { RecentProjects } from '../../../shared/components/recent-projects/RecentProjects.jsx'
@@ -16,16 +17,41 @@ export default function OverviewPanel({
   onOpenCreateProject,
   onProjectSelect,
   onOpenIssueDetails,
+  activeProjectDetail,
+  onEditProject,
+  onDeleteProject
 }) {
   return (
     <>
       <header className="dashboard-header">
         <div>
           <p className="dashboard-kicker">{t('overview.kicker')}</p>
-          <h1>{t('overview.title')}</h1>
+          <h1>{activeProjectDetail?.name || t('overview.title')}</h1>
         </div>
 
         <div className="dashboard-actions">
+          {activeProjectDetail && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem' }}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={onEditProject}
+                title={t('common.edit', { defaultValue: 'Sửa dự án' })}
+              >
+                <FiEdit2 />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={onDeleteProject}
+                title={t('common.delete', { defaultValue: 'Xóa dự án' })}
+                style={{ color: '#d92d20' }}
+              >
+                <FiTrash2 />
+              </button>
+            </div>
+          )}
+
           <div className="mini-avatars" aria-hidden="true">
             <span>SC</span>
             <span>AR</span>

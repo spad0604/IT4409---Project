@@ -125,6 +125,7 @@ function Kanban() {
   })
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [showShortcutHelp, setShowShortcutHelp] = useState(false)
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [editingSprint, setEditingSprint] = useState(null)
   const {
     activeTopTab,
@@ -648,6 +649,46 @@ function Kanban() {
       // ignore
     }
   }, [activeProjectId, refetchSprints, refetchBacklog])
+
+  const handleEditProject = async () => {
+    const promptText = t('projects.edit.promptName', { defaultValue: 'Nhập tên mới cho dự án:' });
+    const newName = window.prompt(promptText, activeProject?.name);
+
+    if (!newName || newName === activeProject?.name) return;
+
+    try {
+      await projectApi.updateProject(activeProjectId, { name: newName });
+
+      alert(t('projects.edit.success', { defaultValue: 'Cập nhật dự án thành công!' }));
+
+      if (typeof refetchProjects === 'function') {
+        refetchProjects().catch(err => console.error("Lỗi khi load lại list:", err));
+      }
+
+    } catch (error) {
+      console.error("Lỗi API Update:", error);
+      alert(t('projects.edit.error', { defaultValue: 'Lỗi khi cập nhật dự án!' }));
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    const confirmText = t('projects.delete.confirm', {
+      defaultValue: 'Bạn có chắc chắn muốn xóa toàn bộ dự án này không? Thao tác này không thể hoàn tác!'
+    });
+    const confirm = window.confirm(confirmText);
+
+    if (!confirm) return;
+
+    try {
+      await projectApi.deleteProject(activeProjectId);
+      alert(t('projects.delete.success', { defaultValue: 'Đã xóa dự án!' }));
+      setActiveProjectId('');
+      refetchProjects();
+    } catch (error) {
+      console.error(error);
+      alert(t('projects.delete.error', { defaultValue: 'Lỗi khi xóa dự án. Có thể dự án đang chứa dữ liệu ràng buộc!' }));
+    }
+  };
 
   // ─── Activity Handlers ─────────────────────────────────────────────────────
 
@@ -1236,6 +1277,29 @@ function Kanban() {
     }
   }, [activeProjectId, refetchMembers])
 
+  const handleChangeMemberRole = async (userId, newRole) => {
+    try {
+      await projectApi.changeProjectMemberRole(activeProjectId, userId, newRole);
+
+      if (typeof setMembers === 'function') {
+        setMembers(prevMembers =>
+          prevMembers.map(m =>
+            m.userId === userId ? { ...m, role: newRole } : m
+          )
+        );
+      }
+
+      if (typeof refetchProjectMembers === 'function') {
+        refetchProjectMembers(activeProjectId).catch(err => console.error(err));
+      }
+
+      alert(t('team.members.changeRoleSuccess', { defaultValue: 'Cập nhật quyền thành công!' }));
+    } catch (error) {
+      console.error("Lỗi khi đổi quyền:", error);
+      alert(t('team.members.changeRoleError', { defaultValue: 'Lỗi khi cập nhật quyền thành viên!' }));
+    }
+  };
+
   const createProjectModal = useMemo(() => {
     if (!showCreateProject) return null
     return createPortal(
@@ -1597,6 +1661,67 @@ function Kanban() {
     t,
   ])
 
+  const [createIssueColumnId, setCreateIssueColumnId] = useState(null)
+
+  const handleAddColumn = async () => {
+    // Sửa lại dòng lấy ID: Ưu tiên dùng activeBoardId, nếu không có thì lấy boardDetail.id
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) {
+      alert('Lỗi: Không tìm thấy ID của Bảng!');
+      return;
+    }
+
+    const title = window.prompt(t('board.columns.promptNew', { defaultValue: 'Nhập tên cột mới (VD: To Do, In Progress):' }))
+    if (!title) return
+
+    try {
+      await boardApi.addColumn(currentBoardId, { title, tone: 'neutral' })
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi tạo cột:', error)
+      alert(error?.message || t('board.columns.errorCreate', { defaultValue: 'Không thể tạo cột mới!' }))
+    }
+  }
+
+
+  const handleEditColumn = async (columnId, currentTitle) => {
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) return;
+
+    const newTitle = window.prompt(t('board.columns.promptEdit', { defaultValue: 'Sửa tên cột:' }), currentTitle)
+    if (!newTitle || newTitle === currentTitle) return
+
+    try {
+      await boardApi.updateColumn(currentBoardId, columnId, { title: newTitle })
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi sửa cột:', error)
+      alert(error?.message || t('board.columns.errorEdit', { defaultValue: 'Không thể sửa cột!' }))
+    }
+  }
+
+  // Sửa tương tự cho Delete
+  const handleDeleteColumn = async (columnId) => {
+    const currentBoardId = activeBoardId || boardDetail?.id;
+    if (!currentBoardId) return;
+
+    const confirmDelete = window.confirm(t('board.columns.confirmDelete', { defaultValue: 'Bạn có chắc muốn xóa cột này? Tất cả thẻ bên trong sẽ bị mất!' }))
+    if (!confirmDelete) return
+
+    try {
+      await boardApi.deleteColumn(currentBoardId, columnId)
+      refetchBoardDetail(currentBoardId)
+    } catch (error) {
+      console.error('Lỗi khi xóa cột:', error)
+      alert(error?.message || t('board.columns.errorDelete', { defaultValue: 'Không thể xóa cột!' }))
+    }
+  }
+
+  const handleOpenAddCard = useCallback((columnId) => {
+    setCreateIssueColumnId(columnId)
+    handleOpenCreateIssue()
+  }, [handleOpenCreateIssue])
+
   return (
     <main className="home-page">
       <section className="home-frame" data-enter>
@@ -1853,6 +1978,9 @@ function Kanban() {
                 onOpenCreateProject={handleOpenCreateProject}
                 onProjectSelect={handleProjectSelect}
                 onOpenIssueDetails={handleOpenIssueDetails}
+                activeProjectDetail={activeProject}
+                onEditProject={handleEditProject}
+                onDeleteProject={handleDeleteProject}
               />
             ) : null}
 
@@ -1893,6 +2021,8 @@ function Kanban() {
                 usersById={usersById}
                 onInviteMember={handleInviteMember}
                 onRemoveMember={handleRemoveMember}
+                onChangeRole={handleChangeMemberRole}
+                currentUserId={user?.id}
               />
             ) : null}
 
@@ -1913,6 +2043,11 @@ function Kanban() {
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDrop={handleColumnDrop}
                 onOpenIssueDetails={handleOpenIssueDetails}
+
+                onAddColumn={handleAddColumn}
+                onEditColumn={handleEditColumn}
+                onDeleteColumn={handleDeleteColumn}
+                onAddCard={handleOpenAddCard}
               />
             ) : null}
 

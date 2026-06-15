@@ -119,6 +119,9 @@ export const en = {
       completion: 'sprint flow completion',
       cards: 'cards',
       addCardTo: 'Add card to {{column}}',
+      editColumn: 'Edit Column',
+      deleteColumn: 'Delete Column',
+      addColumn: 'Add Column',
       columns: {
         todo: 'To do',
         in_progress: 'In Progress',
@@ -245,6 +248,16 @@ export const en = {
         cancel: 'Cancel',
         validation: 'Please enter project name and key.',
       },
+      edit: {
+        promptName: 'Enter new name for the project:',
+        success: 'Project updated successfully!',
+        error: 'Error updating project!',
+      },
+      delete: {
+        confirm: 'Are you sure you want to delete this entire project? This action cannot be undone!',
+        success: 'Project deleted!',
+        error: 'Error deleting project. It may contain constrained data!',
+      },
       status: {
         active: 'Active',
       },
@@ -308,6 +321,8 @@ export const en = {
         subtitle: 'Project members and roles.',
         role: 'Role',
         remove: 'Remove',
+        changeRoleSuccess: 'Role updated successfully!',
+        changeRoleError: 'Error updating member role!',
       },
     },
 

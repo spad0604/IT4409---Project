@@ -119,6 +119,9 @@ export const vi = {
       completion: 'hoàn thành luồng sprint',
       cards: 'thẻ',
       addCardTo: 'Thêm thẻ vào cột {{column}}',
+      editColumn: 'Sửa tên cột',
+      deleteColumn: 'Xóa cột',
+      addColumn: 'Thêm cột mới',
       columns: {
         todo: 'Cần làm',
         in_progress: 'Đang làm',
@@ -304,6 +307,16 @@ export const vi = {
         cancel: 'Hủy bỏ',
         validation: 'Vui lòng nhập đầy đủ tên và mã dự án.',
       },
+      edit: {
+        promptName: 'Nhập tên mới cho dự án:',
+        success: 'Cập nhật dự án thành công!',
+        error: 'Lỗi khi cập nhật dự án!',
+      },
+      delete: {
+        confirm: 'Bạn có chắc chắn muốn xóa toàn bộ dự án này không? Thao tác này không thể hoàn tác!',
+        success: 'Đã xóa dự án!',
+        error: 'Lỗi khi xóa dự án. Có thể dự án đang chứa dữ liệu ràng buộc!',
+      },
       status: {
         active: 'Dự án đang hoạt động',
       },
@@ -366,6 +379,8 @@ export const vi = {
         subtitle: 'Danh sách thành viên và vai trò tương ứng.',
         role: 'Vai trò',
         remove: 'Gỡ bỏ',
+        changeRoleSuccess: 'Cập nhật quyền thành công!',
+        changeRoleError: 'Lỗi khi cập nhật quyền thành viên!',
       },
     },
 

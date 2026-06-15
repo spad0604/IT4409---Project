@@ -17,6 +17,8 @@ export default function TeamPanel({
   usersById,
   onInviteMember,
   onRemoveMember,
+  onChangeRole,
+  currentUserId,
 }) {
   return (
     <section className="placeholder-panel panel">
@@ -91,10 +93,33 @@ export default function TeamPanel({
                     <span className="team-avatar">{toInitials(u?.name || u?.email || '') || '??'}</span>
                     <div>
                       <h3>{u?.name || t('common.unknown')}</h3>
-                      <p>
-                        {u?.email ? `${u.email} · ` : ''}
-                        {t('team.members.role')}: {t(`roles.${safeLower(m?.role)}`, { defaultValue: String(m?.role || '-') })}
-                      </p>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#667085' }}>{u?.email}</span>
+                        <select
+                          value={safeLower(m?.role)}
+                          onChange={(e) => onChangeRole(m?.userId, e.target.value)}
+                          // 2. KHÓA DROPDOWN NẾU ĐÂY LÀ TÀI KHOẢN ĐANG ĐĂNG NHẬP
+                          disabled={String(m?.userId) === String(currentUserId)}
+                          title={String(m?.userId) === String(currentUserId) ? 'Không thể tự đổi quyền của chính mình' : ''}
+                          style={{
+                            padding: '2px 20px 2px 6px',
+                            fontSize: '0.75rem',
+                            borderRadius: '4px',
+                            border: '1px solid #d0d5dd',
+                            backgroundColor: String(m?.userId) === String(currentUserId) ? '#f2f4f7' : '#fff',
+                            color: String(m?.userId) === String(currentUserId) ? '#98a2b3' : '#344054',
+                            cursor: String(m?.userId) === String(currentUserId) ? 'not-allowed' : 'pointer',
+                            outline: 'none',
+                            width: 'fit-content'
+                          }}
+                        >
+                          <option value="admin">{t('roles.admin')}</option>
+                          <option value="member">{t('roles.member')}</option>
+                          <option value="viewer">{t('roles.viewer')}</option>
+                        </select>
+                      </div>
+
                     </div>
                   </div>
                   <button type="button" className="open-btn" onClick={() => onRemoveMember(m?.userId)}>

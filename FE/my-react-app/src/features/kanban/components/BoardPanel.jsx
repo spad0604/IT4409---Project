@@ -1,4 +1,4 @@
-import { FiChevronRight, FiPlus } from 'react-icons/fi'
+import { FiChevronRight, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { formatShortDate, priorityDisplay, safeLower, toInitials } from '../kanbanUtils'
 
 const BOARD_STAGE_PROGRESS = {
@@ -24,6 +24,10 @@ export default function BoardPanel({
   onColumnDragOver,
   onColumnDrop,
   onOpenIssueDetails,
+  onAddColumn,
+  onEditColumn,
+  onDeleteColumn,
+  onAddCard
 }) {
   const totalColumns = kanbanColumns.length
 
@@ -99,9 +103,34 @@ export default function BoardPanel({
                 <h3>{column.title}</h3>
                 <p>{column.items.length} {t('board.cards')}</p>
               </div>
-              <button type="button" className="lane-add-btn" aria-label={t('board.addCardTo', { column: column.title })}>
-                <FiPlus />
-              </button>
+
+              {/* VÙNG NÀY ĐÃ ĐƯỢC THÊM CÁC NÚT THAO TÁC */}
+              <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                {/*<button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => onEditColumn(column.id, column.title)}
+                  title={t('board.editColumn', { defaultValue: 'Edit' })}
+                >
+                  <FiEdit2 />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => onDeleteColumn(column.id)}
+                  title={t('board.deleteColumn', { defaultValue: 'Delete' })}
+                >
+                  <FiTrash2 />
+                </button>*/}
+                <button
+                  type="button"
+                  className="lane-add-btn"
+                  onClick={() => onAddCard(column.id)}
+                  aria-label={t('board.addCardTo', { column: column.title })}
+                >
+                  <FiPlus />
+                </button>
+              </div>
             </header>
 
             <div className="board-card-list">
