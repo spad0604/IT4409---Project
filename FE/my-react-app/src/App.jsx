@@ -1277,6 +1277,29 @@ function Kanban() {
     }
   }, [activeProjectId, refetchMembers])
 
+  const handleChangeMemberRole = async (userId, newRole) => {
+    try {
+      await projectApi.changeProjectMemberRole(activeProjectId, userId, newRole);
+
+      if (typeof setMembers === 'function') {
+        setMembers(prevMembers =>
+          prevMembers.map(m =>
+            m.userId === userId ? { ...m, role: newRole } : m
+          )
+        );
+      }
+
+      if (typeof refetchProjectMembers === 'function') {
+        refetchProjectMembers(activeProjectId).catch(err => console.error(err));
+      }
+
+      alert(t('team.members.changeRoleSuccess', { defaultValue: 'Cập nhật quyền thành công!' }));
+    } catch (error) {
+      console.error("Lỗi khi đổi quyền:", error);
+      alert(t('team.members.changeRoleError', { defaultValue: 'Lỗi khi cập nhật quyền thành viên!' }));
+    }
+  };
+
   const createProjectModal = useMemo(() => {
     if (!showCreateProject) return null
     return createPortal(
@@ -1660,7 +1683,7 @@ function Kanban() {
     }
   }
 
-  // Sửa tương tự cho Edit
+
   const handleEditColumn = async (columnId, currentTitle) => {
     const currentBoardId = activeBoardId || boardDetail?.id;
     if (!currentBoardId) return;
@@ -1998,6 +2021,8 @@ function Kanban() {
                 usersById={usersById}
                 onInviteMember={handleInviteMember}
                 onRemoveMember={handleRemoveMember}
+                onChangeRole={handleChangeMemberRole}
+                currentUserId={user?.id}
               />
             ) : null}
 

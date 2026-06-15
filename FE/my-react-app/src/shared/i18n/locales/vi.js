@@ -379,6 +379,8 @@ export const vi = {
         subtitle: 'Danh sách thành viên và vai trò tương ứng.',
         role: 'Vai trò',
         remove: 'Gỡ bỏ',
+        changeRoleSuccess: 'Cập nhật quyền thành công!',
+        changeRoleError: 'Lỗi khi cập nhật quyền thành viên!',
       },
     },
 

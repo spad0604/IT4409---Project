@@ -321,6 +321,8 @@ export const en = {
         subtitle: 'Project members and roles.',
         role: 'Role',
         remove: 'Remove',
+        changeRoleSuccess: 'Role updated successfully!',
+        changeRoleError: 'Error updating member role!',
       },
     },
 
