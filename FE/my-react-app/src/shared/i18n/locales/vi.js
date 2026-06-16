@@ -306,6 +306,8 @@ export const vi = {
         creating: 'Đang tạo...',
         cancel: 'Hủy bỏ',
         validation: 'Vui lòng nhập đầy đủ tên và mã dự án.',
+        errorDuplicateKey: 'Mã dự án này đã tồn tại, vui lòng chọn mã khác!',
+        errorGeneric: 'Có lỗi xảy ra trong quá trình tạo dự án!',
       },
       edit: {
         promptName: 'Nhập tên mới cho dự án:',

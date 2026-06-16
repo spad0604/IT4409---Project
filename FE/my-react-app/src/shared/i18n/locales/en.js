@@ -247,6 +247,8 @@ export const en = {
         creating: 'Creating…',
         cancel: 'Cancel',
         validation: 'Please enter project name and key.',
+        errorDuplicateKey: 'This project key already exists, please choose another one!',
+        errorGeneric: 'An error occurred while creating the project!',
       },
       edit: {
         promptName: 'Enter new name for the project:',
