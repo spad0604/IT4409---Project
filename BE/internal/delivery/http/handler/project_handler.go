@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"it4409/internal/delivery/http/middleware"
 	"it4409/internal/domain"
@@ -60,6 +61,10 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.projectUC.CreateProject(r.Context(), userID, &proj)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+			writeError(w, http.StatusConflict, "project key duplicate or exists")
+			return
+		}
 		writeDomainError(w, err)
 		return
 	}

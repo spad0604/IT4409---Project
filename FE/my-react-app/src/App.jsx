@@ -1248,7 +1248,16 @@ function Kanban() {
       setShowCreateProject(false)
       resetCreateProjectForm()
     } catch (err) {
-      setCreateProjectError(err?.message || t('common.actionFailed'))
+      console.error("Lỗi tạo dự án:", err);
+
+      const statusCode = err?.response?.status;
+      const serverMessage = err?.response?.data?.message || err?.message || '';
+
+      if (statusCode === 409 || statusCode === 400 || serverMessage.toLowerCase().includes('exist') || serverMessage.toLowerCase().includes('duplicate')) {
+        setCreateProjectError(t('projects.create.errorDuplicateKey', { defaultValue: 'Mã dự án này đã tồn tại, vui lòng chọn mã khác!' }));
+      } else {
+        setCreateProjectError(serverMessage || t('common.actionFailed', { defaultValue: 'Có lỗi xảy ra khi thực hiện!' }));
+      }
     } finally {
       setCreateProjectLoading(false)
     }

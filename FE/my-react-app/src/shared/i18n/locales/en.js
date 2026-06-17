@@ -247,6 +247,8 @@ export const en = {
         creating: 'Creating…',
         cancel: 'Cancel',
         validation: 'Please enter project name and key.',
+        errorDuplicateKey: 'This project key already exists, please choose another one!',
+        errorGeneric: 'An error occurred while creating the project!',
       },
       edit: {
         promptName: 'Enter new name for the project:',
@@ -496,6 +498,22 @@ export const en = {
 
       haveAccount: 'Already have an account?',
       signin: 'Sign In',
+    },
+
+    profile: {
+      title: 'Personal Profile',
+      subtitle: 'Update your personal information',
+      displayName: 'Display Name',
+      avatarUrl: 'Avatar URL',
+      updateSuccess: 'Profile updated successfully!',
+      changePassword: 'Change Password',
+      oldPassword: 'Old Password',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password',
+      updatePasswordBtn: 'Update Password',
+      passwordRequired: 'Please fill in all password fields!',
+      passwordMismatch: 'New passwords do not match!',
+      passwordSuccess: 'Password changed successfully!'
     },
   },
 }

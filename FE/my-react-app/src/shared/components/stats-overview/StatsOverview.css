@@ -133,8 +133,10 @@
 }
 
 .variant-highlight .card-label,
-.variant-highlight .card-value {
-  color: #ffffff;
+.variant-highlight .card-value,
+.variant-highlight p,
+.variant-highlight span {
+  color: #ffffff !important;
 }
 
 .card-decor {

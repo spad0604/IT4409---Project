@@ -24,3 +24,8 @@ export function searchUsers({ search, page, perPage } = {}) {
   const qs = params.toString()
   return httpClient.get(`/api/users${qs ? `?${qs}` : ''}`)
 }
+
+export const changePassword = async (payload) => {
+  const response = await httpClient.post('/api/auth/change-password', payload);
+  return response?.data;
+};
