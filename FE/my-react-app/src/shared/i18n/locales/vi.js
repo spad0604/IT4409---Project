@@ -499,5 +499,21 @@ export const vi = {
       },
     },
 
+    profile: {
+      title: 'Hồ sơ cá nhân',
+      subtitle: 'Cập nhật thông tin cá nhân của bạn',
+      displayName: 'Tên hiển thị',
+      avatarUrl: 'Đường dẫn Avatar',
+      updateSuccess: 'Cập nhật thông tin thành công!',
+      changePassword: 'Đổi mật khẩu',
+      oldPassword: 'Mật khẩu cũ',
+      newPassword: 'Mật khẩu mới',
+      confirmPassword: 'Xác nhận mật khẩu',
+      updatePasswordBtn: 'Cập nhật mật khẩu',
+      passwordRequired: 'Vui lòng nhập đầy đủ thông tin mật khẩu!',
+      passwordMismatch: 'Mật khẩu mới không khớp!',
+      passwordSuccess: 'Đổi mật khẩu thành công!'
+    },
+
   },
 };

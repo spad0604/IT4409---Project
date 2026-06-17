@@ -499,5 +499,21 @@ export const en = {
       haveAccount: 'Already have an account?',
       signin: 'Sign In',
     },
+
+    profile: {
+      title: 'Personal Profile',
+      subtitle: 'Update your personal information',
+      displayName: 'Display Name',
+      avatarUrl: 'Avatar URL',
+      updateSuccess: 'Profile updated successfully!',
+      changePassword: 'Change Password',
+      oldPassword: 'Old Password',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password',
+      updatePasswordBtn: 'Update Password',
+      passwordRequired: 'Please fill in all password fields!',
+      passwordMismatch: 'New passwords do not match!',
+      passwordSuccess: 'Password changed successfully!'
+    },
   },
 }
