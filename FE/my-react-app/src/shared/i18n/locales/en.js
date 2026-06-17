@@ -223,6 +223,8 @@ export const en = {
         createAccount: 'Create an account',
         mockNote: 'Use your backend account credentials to sign in.',
         focusTip: 'Maintain a distraction-free environment by toggling Focus Mode in your project dashboard.',
+        invalidCredentials: 'Invalid email or password.',
+        loginFailed: 'Login failed. Please try again.',
       },
     },
 

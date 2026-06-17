@@ -106,8 +106,14 @@ export default function Login() {
             await signIn({ email, password })
             navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
-            const apiMessage = err?.message
-            setError(apiMessage || t('auth.loginFailed'))
+            const statusCode = err?.response?.status;
+            const backendMessage = err?.response?.data?.message || err?.message || '';
+
+            if (statusCode === 401 || backendMessage.toLowerCase().includes('unauthorized')) {
+                setError(t('auth.login.invalidCredentials', { defaultValue: 'Email hoặc mật khẩu không chính xác.' }));
+            } else {
+                setError(apiMessage || t('auth.login.loginFailed', { defaultValue: 'Đăng nhập thất bại. Vui lòng thử lại.' }));
+            }
         } finally {
             setSubmitting(false)
         }

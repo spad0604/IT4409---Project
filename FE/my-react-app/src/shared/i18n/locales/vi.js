@@ -282,6 +282,8 @@ export const vi = {
         createAccount: 'Tạo tài khoản mới',
         mockNote: 'Sử dụng tài khoản backend của bạn để đăng nhập.',
         focusTip: 'Giữ môi trường làm việc yên tĩnh bằng cách bật Focus Mode trong bảng điều khiển.',
+        invalidCredentials: 'Email hoặc mật khẩu không chính xác.',
+        loginFailed: 'Đăng nhập thất bại. Vui lòng thử lại.',
       },
     },
 
