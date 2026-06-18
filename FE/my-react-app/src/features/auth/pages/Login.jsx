@@ -48,7 +48,7 @@ export default function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [keepSignedIn, setKeepSignedIn] = useState(true)
+    const [keepSignedIn, setKeepSignedIn] = useState(false)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [oauthSubmitting, setOauthSubmitting] = useState('')
@@ -103,11 +103,17 @@ export default function Login() {
         setSubmitting(true)
 
         try {
-            await signIn({ email, password })
+            await signIn({ email, password, keepSignedIn })
             navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
-            const apiMessage = err?.message
-            setError(apiMessage || t('auth.loginFailed'))
+            const statusCode = err?.response?.status;
+            const backendMessage = err?.response?.data?.message || err?.message || '';
+
+            if (statusCode === 401 || backendMessage.toLowerCase().includes('unauthorized')) {
+                setError(t('auth.login.invalidCredentials', { defaultValue: 'Email hoặc mật khẩu không chính xác.' }));
+            } else {
+                setError(apiMessage || t('auth.login.loginFailed', { defaultValue: 'Đăng nhập thất bại. Vui lòng thử lại.' }));
+            }
         } finally {
             setSubmitting(false)
         }

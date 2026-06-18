@@ -5,18 +5,25 @@ import { getToken } from '../storage/token'
  * Backend envelope:
  * { status: number, message: string, data: any }
  */
+
+let refreshHandler = null;
+
+export function setRefreshHandler(handler) {
+  refreshHandler = handler;
+}
+
 function isEnvelope(payload) {
   return Boolean(
     payload
-      && typeof payload === 'object'
-      && !Array.isArray(payload)
-      && 'status' in payload
-      && 'message' in payload
-      && 'data' in payload,
+    && typeof payload === 'object'
+    && !Array.isArray(payload)
+    && 'status' in payload
+    && 'message' in payload
+    && 'data' in payload,
   )
 }
 
-async function request(path, { method = 'GET', body, headers } = {}) {
+async function request(path, { method = 'GET', body, headers, _isRetry = false } = {}) {
   const url = `${env.apiBaseUrl}${path}`
 
   const token = getToken()
@@ -30,6 +37,13 @@ async function request(path, { method = 'GET', body, headers } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
+
+  if (res.status === 401 && !_isRetry && refreshHandler) {
+    const newToken = await refreshHandler();
+    if (newToken) {
+      return request(path, { method, body, headers, _isRetry: true });
+    }
+  }
 
   let payload = null
   try {

@@ -3,8 +3,11 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"it4409/internal/domain"
 	"it4409/internal/pkg/jwtutil"
@@ -35,6 +38,17 @@ func (m JWTAuth) Middleware(next http.Handler) http.Handler {
 
 		claims, err := m.JWT.Parse(tokenString)
 		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) && strings.HasSuffix(r.URL.Path, "/auth/refresh") {
+				var expiredClaims jwtutil.Claims
+				_, _ = jwt.ParseWithClaims(tokenString, &expiredClaims, func(token *jwt.Token) (any, error) {
+					return m.JWT.Secret, nil
+				})
+
+				ctx := context.WithValue(r.Context(), ctxKeyUserID{}, expiredClaims.Subject)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
 			writeJSONError(w, http.StatusUnauthorized, domain.ErrUnauthorized.Error())
 			return
 		}
