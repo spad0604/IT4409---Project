@@ -48,7 +48,7 @@ export default function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [keepSignedIn, setKeepSignedIn] = useState(true)
+    const [keepSignedIn, setKeepSignedIn] = useState(false)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [oauthSubmitting, setOauthSubmitting] = useState('')
@@ -103,7 +103,7 @@ export default function Login() {
         setSubmitting(true)
 
         try {
-            await signIn({ email, password })
+            await signIn({ email, password, keepSignedIn })
             navigate('/home/dashboard', { replace: true, state: { keepSignedIn } })
         } catch (err) {
             const statusCode = err?.response?.status;

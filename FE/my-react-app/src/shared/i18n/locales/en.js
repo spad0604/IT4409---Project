@@ -216,7 +216,7 @@ export const en = {
         forgotPassword: 'Forgot password?',
         showPassword: 'Show password',
         hidePassword: 'Hide password',
-        keepSignedIn: 'Keep me signed in for 30 days',
+        keepSignedIn: 'Keep me signed in for 7 days',
         signingIn: 'Signing in…',
         signIn: 'Sign In to Workspace',
         registerPrompt: 'New to Ledger Project?',

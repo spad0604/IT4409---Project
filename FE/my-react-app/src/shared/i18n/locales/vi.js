@@ -275,7 +275,7 @@ export const vi = {
         forgotPassword: 'Quên mật khẩu?',
         showPassword: 'Hiện',
         hidePassword: 'Ẩn',
-        keepSignedIn: 'Duy trì đăng nhập trong 30 ngày',
+        keepSignedIn: 'Duy trì đăng nhập trong 7 ngày',
         signingIn: 'Đang đăng nhập...',
         signIn: 'Đăng nhập vào Workspace',
         registerPrompt: 'Lần đầu đến với Ledger Project?',
