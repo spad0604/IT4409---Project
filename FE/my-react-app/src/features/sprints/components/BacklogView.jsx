@@ -146,7 +146,7 @@ export default function BacklogView({
         <section className="backlog-group">
           <header className="panel-head">
             <div>
-              <h2>{t('backlog.title')}</h2>
+              <h2>{t('backlog.unassignedTitle', { defaultValue: 'Vấn đề chưa phân công (Unassigned Issues)' })}</h2>
               <p>{t('backlog.subtitle', { defaultValue: 'Issues not assigned to a sprint' })}</p>
             </div>
           </header>
