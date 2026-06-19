@@ -307,6 +307,7 @@ export const en = {
 
     backlog: {
       title: 'Backlog',
+      subtitle: 'Issues not assigned to a sprint',
       empty: 'No issues found',
       emptyHint: 'Try changing search text or create an issue.',
     },

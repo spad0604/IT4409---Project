@@ -365,6 +365,7 @@ export const vi = {
 
     backlog: {
       title: 'Danh sách chờ (Backlog)',
+      subtitle: 'Các vấn đề chưa được phân công vào sprint',
       empty: 'Không tìm thấy vấn đề nào',
       emptyHint: 'Thử thay đổi từ khóa tìm kiếm hoặc tạo vấn đề mới.',
     },
