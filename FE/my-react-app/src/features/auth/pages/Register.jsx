@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import heroImage from '../../../assets/hero.png'
 import './Auth.css'
 
-import { register } from '../api/authApi'
+import { useAuth } from '../model/AuthContext'
 
 function GoogleIcon() {
     return (
@@ -29,6 +29,7 @@ function GithubIcon() {
 export default function Register() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const { signUp } = useAuth()
 
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -45,8 +46,8 @@ export default function Register() {
         setError('')
         setSubmitting(true)
         try {
-            await register({ name, email, password })
-            navigate('/login')
+            await signUp({ name, email, password })
+            navigate('/home/dashboard')
         } catch (err) {
             setError(err?.message || 'Đăng ký thất bại')
         } finally {
