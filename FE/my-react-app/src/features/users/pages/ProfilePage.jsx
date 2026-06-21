@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import * as userApi from '../api/userApi'
+import { env } from '../../../shared/config/env'
+import { useAuth } from '../../auth/model/AuthContext'
 
 // --- Component Icon vẽ bằng SVG cho nhẹ, không cần cài thư viện ngoài ---
 const EyeIcon = () => (
@@ -11,9 +12,9 @@ const EyeOffIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
 )
 
-export default function ProfilePage() {
+export default function ProfilePage({ onClose }) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const { refreshMe } = useAuth()
 
   // --- States cho Profile ---
   const [profile, setProfile] = useState(null)
@@ -55,6 +56,14 @@ export default function ProfilePage() {
       .finally(() => setLoading(false))
   }, [t])
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const handleSaveProfile = async (event) => {
     event.preventDefault()
     setSaving(true)
@@ -63,6 +72,7 @@ export default function ProfilePage() {
     try {
       const data = await userApi.updateMyProfile({ name, avatar_url: avatarUrl })
       setProfile(data)
+      await refreshMe()
       setSuccess(t('profile.updateSuccess', { defaultValue: 'Cập nhật thông tin thành công!' }))
     } catch (err) {
       setError(err?.message || t('common.actionFailed'))
@@ -70,6 +80,27 @@ export default function ProfilePage() {
       setSaving(false)
     }
   }
+
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setError('')
+    setSaving(true)
+    try {
+      const data = await userApi.uploadMyAvatar(file)
+      setProfile(data)
+      setAvatarUrl(String(data?.avatar_url || ''))
+      await refreshMe()
+      setSuccess(t('profile.avatarSuccess'))
+    } catch (err) {
+      setError(err?.message || t('common.actionFailed'))
+    } finally {
+      setSaving(false)
+      event.target.value = ''
+    }
+  }
+
+  const displayAvatar = avatarUrl.startsWith('/') ? `${env.apiBaseUrl}${avatarUrl}` : avatarUrl
 
   const handleChangePassword = async (event) => {
     event.preventDefault()
@@ -118,16 +149,15 @@ export default function ProfilePage() {
   )
 
   return (
-    <main className="home-page">
-      <section className="home-frame">
-        <section className="panel profile-panel">
+    <div className="profile-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="panel profile-panel profile-modal" role="dialog" aria-modal="true" aria-label={t('profile.title')} onMouseDown={(event) => event.stopPropagation()}>
           <header className="panel-head">
             <div>
               <h2>{t('profile.title', { defaultValue: 'Hồ sơ cá nhân' })}</h2>
               <p>{t('profile.subtitle', { defaultValue: 'Cập nhật thông tin cá nhân của bạn' })}</p>
             </div>
-            <button type="button" className="filter-btn" onClick={() => navigate('/home')}>
-              {t('common.back', { defaultValue: 'Quay lại' })}
+            <button type="button" className="filter-btn" onClick={onClose}>
+              {t('common.close')}
             </button>
           </header>
 
@@ -137,7 +167,7 @@ export default function ProfilePage() {
           <form onSubmit={handleSaveProfile} style={{ display: 'grid', gap: '1rem' }}>
             <div className="profile-hero">
               <div className="profile-avatar-preview">
-                {avatarUrl ? <img src={avatarUrl} alt={name || 'avatar'} /> : <span>{String(name || profile?.email || '?').slice(0, 2).toUpperCase()}</span>}
+                {displayAvatar ? <img src={displayAvatar} alt={name || 'avatar'} /> : <span>{String(name || profile?.email || '?').slice(0, 2).toUpperCase()}</span>}
               </div>
               <div>
                 <h3 style={{ margin: 0 }}>{profile?.name || t('common.unknown')}</h3>
@@ -148,6 +178,11 @@ export default function ProfilePage() {
             <label className="inline-field">
               <span className="inline-label">{t('profile.displayName', { defaultValue: 'Tên hiển thị' })}</span>
               <input className="inline-input" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+
+            <label className="filter-btn" style={{ justifySelf: 'start', cursor: saving ? 'wait' : 'pointer' }}>
+              {t('profile.uploadAvatar')}
+              <input type="file" accept="image/*" hidden onChange={handleAvatarUpload} disabled={saving} />
             </label>
 
             <label className="inline-field">
@@ -225,8 +260,7 @@ export default function ProfilePage() {
             </div>
           </form>
 
-        </section>
       </section>
-    </main>
+    </div>
   )
 }

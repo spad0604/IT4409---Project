@@ -13,4 +13,6 @@ type UserRepository interface {
 	Update(ctx context.Context, user domain.User) (domain.User, error)
 	UpdatePassword(ctx context.Context, id string, newHash string) error
 	Search(ctx context.Context, keyword string, limit, offset int) ([]domain.User, error)
+	GetPreferences(ctx context.Context, userID string) (domain.UserPreferences, error)
+	UpdatePreferences(ctx context.Context, userID string, preferences domain.UserPreferences) (domain.UserPreferences, error)
 }

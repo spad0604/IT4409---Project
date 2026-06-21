@@ -22,6 +22,7 @@ import * as activityApi from './features/activity/api/activityApi'
 import * as labelApi from './features/labels/api/labelApi'
 import BacklogView from './features/sprints/components/BacklogView'
 import FilterBar from './shared/components/FilterBar'
+import UserAvatar from './shared/components/UserAvatar'
 import GlobalSearch from './shared/components/GlobalSearch'
 import { WsClient } from './shared/ws/wsClient'
 import {
@@ -111,6 +112,11 @@ function Kanban() {
   const location = useLocation()
   const { user, refreshMe, serverSignOut } = useAuth()
   const [topbarPopover, setTopbarPopover] = useState('')
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [preferences, setPreferences] = useState({ language: 'vi', compact_mode: false, email_notifications: true })
+  const [preferencesLoading, setPreferencesLoading] = useState(false)
+  const [preferencesSaving, setPreferencesSaving] = useState(false)
+  const [preferencesMessage, setPreferencesMessage] = useState('')
   const popoverRef = useRef(null)
   const [projectLabels, setProjectLabels] = useState([])
   const [issueFilters, setIssueFilters] = useState({
@@ -125,7 +131,9 @@ function Kanban() {
   })
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [showShortcutHelp, setShowShortcutHelp] = useState(false)
-  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [projectActionModal, setProjectActionModal] = useState(null)
+  const [projectActionSaving, setProjectActionSaving] = useState(false)
+  const [projectActionError, setProjectActionError] = useState('')
   const [editingSprint, setEditingSprint] = useState(null)
   const {
     activeTopTab,
@@ -284,6 +292,7 @@ function Kanban() {
       return {
         id: a?.id || `${a?.userId}-${a?.createdAt}`,
         avatar: initials || '??',
+        avatarUser: actor,
         actor: name,
         action: action || t('overview.activity.updated', { defaultValue: 'updated' }),
         time,
@@ -650,45 +659,47 @@ function Kanban() {
     }
   }, [activeProjectId, refetchSprints, refetchBacklog])
 
-  const handleEditProject = async () => {
-    const promptText = t('projects.edit.promptName', { defaultValue: 'Nhập tên mới cho dự án:' });
-    const newName = window.prompt(promptText, activeProject?.name);
+  const closeProjectActionModal = () => {
+    if (projectActionSaving) return
+    setProjectActionModal(null)
+    setProjectActionError('')
+  }
 
-    if (!newName || newName === activeProject?.name) return;
+  const handleEditProject = () => {
+    if (!activeProjectId || !activeProject) return
+    setProjectActionError('')
+    setProjectActionModal({ mode: 'edit', name: activeProject.name || '', description: activeProject.description || '' })
+  }
 
+  const handleDeleteProject = () => {
+    if (!activeProjectId || !activeProject) return
+    setProjectActionError('')
+    setProjectActionModal({ mode: 'delete' })
+  }
+
+  const submitProjectAction = async (event) => {
+    event.preventDefault()
+    if (!projectActionModal || !activeProjectId) return
+    setProjectActionSaving(true)
+    setProjectActionError('')
     try {
-      await projectApi.updateProject(activeProjectId, { name: newName });
-
-      alert(t('projects.edit.success', { defaultValue: 'Cập nhật dự án thành công!' }));
-
-      if (typeof refetchProjects === 'function') {
-        refetchProjects().catch(err => console.error("Lỗi khi load lại list:", err));
+      if (projectActionModal.mode === 'edit') {
+        const name = projectActionModal.name.trim()
+        if (!name) { setProjectActionError(t('projects.create.validation')); return }
+        await projectApi.updateProject(activeProjectId, { name, description: projectActionModal.description.trim() })
+        await refetchProjects()
+      } else {
+        await projectApi.deleteProject(activeProjectId)
+        setActiveProjectId('')
+        await refetchProjects()
       }
-
+      setProjectActionModal(null)
     } catch (error) {
-      console.error("Lỗi API Update:", error);
-      alert(t('projects.edit.error', { defaultValue: 'Lỗi khi cập nhật dự án!' }));
+      setProjectActionError(error?.message || t(projectActionModal.mode === 'edit' ? 'projects.edit.error' : 'projects.delete.error'))
+    } finally {
+      setProjectActionSaving(false)
     }
-  };
-
-  const handleDeleteProject = async () => {
-    const confirmText = t('projects.delete.confirm', {
-      defaultValue: 'Bạn có chắc chắn muốn xóa toàn bộ dự án này không? Thao tác này không thể hoàn tác!'
-    });
-    const confirm = window.confirm(confirmText);
-
-    if (!confirm) return;
-
-    try {
-      await projectApi.deleteProject(activeProjectId);
-      alert(t('projects.delete.success', { defaultValue: 'Đã xóa dự án!' }));
-      setActiveProjectId('');
-      refetchProjects();
-    } catch (error) {
-      console.error(error);
-      alert(t('projects.delete.error', { defaultValue: 'Lỗi khi xóa dự án. Có thể dự án đang chứa dữ liệu ràng buộc!' }));
-    }
-  };
+  }
 
   // ─── Activity Handlers ─────────────────────────────────────────────────────
 
@@ -727,6 +738,37 @@ function Kanban() {
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [topbarPopover])
+
+  useEffect(() => {
+    if (topbarPopover !== 'settings') return
+    let cancelled = false
+    setPreferencesLoading(true)
+    setPreferencesMessage('')
+    userApi.getMyPreferences()
+      .then((data) => {
+        if (!cancelled) setPreferences((current) => ({ ...current, ...data }))
+      })
+      .catch(() => {
+        if (!cancelled) setPreferencesMessage(t('settings.loadError'))
+      })
+      .finally(() => { if (!cancelled) setPreferencesLoading(false) })
+    return () => { cancelled = true }
+  }, [topbarPopover, t])
+
+  const savePreferences = async () => {
+    setPreferencesSaving(true)
+    setPreferencesMessage('')
+    try {
+      await userApi.updateMyPreferences(preferences)
+      await i18n.changeLanguage(preferences.language)
+      document.documentElement.dataset.density = preferences.compact_mode ? 'compact' : 'comfortable'
+      setPreferencesMessage(t('settings.saved'))
+    } catch (err) {
+      setPreferencesMessage(err?.message || t('settings.saveError'))
+    } finally {
+      setPreferencesSaving(false)
+    }
+  }
 
   useEffect(() => {
     refetchProjects()
@@ -853,10 +895,6 @@ function Kanban() {
       wsClientRef.current = null
     }
   }, [user?.id, activeProjectId, refetchIssues, refetchProjectActivity, refetchSprints, refetchBacklog])
-
-  const handleLanguageChange = (lang) => {
-    i18n.changeLanguage(lang)
-  }
 
   const handleFilterChange = useCallback((nextFilters) => {
     setIssueFilters(nextFilters)
@@ -1405,6 +1443,32 @@ function Kanban() {
     t,
   ])
 
+  const projectActionDialog = useMemo(() => {
+    if (!projectActionModal) return null
+    const isDelete = projectActionModal.mode === 'delete'
+    return createPortal(
+      <div className="modal-overlay" role="presentation" onMouseDown={closeProjectActionModal}>
+        <div className="modal project-action-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+          <header className="modal-head">
+            <div>
+              <h2>{isDelete ? t('projects.delete.title') : t('projects.edit.title')}</h2>
+              <p>{isDelete ? t('projects.delete.confirm') : t('projects.edit.subtitle')}</p>
+            </div>
+            <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={closeProjectActionModal}><FiX /></button>
+          </header>
+          <form className="modal-body" onSubmit={submitProjectAction}>
+            {!isDelete ? <div className="modal-grid">
+              <label className="inline-field modal-span"><span className="inline-label">{t('projects.create.name')}</span><input className="inline-input" value={projectActionModal.name} onChange={(e) => setProjectActionModal((current) => ({ ...current, name: e.target.value }))} autoFocus /></label>
+              <label className="inline-field modal-span"><span className="inline-label">{t('projects.create.description')}</span><textarea className="modal-textarea" rows={4} value={projectActionModal.description} onChange={(e) => setProjectActionModal((current) => ({ ...current, description: e.target.value }))} /></label>
+            </div> : <p className="project-delete-warning">{t('projects.delete.warning', { project: activeProject?.name || '' })}</p>}
+            {projectActionError ? <p className="inline-error">{projectActionError}</p> : null}
+            <footer className="modal-actions"><button type="button" className="filter-btn" onClick={closeProjectActionModal}>{t('common.cancel')}</button><button type="submit" className={isDelete ? 'danger-btn' : 'create-issue-btn'} disabled={projectActionSaving}>{projectActionSaving ? t('common.saving') : isDelete ? t('projects.delete.confirmButton') : t('common.save')}</button></footer>
+          </form>
+        </div>
+      </div>, document.body,
+    )
+  }, [activeProject?.name, closeProjectActionModal, projectActionError, projectActionModal, projectActionSaving, submitProjectAction, t])
+
   const createSprintModal = useMemo(() => {
     if (!showCreateSprint) return null
     return createPortal(
@@ -1809,12 +1873,11 @@ function Kanban() {
             </button>
             <button
               type="button"
-              className={`profile-pill ${topbarPopover === 'profile' ? 'is-active' : ''}`}
+              className={`profile-pill ${showProfileModal ? 'is-active' : ''}`}
               aria-label={t('boardShell.profile', { defaultValue: 'Profile' })}
-              data-popover-toggle="true"
-              onClick={() => setTopbarPopover((prev) => (prev === 'profile' ? '' : 'profile'))}
+              onClick={() => setShowProfileModal(true)}
             >
-              {profileInitials || '??'}
+              <UserAvatar user={user} initials={profileInitials || '??'} />
             </button>
 
             {topbarPopover ? (
@@ -1834,7 +1897,7 @@ function Kanban() {
                       ) : null}
                       {activityFeed.map((it) => (
                         <div key={it.id} className="topbar-popover-item">
-                          <span className="activity-avatar">{it.avatar}</span>
+                          <UserAvatar className="activity-avatar" user={it.avatarUser} initials={it.avatar} />
                           <div>
                             <p><strong>{it.actor}</strong> {it.action}</p>
                             <span>{it.time}</span>
@@ -1848,32 +1911,29 @@ function Kanban() {
                 {topbarPopover === 'settings' ? (
                   <>
                     <p className="topbar-popover-title">{t('boardShell.settings')}</p>
-                    <p className="topbar-popover-muted">{t('common.comingSoon', { defaultValue: 'Coming soon' })}</p>
+                    <p className="topbar-popover-muted">{t('settings.shortDescription')}</p>
+                    {preferencesLoading ? <p className="topbar-popover-muted">{t('common.loading')}</p> : (
+                      <div className="quick-settings">
+                        <label><span>{t('settings.language')}</span><select value={preferences.language} onChange={(e) => setPreferences((current) => ({ ...current, language: e.target.value }))}><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+                        <label><span>{t('settings.compactMode')}</span><input type="checkbox" checked={preferences.compact_mode} onChange={(e) => setPreferences((current) => ({ ...current, compact_mode: e.target.checked }))} /></label>
+                        <label><span>{t('settings.emailNotifications')}</span><input type="checkbox" checked={preferences.email_notifications} onChange={(e) => setPreferences((current) => ({ ...current, email_notifications: e.target.checked }))} /></label>
+                        {preferencesMessage ? <p className="quick-settings-message">{preferencesMessage}</p> : null}
+                        <button type="button" className="filter-btn" disabled={preferencesSaving} onClick={savePreferences}>{preferencesSaving ? t('common.saving') : t('common.save')}</button>
+                      </div>
+                    )}
                   </>
                 ) : null}
 
-                {topbarPopover === 'profile' ? (
-                  <>
-                    <p className="topbar-popover-title">{user?.name || user?.email || t('common.unknown')}</p>
-                    <p className="topbar-popover-muted">{user?.email || ''}</p>
-                    <div className="topbar-popover-actions">
-                      <button type="button" className="filter-btn" onClick={() => navigate('/profile')}>
-                        {t('boardShell.profile', { defaultValue: 'Profile' })}
-                      </button>
-                      <button type="button" className="filter-btn" onClick={serverSignOut}>
-                        <FiLogOut /> {t('auth.signOut')}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
               </div>
             ) : null}
           </div>
         </header>
 
         {createProjectModal}
+        {projectActionDialog}
         {createSprintModal}
         {createIssueModal}
+        {showProfileModal ? <ProfilePage onClose={() => setShowProfileModal(false)} /> : null}
         <GlobalSearch
           t={t}
           open={showGlobalSearch}
@@ -2127,22 +2187,6 @@ function Kanban() {
         </div>
       </section>
 
-      <div className="language-switch floating-lang" role="group" aria-label={t('nav.language')}>
-        <button
-          type="button"
-          className={`lang-button ${activeLang === 'vi' ? 'is-active' : ''}`}
-          onClick={() => handleLanguageChange('vi')}
-        >
-          VI
-        </button>
-        <button
-          type="button"
-          className={`lang-button ${activeLang === 'en' ? 'is-active' : ''}`}
-          onClick={() => handleLanguageChange('en')}
-        >
-          EN
-        </button>
-      </div>
     </main>
   )
 
@@ -2208,14 +2252,6 @@ function App() {
           )}
         />
 
-        <Route
-          path="/profile"
-          element={(
-            <RequireAuth>
-              <ProfilePage />
-            </RequireAuth>
-          )}
-        />
 
         <Route path="*" element={<AppFallback />} />
       </Routes>

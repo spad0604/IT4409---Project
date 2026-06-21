@@ -1,4 +1,5 @@
 import { FiEdit2, FiTrash2 } from 'react-icons/fi'
+import UserAvatar from '../../../shared/components/UserAvatar'
 import { StatsOverview } from '../../../shared/components/stats-overview/StatsOverview.jsx'
 import { formatShortDate, priorityDisplay, toInitials } from '../kanbanUtils'
 import { RecentProjects } from '../../../shared/components/recent-projects/RecentProjects.jsx'
@@ -91,7 +92,7 @@ export default function OverviewPanel({
             ) : null}
             {activityFeed.map((item) => (
               <article key={item.id} className="activity-item">
-                <span className="activity-avatar">{item.avatar}</span>
+                <UserAvatar className="activity-avatar" user={item.avatarUser} initials={item.avatar} />
                 <div>
                   <p>
                     <strong>{item.actor}</strong> {item.action}

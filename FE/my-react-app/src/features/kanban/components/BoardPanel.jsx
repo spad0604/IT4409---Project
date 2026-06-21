@@ -1,5 +1,6 @@
 import { FiChevronRight, FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { formatShortDate, priorityDisplay, safeLower, toInitials } from '../kanbanUtils'
+import UserAvatar from '../../../shared/components/UserAvatar'
 
 const BOARD_STAGE_PROGRESS = {
   todo: 25,
@@ -178,7 +179,7 @@ export default function BoardPanel({
 
                     <footer className="board-card-foot">
                       <span>{due ? `${t('common.due')}: ${due}` : t('common.noDueDateShort')}</span>
-                      <span className="card-avatar">{assigneeInitials || '??'}</span>
+                      <UserAvatar className="card-avatar" user={assignee} initials={assigneeInitials || '??'} />
                     </footer>
                   </article>
                 )

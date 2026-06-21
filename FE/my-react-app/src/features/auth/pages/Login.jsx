@@ -112,7 +112,7 @@ export default function Login() {
             if (statusCode === 401 || backendMessage.toLowerCase().includes('unauthorized')) {
                 setError(t('auth.login.invalidCredentials', { defaultValue: 'Email hoặc mật khẩu không chính xác.' }));
             } else {
-                setError(apiMessage || t('auth.login.loginFailed', { defaultValue: 'Đăng nhập thất bại. Vui lòng thử lại.' }));
+                setError(backendMessage || t('auth.login.loginFailed', { defaultValue: 'Đăng nhập thất bại. Vui lòng thử lại.' }));
             }
         } finally {
             setSubmitting(false)

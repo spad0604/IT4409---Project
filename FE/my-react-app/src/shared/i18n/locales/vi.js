@@ -1,7 +1,7 @@
 export const vi = {
   translation: {
     boardShell: {
-      screenLabel: 'Bảng công việc (Kanban Board)',
+      screenLabel: 'Bảng công việc',
       workspaceName: 'Ledger Project',
       topNavLabel: 'Điều hướng chính',
       topTabs: [
@@ -96,7 +96,7 @@ export const vi = {
     quickAdd: {
       title: 'Thanh thêm nhanh',
       subtitle: 'Lớp giao diện nổi để cập nhật kế hoạch ngay tại ngữ cảnh hiện tại.',
-      hint: 'Chế độ kính mờ (Glass mode)',
+      hint: 'Chế độ kính mờ',
       placeholder: 'Nhập tên công việc ưu tiên...',
       button: 'Thêm vào sprint',
     },
@@ -104,7 +104,7 @@ export const vi = {
       kicker: 'Vùng tập trung',
       title: 'Tín hiệu cần chú ý',
       items: [
-        { title: 'Cổng xác thực Backend', meta: '2 khối cần kiểm duyệt trong 45 phút tới' },
+        { title: 'Cổng xác thực máy chủ', meta: '2 hạng mục cần kiểm tra trong 45 phút tới' },
         { title: 'Cột mốc phát hành R2', meta: 'Cần xác nhận QA trước 16:30' },
         { title: 'Theo dõi phụ thuộc', meta: '3 gói cần cập nhật bảo mật' },
       ],
@@ -172,10 +172,10 @@ export const vi = {
       projectName: "Ledger Project",
       titleLine1: "Kiến trúc cho",
       titleLine2: "sự tập trung sâu",
-      description: "Một workspace được thiết kế tinh chỉnh để hỗ trợ các dự án tham vọng.",
+      description: "Không gian làm việc gọn gàng để đồng hành cùng những dự án lớn.",
       socialProof: "Hơn 12k người đã tham gia",
       welcome: "Chào mừng trở lại",
-      subtitle: "Nhập thông tin để truy cập workspace",
+      subtitle: "Nhập thông tin để truy cập không gian làm việc",
       google: "Tiếp tục với Google",
       github: "Tiếp tục với GitHub",
       or: "HOẶC ĐĂNG NHẬP BẰNG EMAIL",
@@ -197,7 +197,7 @@ export const vi = {
     register: {
       projectName: 'Ledger Project',
       title: 'Tham gia thế hệ quản lý dự án kiến trúc mới',
-      description: 'Trải nghiệm workspace được thiết kế tối ưu cho chiều sâu và sự tập trung.',
+      description: 'Một không gian làm việc rõ ràng để cả nhóm tập trung vào điều quan trọng.',
       socialProof: 'Hơn 2,000 team đã tham gia',
 
       create: 'Tạo tài khoản',
@@ -237,6 +237,8 @@ export const vi = {
       back: 'Quay lại',
       filter: 'Lọc',
       filters: 'Bộ lọc',
+      search: 'Tìm kiếm',
+      all: 'Tất cả',
       viewAll: 'Xem tất cả',
       open: 'Mở',
       due: 'Hạn',
@@ -253,6 +255,8 @@ export const vi = {
       saving: 'Đang lưu...',
       unassigned: 'Chưa phân công',
       error: 'Có lỗi xảy ra',
+      name: 'Tên',
+      color: 'Màu sắc',
     },
 
     auth: {
@@ -260,16 +264,16 @@ export const vi = {
       loginFailed: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.',
       login: {
         brand: 'Ledger Project',
-        headlineLine1: 'Kiến trúc cho sự',
-        headlineLine2: 'Tập trung sâu.',
-        description: 'Không gian làm việc được thiết kế chính xác để bạn tập trung cho những dự án tham vọng nhất.',
-        socialProof: 'Tham gia cùng hơn 12.000 kiến trúc sư phần mềm',
+        headlineLine1: 'Làm việc rõ ràng.',
+        headlineLine2: 'Đi xa hơn mỗi ngày.',
+        description: 'Nơi cả nhóm theo dõi việc cần làm, trao đổi nhanh và đưa dự án tiến về phía trước.',
+        socialProof: 'Được tin dùng bởi hơn 12.000 người làm sản phẩm',
         welcomeBack: 'Chào mừng trở lại',
         welcomeSub: 'Nhập thông tin để truy cập vào không gian làm việc.',
         continueGoogle: 'Tiếp tục với Google',
         continueGithub: 'Tiếp tục với GitHub',
         divider: 'HOẶC ĐĂNG NHẬP BẰNG EMAIL',
-        emailLabel: 'Địa chỉ Email',
+        emailLabel: 'Địa chỉ email',
         emailPlaceholder: 'ten@congty.com',
         passwordLabel: 'Mật khẩu',
         forgotPassword: 'Quên mật khẩu?',
@@ -277,14 +281,26 @@ export const vi = {
         hidePassword: 'Ẩn',
         keepSignedIn: 'Duy trì đăng nhập trong 7 ngày',
         signingIn: 'Đang đăng nhập...',
-        signIn: 'Đăng nhập vào Workspace',
+        signIn: 'Đăng nhập',
         registerPrompt: 'Lần đầu đến với Ledger Project?',
         createAccount: 'Tạo tài khoản mới',
-        mockNote: 'Sử dụng tài khoản backend của bạn để đăng nhập.',
-        focusTip: 'Giữ môi trường làm việc yên tĩnh bằng cách bật Focus Mode trong bảng điều khiển.',
+        mockNote: 'Dùng tài khoản bạn đã đăng ký để đăng nhập.',
+        focusTip: 'Bật chế độ tập trung trên bảng điều khiển để giảm bớt xao nhãng.',
         invalidCredentials: 'Email hoặc mật khẩu không chính xác.',
         loginFailed: 'Đăng nhập thất bại. Vui lòng thử lại.',
       },
+    },
+
+    settings: {
+      title: 'Cài đặt', subtitle: 'Tùy chỉnh trải nghiệm làm việc của bạn.', shortDescription: 'Ngôn ngữ, giao diện và thông báo.', open: 'Mở cài đặt', interface: 'Giao diện', interfaceHint: 'Chọn cách Ledger Project hiển thị cho bạn.', language: 'Ngôn ngữ', compactMode: 'Hiển thị gọn', compactModeHint: 'Giảm khoảng cách giữa các thành phần.', notifications: 'Thông báo', notificationsHint: 'Chọn cách bạn muốn nhận cập nhật.', emailNotifications: 'Nhận thông báo qua email', emailNotificationsHint: 'Nhận email khi có hoạt động quan trọng.', saved: 'Đã lưu cài đặt.', loadError: 'Không thể tải cài đặt.', saveError: 'Không thể lưu cài đặt. Vui lòng thử lại.',
+    },
+
+    shortcuts: {
+      title: 'Phím tắt', subtitle: 'Các thao tác nhanh có sẵn trong ứng dụng.', createIssue: 'Tạo vấn đề', globalSearch: 'Mở tìm kiếm tổng quát', toggleBoard: 'Chuyển bảng/danh sách chờ', help: 'Xem phím tắt', close: 'Đóng cửa sổ hiện tại',
+    },
+
+    search: {
+      title: 'Tìm kiếm tổng quát', subtitle: 'Tìm vấn đề và dự án.', placeholder: 'Tìm vấn đề, dự án...', empty: 'Không tìm thấy kết quả', issues: 'Vấn đề', projects: 'Dự án',
     },
 
     projects: {
@@ -312,11 +328,16 @@ export const vi = {
         errorGeneric: 'Có lỗi xảy ra trong quá trình tạo dự án!',
       },
       edit: {
+        title: 'Chỉnh sửa dự án',
+        subtitle: 'Cập nhật tên và mô tả dự án.',
         promptName: 'Nhập tên mới cho dự án:',
         success: 'Cập nhật dự án thành công!',
         error: 'Lỗi khi cập nhật dự án!',
       },
       delete: {
+        title: 'Xóa dự án',
+        confirmButton: 'Xóa dự án',
+        warning: 'Bạn sắp xóa dự án “{{project}}”. Thao tác này không thể hoàn tác.',
         confirm: 'Bạn có chắc chắn muốn xóa toàn bộ dự án này không? Thao tác này không thể hoàn tác!',
         success: 'Đã xóa dự án!',
         error: 'Lỗi khi xóa dự án. Có thể dự án đang chứa dữ liệu ràng buộc!',
@@ -324,6 +345,14 @@ export const vi = {
       status: {
         active: 'Dự án đang hoạt động',
       },
+    },
+
+    labels: {
+      title: 'Nhãn của dự án', subtitle: 'Tạo và quản lý nhãn cho dự án này.', empty: 'Chưa có nhãn nào', emptyHint: 'Hãy tạo nhãn đầu tiên cho dự án.', create: 'Tạo nhãn', edit: 'Chỉnh sửa nhãn', validationName: 'Vui lòng nhập tên nhãn.', confirmDelete: 'Xóa nhãn này?',
+    },
+
+    archive: {
+      aria: 'Lưu trữ', title: 'Lưu trữ', empty: 'Chưa có mục nào được lưu trữ', emptyHint: 'Các công việc đã hoàn thành sẽ xuất hiện ở đây.',
     },
 
     reports: {
@@ -340,10 +369,12 @@ export const vi = {
         priority: 'Ưu tiên',
         type: 'Loại',
       },
+      tabs: { summary: 'Tổng quan', workload: 'Khối lượng nhóm', progress: 'Tiến độ' },
+      issues: 'Vấn đề', noData: 'Chưa có dữ liệu', byStatus: 'Theo trạng thái', byType: 'Theo loại', byPriority: 'Theo mức ưu tiên', byAssignee: 'Theo người phụ trách', statusBreakdown: 'Trạng thái theo người phụ trách', burnup: 'Biểu đồ khối lượng công việc', burnupHint: 'Số vấn đề tạo mới và hoàn thành theo thời gian', totalCreated: 'Tổng đã tạo', completed: 'Đã hoàn thành', noProgressData: 'Chưa đủ dữ liệu để vẽ biểu đồ', completion: 'Tỷ lệ hoàn thành', issueList: 'Danh sách vấn đề',
     },
 
     overview: {
-      kicker: 'Bảng điều khiển Workspace',
+      kicker: 'Bảng điều khiển không gian làm việc',
       title: 'Tổng quan hệ thống',
       recentProjects: 'Dự án gần đây',
       activity: {
@@ -364,10 +395,11 @@ export const vi = {
     },
 
     backlog: {
-      title: 'Danh sách chờ (Backlog)',
-      subtitle: 'Các vấn đề chưa được phân công vào sprint',
+      title: 'Danh sách chờ',
+      subtitle: 'Các vấn đề chưa được phân công vào đợt làm việc',
       empty: 'Không tìm thấy vấn đề nào',
       emptyHint: 'Thử thay đổi từ khóa tìm kiếm hoặc tạo vấn đề mới.',
+      emptySprint: 'Chưa có vấn đề trong đợt làm việc này', moveHint: 'Chuyển vấn đề từ danh sách chờ vào đây bằng bộ chọn đợt làm việc.', unassignedTitle: 'Vấn đề chưa phân công',
     },
 
     team: {
@@ -466,6 +498,7 @@ export const vi = {
     },
 
     sprints: {
+      title: 'Đợt làm việc', start: 'Bắt đầu đợt làm việc', complete: 'Hoàn thành đợt làm việc', goal: 'Mục tiêu', goalPlaceholder: 'Đợt làm việc này cần đạt điều gì?', range: 'Thời gian', progress: 'Tiến độ',
       create: {
         title: 'Tạo Sprint mới',
         subtitle: 'Lên kế hoạch và tổ chức công việc',
@@ -506,7 +539,9 @@ export const vi = {
       title: 'Hồ sơ cá nhân',
       subtitle: 'Cập nhật thông tin cá nhân của bạn',
       displayName: 'Tên hiển thị',
-      avatarUrl: 'Đường dẫn Avatar',
+      avatarUrl: 'Đường dẫn ảnh đại diện',
+      uploadAvatar: 'Tải ảnh đại diện lên',
+      avatarSuccess: 'Đã cập nhật ảnh đại diện.',
       updateSuccess: 'Cập nhật thông tin thành công!',
       changePassword: 'Đổi mật khẩu',
       oldPassword: 'Mật khẩu cũ',

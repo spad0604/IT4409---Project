@@ -39,6 +39,7 @@ func New(deps Deps) http.Handler {
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORSMiddleware())
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
 
 	// Phục vụ Swagger UI — đọc từ file swagger.yaml tĩnh
 	r.Get("/swagger/swagger.yaml", func(w http.ResponseWriter, r *http.Request) {

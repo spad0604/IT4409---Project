@@ -93,7 +93,7 @@ func main() {
 
 	// ── Handlers ────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authUC)
-	userHandler := handler.NewUserHandler(userUC)
+	userHandler := handler.NewUserHandler(userUC, fs)
 	projectHandler := handler.NewProjectHandler(projectUC)
 	boardHandler := handler.NewBoardHandler(boardUC)
 	labelHandler := handler.NewLabelHandler(labelUC)
