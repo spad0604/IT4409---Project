@@ -252,6 +252,7 @@ function Kanban() {
     setUsersById,
     userFetchInFlight,
   } = useKanbanState()
+  const [wsClient, setWsClient] = useState(null)
 
   const activeLang = useMemo(() => {
     const current = i18n.resolvedLanguage || i18n.language || 'vi'
@@ -856,6 +857,7 @@ function Kanban() {
     if (!user?.id) return
     const ws = new WsClient()
     wsClientRef.current = ws
+    setWsClient(ws)
 
     ws.on('issue_updated', () => {
       // Refetch issues when updated via WebSocket
@@ -893,6 +895,7 @@ function Kanban() {
     return () => {
       ws.disconnect()
       wsClientRef.current = null
+      setWsClient(null)
     }
   }, [user?.id, activeProjectId, refetchIssues, refetchProjectActivity, refetchSprints, refetchBacklog])
 
@@ -940,8 +943,14 @@ function Kanban() {
       return
     }
 
-    const issueMatch = path.match(/^\/home\/issues\/([^/]+)$/)
+    // Support issue details opened from either the global issue route or the
+    // project issue list route.
+    const issueMatch = path.match(/^\/home(?:\/projects)?\/issues\/([^/]+)$/)
     if (issueMatch) {
+      if (path.startsWith('/home/projects/issues/')) {
+        setActiveTopTab('projects')
+        setActiveSideLink('issues')
+      }
       setActiveIssueKey(decodeURIComponent(issueMatch[1]))
       return
     }
@@ -2008,7 +2017,7 @@ function Kanban() {
           </aside>
 
           <section className="dashboard-main">
-            {activeIssueKey ? (
+            {activeIssueKey && !selectedProjectIssueKey ? (
               <IssueDetailsPage
                 issueKey={activeIssueKey}
                 onBack={handleCloseIssueDetails}
@@ -2016,6 +2025,7 @@ function Kanban() {
                 locale={activeLocale}
                 members={members}
                 usersById={usersById}
+                wsClient={wsClient}
               />
             ) : null}
 
@@ -2120,7 +2130,7 @@ function Kanban() {
               />
             ) : null}
 
-            {isBoardView && !activeIssueKey && activeSideLink === 'issues' ? (
+            {isBoardView && activeSideLink === 'issues' ? (
               <IssuesPage
                 t={t}
                 projectName={activeProject?.name || ''}
@@ -2134,6 +2144,7 @@ function Kanban() {
                 locale={activeLocale}
                 members={members}
                 usersById={usersById}
+                wsClient={wsClient}
               />
             ) : null}
 

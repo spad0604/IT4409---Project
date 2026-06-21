@@ -98,7 +98,15 @@ func (uc *CommentUsecase) EditComment(ctx context.Context, userID, commentID, co
 		return nil, fmt.Errorf("%w: only the author can edit this comment", domain.ErrForbidden)
 	}
 
-	return uc.commentRepo.Update(ctx, commentID, content)
+	updated, err := uc.commentRepo.Update(ctx, commentID, content)
+	if err != nil {
+		return nil, err
+	}
+	issue, err := uc.issueRepo.GetByID(ctx, comment.IssueID)
+	if err == nil {
+		uc.publishCommentEvent("comment_updated", issue, updated)
+	}
+	return updated, nil
 }
 
 // DeleteComment xóa bình luận. Tác giả hoặc project admin mới được xóa.
@@ -108,22 +116,23 @@ func (uc *CommentUsecase) DeleteComment(ctx context.Context, userID, commentID s
 		return err
 	}
 
-	// Tác giả luôn được xóa comment của mình
-	if uc.perm.IsOwner(userID, comment.UserID) {
-		return uc.commentRepo.Delete(ctx, commentID)
-	}
-
-	// Nếu không phải tác giả, phải là admin của project chứa issue
 	issue, err := uc.issueRepo.GetByID(ctx, comment.IssueID)
 	if err != nil {
 		return err
 	}
 
-	if err := uc.perm.Check(ctx, issue.ProjectID, userID, "admin"); err != nil {
-		return fmt.Errorf("%w: only author or project admin can delete", domain.ErrForbidden)
+	// Tác giả luôn được xóa comment của mình; người khác cần là project admin.
+	if !uc.perm.IsOwner(userID, comment.UserID) {
+		if err := uc.perm.Check(ctx, issue.ProjectID, userID, "admin"); err != nil {
+			return fmt.Errorf("%w: only author or project admin can delete", domain.ErrForbidden)
+		}
 	}
 
-	return uc.commentRepo.Delete(ctx, commentID)
+	if err := uc.commentRepo.Delete(ctx, commentID); err != nil {
+		return err
+	}
+	uc.publishCommentEvent("comment_deleted", issue, comment)
+	return nil
 }
 
 func (uc *CommentUsecase) logCommentActivity(ctx context.Context, issueID, userID, content string) {
@@ -145,10 +154,14 @@ func (uc *CommentUsecase) logCommentActivity(ctx context.Context, issueID, userI
 }
 
 func (uc *CommentUsecase) publishCommentAdded(issue *domain.Issue, comment *domain.Comment) {
+	uc.publishCommentEvent("comment_added", issue, comment)
+}
+
+func (uc *CommentUsecase) publishCommentEvent(eventType string, issue *domain.Issue, comment *domain.Comment) {
 	if uc.events == nil || issue == nil || comment == nil {
 		return
 	}
-	uc.events.Publish("comment_added", map[string]any{
+	uc.events.Publish(eventType, map[string]any{
 		"projectId": issue.ProjectID,
 		"issueId":   issue.ID,
 		"issueKey":  issue.Key,
