@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FiArrowLeft, FiClock, FiDownload, FiPlus, FiTrash2, FiUploadCloud } from 'react-icons/fi'
 import * as issueApi from '../api/issueApi'
@@ -88,6 +88,7 @@ export default function IssueDetailsPage({
   locale = 'vi-VN',
   members = [],
   usersById = {},
+  wsClient = null,
   embedded = false,
 }) {
   const { t } = useTranslation()
@@ -124,6 +125,7 @@ export default function IssueDetailsPage({
   const [titleDraft, setTitleDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [descriptionEditing, setDescriptionEditing] = useState(false)
+  const issueLoadVersionRef = useRef(0)
 
   const [userCache, setUserCache] = useState({})
 
@@ -150,7 +152,13 @@ export default function IssueDetailsPage({
 
   const loadIssue = useCallback(async () => {
     if (!issueKey) return null
+    const requestVersion = ++issueLoadVersionRef.current
     const data = await issueApi.getIssue(issueKey)
+
+    // A slower request started before a WebSocket refresh must not overwrite
+    // newer issue data (for example, a newly assigned user).
+    if (requestVersion !== issueLoadVersionRef.current) return data || null
+
     setIssue(data || null)
     setTitleDraft(String(data?.title ?? ''))
     setDescriptionDraft(String(data?.description ?? ''))
@@ -271,6 +279,30 @@ export default function IssueDetailsPage({
   useEffect(() => {
     refetchAll()
   }, [refetchAll])
+
+  // Keep this view in sync when another project member changes the same issue.
+  useEffect(() => {
+    if (!wsClient || !issueKey) return undefined
+
+    const isCurrentIssue = (data) => String(data?.issueKey ?? '') === String(issueKey)
+    const refreshIssue = (data) => {
+      if (!isCurrentIssue(data)) return
+      void Promise.all([loadIssue(), loadActivity()])
+    }
+    const refreshComments = (data) => {
+      if (!isCurrentIssue(data)) return
+      void Promise.all([loadComments(), loadActivity()])
+    }
+
+    const unsubscribe = [
+      wsClient.on('issue_updated', refreshIssue),
+      wsClient.on('comment_added', refreshComments),
+      wsClient.on('comment_updated', refreshComments),
+      wsClient.on('comment_deleted', refreshComments),
+    ]
+
+    return () => unsubscribe.forEach((off) => off())
+  }, [issueKey, loadActivity, loadComments, loadIssue, wsClient])
 
   useEffect(() => {
     const userIds = [

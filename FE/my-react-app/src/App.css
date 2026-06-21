@@ -1492,6 +1492,22 @@
   font-size: 0.56rem;
 }
 
+/* Keep an assignee photo from expanding a Kanban card to its natural size. */
+.board-card-foot .card-avatar {
+  flex: 0 0 1.4rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.48rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .assignee-pill {
   width: 1.4rem;
   height: 1.4rem;

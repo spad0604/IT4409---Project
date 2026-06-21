@@ -45,6 +45,7 @@ export default function IssuesPage({
   locale,
   members,
   usersById,
+  wsClient,
   active = true,
 }) {
   const [query, setQuery] = useState('')
@@ -168,6 +169,7 @@ export default function IssuesPage({
               locale={locale}
               members={members}
               usersById={usersById}
+              wsClient={wsClient}
               embedded
             />
           </>
