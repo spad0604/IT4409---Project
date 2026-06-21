@@ -194,6 +194,8 @@ export const en = {
       saving: 'Saving…',
       unassigned: 'Unassigned',
       error: 'An error occurred',
+      name: 'Name',
+      color: 'Color',
     },
 
     auth: {
@@ -228,6 +230,10 @@ export const en = {
       },
     },
 
+    settings: {
+      title: 'Settings', subtitle: 'Tailor your workspace experience.', shortDescription: 'Language, appearance, and notifications.', open: 'Open settings', interface: 'Appearance', interfaceHint: 'Choose how Ledger Project looks for you.', language: 'Language', compactMode: 'Compact layout', compactModeHint: 'Reduce spacing between interface elements.', notifications: 'Notifications', notificationsHint: 'Choose how you receive updates.', emailNotifications: 'Email notifications', emailNotificationsHint: 'Receive email for important activity.', saved: 'Settings saved.', loadError: 'Unable to load settings.', saveError: 'Unable to save settings. Please try again.',
+    },
+
     projects: {
       untitled: 'Untitled project',
       noDescription: 'No description provided.',
@@ -253,11 +259,16 @@ export const en = {
         errorGeneric: 'An error occurred while creating the project!',
       },
       edit: {
+        title: 'Edit project',
+        subtitle: 'Update the project name and description.',
         promptName: 'Enter new name for the project:',
         success: 'Project updated successfully!',
         error: 'Error updating project!',
       },
       delete: {
+        title: 'Delete project',
+        confirmButton: 'Delete project',
+        warning: 'You are about to delete “{{project}}”. This cannot be undone.',
         confirm: 'Are you sure you want to delete this entire project? This action cannot be undone!',
         success: 'Project deleted!',
         error: 'Error deleting project. It may contain constrained data!',
@@ -265,6 +276,14 @@ export const en = {
       status: {
         active: 'Active',
       },
+    },
+
+    labels: {
+      title: 'Project labels', subtitle: 'Create and maintain labels for this project.', empty: 'No labels yet', emptyHint: 'Create the first label for this project.', create: 'New label', edit: 'Edit label', validationName: 'Label name is required', confirmDelete: 'Delete this label?',
+    },
+
+    archive: {
+      aria: 'Archive', title: 'Archive', empty: 'Nothing archived yet', emptyHint: 'Completed issues will appear here.',
     },
 
     reports: {

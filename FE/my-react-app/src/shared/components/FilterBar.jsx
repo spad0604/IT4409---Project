@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 export default function FilterBar({
   t,
   filters,
@@ -8,11 +10,23 @@ export default function FilterBar({
   sprints = [],
   usersById = {},
 }) {
+  const [isOpen, setIsOpen] = useState(false)
   const update = (key, value) => onChange?.({ ...filters, [key]: value })
+  const activeCount = Object.entries(filters || {}).filter(([key, value]) => key !== 'search' && Boolean(value)).length
 
   return (
-    <section className="panel" aria-label={t('filters.title', { defaultValue: 'Issue filters' })}>
-      <div className="filter-grid">
+    <section className="filter-bar" aria-label={t('filters.title', { defaultValue: 'Issue filters' })}>
+      <div className="filter-bar-trigger">
+        <button type="button" className={`filter-btn ${isOpen ? 'is-active' : ''}`} onClick={() => setIsOpen((current) => !current)}>
+          {t('common.search', { defaultValue: 'Search' })} &amp; {t('common.filters', { defaultValue: 'Filters' })}
+          {activeCount ? <span className="filter-count">{activeCount}</span> : null}
+        </button>
+        {filters?.search ? <span className="filter-search-summary">“{filters.search}”</span> : null}
+        {(activeCount || filters?.search) ? <button type="button" className="filter-clear-link" onClick={onClear}>{t('filters.clear', { defaultValue: 'Clear all filters' })}</button> : null}
+      </div>
+
+      {isOpen ? <div className="filter-popover">
+        <div className="filter-grid">
         <label className="inline-field">
           <span className="inline-label">{t('common.search', { defaultValue: 'Search' })}</span>
           <input
@@ -99,13 +113,8 @@ export default function FilterBar({
             })}
           </select>
         </label>
-      </div>
-
-      <div className="modal-actions" style={{ marginTop: '0.85rem' }}>
-        <button type="button" className="filter-btn" onClick={onClear}>
-          {t('filters.clear', { defaultValue: 'Clear all filters' })}
-        </button>
-      </div>
+        </div>
+      </div> : null}
     </section>
   )
 }

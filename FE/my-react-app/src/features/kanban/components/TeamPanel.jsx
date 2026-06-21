@@ -1,5 +1,6 @@
 import { FiSearch } from 'react-icons/fi'
 import { safeLower, toInitials } from '../kanbanUtils'
+import UserAvatar from '../../../shared/components/UserAvatar'
 
 export default function TeamPanel({
   t,
@@ -61,7 +62,7 @@ export default function TeamPanel({
             {(Array.isArray(inviteResults) ? inviteResults : []).map((u) => (
               <article key={u?.id} className="assigned-item">
                 <div className="member-row">
-                  <span className="team-avatar">{toInitials(u?.name || u?.email || '') || '??'}</span>
+                  <UserAvatar className="team-avatar" user={u} initials={toInitials(u?.name || u?.email || '') || '??'} />
                   <div>
                     <h3>{u?.name || t('common.unknown')}</h3>
                     <p>{u?.email}</p>
@@ -90,7 +91,7 @@ export default function TeamPanel({
               return (
                 <article key={m?.userId} className="assigned-item">
                   <div className="member-row">
-                    <span className="team-avatar">{toInitials(u?.name || u?.email || '') || '??'}</span>
+                    <UserAvatar className="team-avatar" user={u} initials={toInitials(u?.name || u?.email || '') || '??'} />
                     <div>
                       <h3>{u?.name || t('common.unknown')}</h3>
 

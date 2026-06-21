@@ -67,6 +67,7 @@ export default function ReportsPanel({
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
   const [type, setType] = useState('')
+  const [showIssueFilters, setShowIssueFilters] = useState(false)
 
   const issueItems = useMemo(() => (Array.isArray(issues) ? issues : []), [issues])
 
@@ -110,6 +111,7 @@ export default function ReportsPanel({
   const totalCount = Number.isFinite(Number(issuesTotal))
     ? Number(issuesTotal)
     : sorted.length
+  const reportFilterCount = [assigneeId, status, priority, type].filter(Boolean).length
 
   // ─── Chart Data ───────────────────────────────────────────────────────────
 
@@ -564,6 +566,15 @@ export default function ReportsPanel({
       {/* Issue List (always visible below) */}
       <div style={{ display: 'grid', gap: '0.55rem', marginTop: '1.2rem' }}>
         <h3 style={{ margin: 0, fontSize: '0.84rem' }}>{t('reports.issueList', { defaultValue: 'Issue List' })}</h3>
+        <div className="filter-bar-trigger">
+          <button type="button" className={`filter-btn ${showIssueFilters ? 'is-active' : ''}`} onClick={() => setShowIssueFilters((current) => !current)}>
+            {t('common.search', { defaultValue: 'Search' })} &amp; {t('common.filters', { defaultValue: 'Filters' })}
+            {reportFilterCount ? <span className="filter-count">{reportFilterCount}</span> : null}
+          </button>
+          {search ? <span className="filter-search-summary">“{search}”</span> : null}
+        </div>
+
+        {showIssueFilters ? <div className="filter-popover reports-filter-popover">
         <label className="issue-search" htmlFor="reports-search" style={{ maxWidth: 'unset' }}>
           <input
             id="reports-search"
@@ -615,6 +626,7 @@ export default function ReportsPanel({
             </select>
           </label>
         </div>
+        </div> : null}
 
         {issuesLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
         {issuesError ? <p className="dashboard-kicker">{issuesError}</p> : null}

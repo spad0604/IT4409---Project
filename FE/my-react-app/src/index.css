@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
 :root {
   --primary: #001ed2;
@@ -26,8 +26,8 @@
   --radius-lg: 1rem;
   --ambient-shadow: 0 4px 32px rgb(25 28 29 / 6%);
 
-  --font-display: 'Sora', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
-  --font-body: 'Be Vietnam Pro', 'Outfit', 'Segoe UI', sans-serif;
+  --font-display: 'Be Vietnam Pro', 'DM Sans', 'Segoe UI', sans-serif;
+  --font-body: 'Be Vietnam Pro', 'DM Sans', 'Segoe UI', sans-serif;
 }
 
 * {

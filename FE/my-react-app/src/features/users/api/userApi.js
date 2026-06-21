@@ -1,4 +1,6 @@
 import { httpClient } from '../../../shared/api/httpClient'
+import { env } from '../../../shared/config/env'
+import { getToken } from '../../../shared/storage/token'
 
 function encodeId(value) {
   return encodeURIComponent(String(value ?? ''))
@@ -10,6 +12,26 @@ export function getMyProfile() {
 
 export function updateMyProfile(patch) {
   return httpClient.patch('/api/users/me', patch)
+}
+
+export async function uploadMyAvatar(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const token = getToken()
+  const response = await fetch(`${env.apiBaseUrl}/api/users/me/avatar`, {
+    method: 'POST', headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: formData,
+  })
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(payload?.message || 'Không thể tải ảnh lên')
+  return payload?.data || payload
+}
+
+export function getMyPreferences() {
+  return httpClient.get('/api/users/me/preferences')
+}
+
+export function updateMyPreferences(preferences) {
+  return httpClient.put('/api/users/me/preferences', preferences)
 }
 
 export function getUser(userId) {

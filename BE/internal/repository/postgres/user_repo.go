@@ -137,6 +137,43 @@ func (r *UserRepo) Search(ctx context.Context, keyword string, limit, offset int
 	return users, rows.Err()
 }
 
+func (r *UserRepo) GetPreferences(ctx context.Context, userID string) (domain.UserPreferences, error) {
+	const q = `
+		with inserted as (
+			insert into public.user_preferences (user_id)
+			values ($1)
+			on conflict (user_id) do nothing
+		)
+		select language, compact_mode, email_notifications
+		from public.user_preferences where user_id = $1
+	`
+	var out domain.UserPreferences
+	err := r.pool.QueryRow(ctx, q, userID).Scan(&out.Language, &out.CompactMode, &out.EmailNotifications)
+	if err != nil {
+		return domain.UserPreferences{}, err
+	}
+	return out, nil
+}
+
+func (r *UserRepo) UpdatePreferences(ctx context.Context, userID string, preferences domain.UserPreferences) (domain.UserPreferences, error) {
+	const q = `
+		insert into public.user_preferences (user_id, language, compact_mode, email_notifications)
+		values ($1, $2, $3, $4)
+		on conflict (user_id) do update set
+			language = excluded.language,
+			compact_mode = excluded.compact_mode,
+			email_notifications = excluded.email_notifications
+		returning language, compact_mode, email_notifications
+	`
+	var out domain.UserPreferences
+	err := r.pool.QueryRow(ctx, q, userID, preferences.Language, preferences.CompactMode, preferences.EmailNotifications).
+		Scan(&out.Language, &out.CompactMode, &out.EmailNotifications)
+	if err != nil {
+		return domain.UserPreferences{}, err
+	}
+	return out, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil

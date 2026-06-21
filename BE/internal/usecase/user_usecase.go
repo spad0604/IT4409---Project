@@ -21,6 +21,28 @@ type UpdateProfileInput struct {
 	AvatarURL *string `json:"avatar_url"`
 }
 
+type UpdatePreferencesInput struct {
+	Language           string `json:"language"`
+	CompactMode        bool   `json:"compact_mode"`
+	EmailNotifications bool   `json:"email_notifications"`
+}
+
+func (u *UserUsecase) GetPreferences(ctx context.Context, userID string) (domain.UserPreferences, error) {
+	if strings.TrimSpace(userID) == "" {
+		return domain.UserPreferences{}, domain.ErrUnauthorized
+	}
+	return u.users.GetPreferences(ctx, userID)
+}
+
+func (u *UserUsecase) UpdatePreferences(ctx context.Context, userID string, input UpdatePreferencesInput) (domain.UserPreferences, error) {
+	if strings.TrimSpace(userID) == "" || (input.Language != "vi" && input.Language != "en") {
+		return domain.UserPreferences{}, domain.ErrInvalidInput
+	}
+	return u.users.UpdatePreferences(ctx, userID, domain.UserPreferences{
+		Language: input.Language, CompactMode: input.CompactMode, EmailNotifications: input.EmailNotifications,
+	})
+}
+
 // GetProfile returns the authenticated user's profile.
 func (u *UserUsecase) GetProfile(ctx context.Context, userID string) (domain.User, error) {
 	if strings.TrimSpace(userID) == "" {
