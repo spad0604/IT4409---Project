@@ -194,3 +194,15 @@
     font-size: 2.2rem;
   }
 }
+
+:root[data-theme='dark'] .stats-card {
+  background: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: var(--ambient-shadow);
+}
+:root[data-theme='dark'] .card-label,
+:root[data-theme='dark'] .card-value { color: var(--on-surface); }
+:root[data-theme='dark'] .badge-success { background: #164d3b; color: #8aebc1; }
+:root[data-theme='dark'] .badge-danger { background: #60272d; color: #ffb4ba; }
+:root[data-theme='dark'] .badge-info { background: #29376f; color: #c0c8ff; }
+:root[data-theme='dark'] .badge-neutral { background: #343b46; color: #d6dce5; }

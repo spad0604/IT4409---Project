@@ -72,3 +72,8 @@
     margin-right: -8px;
     border: 2px solid white;
 }
+
+:root[data-theme='dark'] .project-status,
+:root[data-theme='dark'] .project-summary { color: var(--on-surface-variant); }
+:root[data-theme='dark'] .project-progress-bar { background: var(--surface-container-high); }
+:root[data-theme='dark'] .owner-avatar { border-color: var(--surface); }

@@ -4,6 +4,12 @@
     background: #f4f6fb;
 }
 
+:root[data-theme='dark'] .login-page,
+:root[data-theme='dark'] .login-shell,
+:root[data-theme='dark'] .login-form-panel { background: var(--page-background) !important; }
+:root[data-theme='dark'] .login-page input,
+:root[data-theme='dark'] .login-page select { background: var(--field-background) !important; border-color: var(--border-color) !important; color: var(--on-surface) !important; }
+
 .login-shell {
     width: 100%;
     min-height: 100vh;
@@ -453,4 +459,67 @@
     border: solid white;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
+}
+
+/* Authentication keeps a light form surface in both themes: it gives the
+   long form a calm, high-contrast reading area next to the dark hero image. */
+:root[data-theme='dark'] .login-page,
+:root[data-theme='dark'] .login-shell {
+    background: #10131a !important;
+}
+
+:root[data-theme='dark'] .login-form-wrap {
+    background: #f5f7fb !important;
+}
+
+:root[data-theme='dark'] .form-box h2 {
+    color: #111827 !important;
+}
+
+:root[data-theme='dark'] .form-box .sub,
+:root[data-theme='dark'] .form-box .register-link,
+:root[data-theme='dark'] .form-box .mock-note,
+:root[data-theme='dark'] .form-box .remember-me,
+:root[data-theme='dark'] .form-box .terms {
+    color: #4b5563 !important;
+}
+
+:root[data-theme='dark'] .form-box .field-label,
+:root[data-theme='dark'] .form-box .social-btn,
+:root[data-theme='dark'] .form-box .password-toggle {
+    color: #111827 !important;
+}
+
+:root[data-theme='dark'] .form-box .social-btn {
+    background: #ffffff !important;
+    border-color: #d7dde7 !important;
+}
+
+:root[data-theme='dark'] .form-box input {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #111827 !important;
+}
+
+:root[data-theme='dark'] .form-box input::placeholder {
+    color: #64748b !important;
+}
+
+:root[data-theme='dark'] .form-box .divider {
+    color: #64748b !important;
+}
+
+:root[data-theme='dark'] .form-box .divider::before,
+:root[data-theme='dark'] .form-box .divider::after {
+    border-color: #cbd5e1 !important;
+}
+
+:root[data-theme='dark'] .form-box .text-link,
+:root[data-theme='dark'] .form-box .register-link a {
+    color: #1d4ed8 !important;
+}
+
+:root[data-theme='dark'] .form-box .custom-checkbox {
+    background: #ffffff !important;
+    border-color: #94a3b8 !important;
 }

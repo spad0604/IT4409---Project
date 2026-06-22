@@ -4,6 +4,25 @@
     background: #edf1f6;
 }
 
+:root[data-theme='dark'] .login-page,
+:root[data-theme='dark'] .login-shell,
+:root[data-theme='dark'] .login-form-panel { background: var(--page-background) !important; }
+
+:root[data-theme='dark'] .login-form,
+:root[data-theme='dark'] .form-card { background: var(--surface) !important; }
+
+:root[data-theme='dark'] .login-page input,
+:root[data-theme='dark'] .login-page select {
+  background: var(--field-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--on-surface) !important;
+}
+
+:root[data-theme='dark'] .login-page h1,
+:root[data-theme='dark'] .login-page h2,
+:root[data-theme='dark'] .login-page label { color: var(--on-surface) !important; }
+:root[data-theme='dark'] .login-page p { color: var(--on-surface-variant); }
+
 .login-shell {
     max-width: 1320px;
     min-height: calc(100vh - 2 * clamp(10px, 2vw, 22px));
