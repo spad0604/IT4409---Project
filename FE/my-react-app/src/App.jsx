@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import Login from './features/auth/pages/Login'
 import Register from './features/auth/pages/Register'
 import { useAuth } from './features/auth/model/AuthContext'
+import { useTheme } from './app/providers/ThemeContext'
 import IssueDetailsPage from './features/issues/pages/IssueDetailsPage'
 import IssuesPage from './features/issues/pages/IssuesPage'
 import ProfilePage from './features/users/pages/ProfilePage'
@@ -42,10 +43,13 @@ import {
   FiList,
   FiLogOut,
   FiMessageSquare,
+  FiMenu,
   FiPlus,
   FiSearch,
   FiSettings,
   FiShield,
+  FiMoon,
+  FiSun,
   FiTarget,
   FiUserPlus,
   FiUsers,
@@ -111,7 +115,9 @@ function Kanban() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, refreshMe, serverSignOut } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const [topbarPopover, setTopbarPopover] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [preferences, setPreferences] = useState({ language: 'vi', compact_mode: false, email_notifications: true })
   const [preferencesLoading, setPreferencesLoading] = useState(false)
@@ -1829,7 +1835,18 @@ function Kanban() {
             </nav>
           </div>
 
-          <div className="topbar-right">
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? <FiX /> : <FiMenu />}
+            <span>{mobileMenuOpen ? 'Đóng' : 'Menu'}</span>
+          </button>
+
+          <div className={`topbar-right ${mobileMenuOpen ? 'is-mobile-open' : ''}`}>
             <label className="project-picker" htmlFor="header-project-select">
               <select
                 id="header-project-select"
@@ -1856,6 +1873,25 @@ function Kanban() {
                 onChange={(e) => handleFilterChange({ ...issueFilters, search: e.target.value })}
               />
             </label>
+            <nav className="mobile-side-links" aria-label={t('boardShell.sideNavLabel')}>
+              {(Array.isArray(sideLinks) ? sideLinks : []).map((link) => {
+                const LinkIcon = SIDE_LINK_ICON_MAP[link.id] || FiGrid
+                return (
+                  <button
+                    key={link.id}
+                    type="button"
+                    className={`sidebar-link ${link.id === activeSideLink ? 'is-active' : ''}`}
+                    onClick={() => {
+                      handleSideLinkClick(link.id)
+                      setMobileMenuOpen(false)
+                    }}
+                  >
+                    <span className="sidebar-icon" aria-hidden="true"><LinkIcon /></span>
+                    {link.label}
+                  </button>
+                )
+              })}
+            </nav>
             <button type="button" className="filter-btn" onClick={handleOpenCreateProject}>
               <FiPlus /> {t('projects.create.open')}
             </button>
@@ -1870,6 +1906,15 @@ function Kanban() {
               onClick={() => setTopbarPopover((prev) => (prev === 'notifications' ? '' : 'notifications'))}
             >
               <FiBell />
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+              title={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? <FiSun /> : <FiMoon />}
             </button>
             <button
               type="button"

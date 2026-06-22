@@ -4,6 +4,102 @@
   padding: 0.9rem 0.75rem 1.45rem;
 }
 
+/* Dark-mode compatibility for legacy component rules that predate tokens. */
+:root[data-theme='dark'] .home-frame,
+:root[data-theme='dark'] .home-topbar,
+:root[data-theme='dark'] .home-sidebar,
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .topbar-popover,
+:root[data-theme='dark'] .filter-popover,
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .profile-modal,
+:root[data-theme='dark'] .project-action-modal,
+:root[data-theme='dark'] .global-search-modal,
+:root[data-theme='dark'] .issues-browser,
+:root[data-theme='dark'] .issues-list-pane,
+:root[data-theme='dark'] .issues-detail-pane,
+:root[data-theme='dark'] .board-card,
+:root[data-theme='dark'] .board-column,
+:root[data-theme='dark'] .board-hero,
+:root[data-theme='dark'] .board-flow,
+:root[data-theme='dark'] .sprint-panel-card,
+:root[data-theme='dark'] .backlog-board,
+:root[data-theme='dark'] .reports-chart-card,
+:root[data-theme='dark'] .profile-panel,
+:root[data-theme='dark'] .team-section,
+:root[data-theme='dark'] .project-card {
+  background: var(--surface) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: var(--ambient-shadow);
+}
+
+:root[data-theme='dark'] .home-frame { background: var(--frame-background) !important; }
+:root[data-theme='dark'] .home-topbar,
+:root[data-theme='dark'] .home-sidebar { background: var(--topbar-background) !important; }
+
+:root[data-theme='dark'] .project-picker,
+:root[data-theme='dark'] .issue-search,
+:root[data-theme='dark'] .inline-input,
+:root[data-theme='dark'] .inline-select,
+:root[data-theme='dark'] .modal-textarea,
+:root[data-theme='dark'] .issues-search,
+:root[data-theme='dark'] .team-search,
+:root[data-theme='dark'] .filter-bar-trigger,
+:root[data-theme='dark'] .quick-settings select,
+:root[data-theme='dark'] .quick-settings input,
+:root[data-theme='dark'] .upload-zone {
+  background: var(--field-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--on-surface) !important;
+}
+
+:root[data-theme='dark'] .workspace-brand,
+:root[data-theme='dark'] .panel h1,
+:root[data-theme='dark'] .panel h2,
+:root[data-theme='dark'] .panel h3,
+:root[data-theme='dark'] .panel h4,
+:root[data-theme='dark'] .topbar-popover-title,
+:root[data-theme='dark'] .issues-list-item,
+:root[data-theme='dark'] .board-card,
+:root[data-theme='dark'] .project-card,
+:root[data-theme='dark'] .team-name,
+:root[data-theme='dark'] .profile-hero,
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea {
+  color: var(--strong-text) !important;
+}
+
+:root[data-theme='dark'] .top-tab,
+:root[data-theme='dark'] .icon-btn,
+:root[data-theme='dark'] .sidebar-link,
+:root[data-theme='dark'] .filter-btn,
+:root[data-theme='dark'] .topbar-popover-muted,
+:root[data-theme='dark'] .panel p,
+:root[data-theme='dark'] .board-subtitle,
+:root[data-theme='dark'] .issues-list-message,
+:root[data-theme='dark'] .attachment-size,
+:root[data-theme='dark'] .team-type {
+  color: var(--on-surface-variant) !important;
+}
+
+:root[data-theme='dark'] .top-tab.is-active,
+:root[data-theme='dark'] .icon-btn.is-active,
+:root[data-theme='dark'] .sidebar-link.is-active,
+:root[data-theme='dark'] .filter-btn.is-active {
+  background: var(--interactive-soft) !important;
+  color: var(--primary) !important;
+}
+
+:root[data-theme='dark'] .board-column-head,
+:root[data-theme='dark'] .issues-list-head,
+:root[data-theme='dark'] .panel-head,
+:root[data-theme='dark'] .modal-head,
+:root[data-theme='dark'] .backlog-issue-row,
+:root[data-theme='dark'] .member-row {
+  border-color: var(--muted-border-color) !important;
+}
+
 .home-frame {
   border-radius: 0.5rem;
   border: 1px solid #d7dde7;
@@ -2361,5 +2457,541 @@
   .reports-completion-grid {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Final dark palette: explicit high-contrast treatment for dashboard content. */
+:root[data-theme='dark'] .dashboard-main,
+:root[data-theme='dark'] .home-body,
+:root[data-theme='dark'] .content-grid {
+  background: var(--frame-background) !important;
+}
+
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .board-column,
+:root[data-theme='dark'] .issues-browser,
+:root[data-theme='dark'] .issues-list-pane,
+:root[data-theme='dark'] .assigned-item,
+:root[data-theme='dark'] .stat-card,
+:root[data-theme='dark'] .flow-step,
+:root[data-theme='dark'] .board-card,
+:root[data-theme='dark'] .topbar-popover,
+:root[data-theme='dark'] .filter-popover,
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .profile-modal,
+:root[data-theme='dark'] .project-action-modal {
+  background: #111a2b !important;
+  border-color: #40516d !important;
+}
+
+:root[data-theme='dark'] .board-column,
+:root[data-theme='dark'] .issues-list-pane {
+  background: #17233a !important;
+}
+
+:root[data-theme='dark'] .home-sidebar,
+:root[data-theme='dark'] .home-topbar {
+  background: #111c2e !important;
+  border-color: #40516d !important;
+}
+
+:root[data-theme='dark'] h1,
+:root[data-theme='dark'] h2,
+:root[data-theme='dark'] h3,
+:root[data-theme='dark'] h4,
+:root[data-theme='dark'] h5,
+:root[data-theme='dark'] h6,
+:root[data-theme='dark'] strong,
+:root[data-theme='dark'] .workspace-brand,
+:root[data-theme='dark'] .team-name,
+:root[data-theme='dark'] .board-card-code,
+:root[data-theme='dark'] .board-card-foot,
+:root[data-theme='dark'] .issues-list-copy strong,
+:root[data-theme='dark'] .issues-list-copy span,
+:root[data-theme='dark'] .stat-card strong {
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] p,
+:root[data-theme='dark'] .top-tab,
+:root[data-theme='dark'] .sidebar-link,
+:root[data-theme='dark'] .footer-link,
+:root[data-theme='dark'] .icon-btn,
+:root[data-theme='dark'] .team-type,
+:root[data-theme='dark'] .board-column-head p,
+:root[data-theme='dark'] .flow-step span,
+:root[data-theme='dark'] .board-progress span,
+:root[data-theme='dark'] .stat-card span,
+:root[data-theme='dark'] .issues-list-head p,
+:root[data-theme='dark'] .task-code {
+  color: #d8e2f0 !important;
+}
+
+:root[data-theme='dark'] .dashboard-kicker,
+:root[data-theme='dark'] .issues-list-key,
+:root[data-theme='dark'] a,
+:root[data-theme='dark'] .filter-clear-link {
+  color: #93c5fd !important;
+}
+
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] .project-picker,
+:root[data-theme='dark'] .issue-search,
+:root[data-theme='dark'] .filter-btn,
+:root[data-theme='dark'] .open-btn,
+:root[data-theme='dark'] .inline-input,
+:root[data-theme='dark'] .inline-select,
+:root[data-theme='dark'] .modal-textarea {
+  background: #22314a !important;
+  border-color: #526783 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder { color: #c4d1e2 !important; }
+
+:root[data-theme='dark'] .sidebar-link:hover,
+:root[data-theme='dark'] .footer-link:hover,
+:root[data-theme='dark'] .issues-list-item:hover { background: #263b5d !important; }
+
+:root[data-theme='dark'] .sidebar-link.is-active,
+:root[data-theme='dark'] .top-tab.is-active,
+:root[data-theme='dark'] .issues-list-item.is-active,
+:root[data-theme='dark'] .icon-btn.is-active {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #93c5fd;
+}
+
+:root[data-theme='dark'] .lane-add-btn,
+:root[data-theme='dark'] .invite-member-btn,
+:root[data-theme='dark'] .history-btn {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border-color: #93c5fd !important;
+}
+
+:root[data-theme='dark'] .mini-avatars span,
+:root[data-theme='dark'] .progress-track,
+:root[data-theme='dark'] .board-progress-track { background: #334155 !important; }
+
+/* Full-viewport workspace: the product is the window, not a card inside it. */
+.home-page {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.home-frame {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.home-body {
+  min-height: calc(100vh - 56px);
+}
+
+/* Deep-black dark theme with deliberately separated surfaces. */
+:root[data-theme='dark'] .dashboard-main,
+:root[data-theme='dark'] .home-body,
+:root[data-theme='dark'] .content-grid {
+  background: #070b10 !important;
+}
+
+:root[data-theme='dark'] .home-frame,
+:root[data-theme='dark'] .home-topbar,
+:root[data-theme='dark'] .home-sidebar {
+  background: #0b1017 !important;
+  border-color: #2b3848 !important;
+}
+
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .board-hero,
+:root[data-theme='dark'] .board-flow,
+:root[data-theme='dark'] .board-card,
+:root[data-theme='dark'] .stat-card,
+:root[data-theme='dark'] .assigned-item,
+:root[data-theme='dark'] .topbar-popover,
+:root[data-theme='dark'] .filter-popover,
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .profile-modal,
+:root[data-theme='dark'] .project-action-modal {
+  background: #0e141d !important;
+  border-color: #354354 !important;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 28%);
+}
+
+:root[data-theme='dark'] .board-column,
+:root[data-theme='dark'] .issues-list-pane,
+:root[data-theme='dark'] .flow-step {
+  background: #121a25 !important;
+  border-color: #354354 !important;
+}
+
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] .project-picker,
+:root[data-theme='dark'] .issue-search,
+:root[data-theme='dark'] .filter-btn,
+:root[data-theme='dark'] .open-btn,
+:root[data-theme='dark'] .inline-input,
+:root[data-theme='dark'] .inline-select,
+:root[data-theme='dark'] .modal-textarea {
+  background: #171f2b !important;
+  border-color: #405065 !important;
+}
+
+:root[data-theme='dark'] .sidebar-link.is-active,
+:root[data-theme='dark'] .top-tab.is-active,
+:root[data-theme='dark'] .issues-list-item.is-active,
+:root[data-theme='dark'] .icon-btn.is-active {
+  background: #3730a3 !important;
+  box-shadow: inset 0 0 0 1px #818cf8;
+}
+
+:root[data-theme='dark'] .sidebar-link:hover,
+:root[data-theme='dark'] .footer-link:hover,
+:root[data-theme='dark'] .issues-list-item:hover {
+  background: #1b2635 !important;
+}
+
+:root[data-theme='dark'] .lane-add-btn,
+:root[data-theme='dark'] .invite-member-btn,
+:root[data-theme='dark'] .history-btn {
+  background: #4f46e5 !important;
+  border-color: #a5b4fc !important;
+}
+
+:root[data-theme='dark'] .dashboard-kicker,
+:root[data-theme='dark'] .issues-list-key,
+:root[data-theme='dark'] a,
+:root[data-theme='dark'] .filter-clear-link {
+  color: #a5b4fc !important;
+}
+
+/* Mobile foundation shared by every feature screen. */
+@media (max-width: 720px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .home-topbar {
+    gap: 0.55rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .topbar-left,
+  .topbar-right {
+    gap: 0.35rem;
+    scrollbar-width: none;
+  }
+
+  .topbar-left::-webkit-scrollbar,
+  .topbar-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  .workspace-brand {
+    font-size: 0.78rem;
+  }
+
+  .top-tab {
+    flex: 0 0 auto;
+    font-size: 0.66rem;
+  }
+
+  .project-picker,
+  .issue-search {
+    min-width: 150px;
+  }
+
+  .home-sidebar {
+    padding: 0.65rem;
+    gap: 0.55rem;
+  }
+
+  .sidebar-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .sidebar-link {
+    min-height: 36px;
+    padding: 0.4rem;
+    font-size: 0.62rem;
+  }
+
+  .sidebar-footer {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footer-link {
+    justify-content: center;
+    font-size: 0.55rem;
+  }
+
+  .dashboard-main {
+    padding: 0.75rem;
+  }
+
+  .dashboard-header,
+  .panel-head,
+  .board-hero,
+  .board-hero-meta,
+  .profile-hero {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-header h1,
+  .board-hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .panel,
+  .board-hero,
+  .board-flow,
+  .reports-chart-card,
+  .profile-panel {
+    padding: 0.8rem;
+  }
+
+  .flow-track,
+  .filter-grid,
+  .modal-grid,
+  .inline-form-grid,
+  .reports-charts-grid,
+  .reports-completion-grid,
+  .team-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-column {
+    min-height: 220px;
+  }
+
+  .modal,
+  .profile-modal,
+  .project-action-modal,
+  .global-search-modal {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+    overflow: auto;
+  }
+
+  .modal-overlay,
+  .profile-modal-backdrop {
+    padding: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .issues-browser {
+    min-height: 0;
+    height: auto;
+  }
+
+  .issues-list-pane {
+    max-height: none;
+  }
+
+  .issues-list {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .issues-list-head,
+  .issues-list-tools {
+    padding: 0.7rem;
+  }
+
+  .reports-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .reports-tab {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .sidebar-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .create-issue-btn {
+    padding: 0 0.5rem;
+  }
+
+  .dashboard-header h1,
+  .board-hero h1 {
+    font-size: 1.28rem;
+  }
+}
+
+/* Dark-theme states that need their own semantic colours. */
+:root[data-theme='dark'] .project-delete-warning {
+  background: #35151a !important;
+  border-color: #7f1d2d !important;
+  color: #fecaca !important;
+}
+
+:root[data-theme='dark'] .project-delete-warning strong {
+  color: #fff1f2 !important;
+}
+
+:root[data-theme='dark'] .priority-pill {
+  border: 1px solid #405065;
+  background: #151d28 !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-theme='dark'] .priority-pill.tone-high.is-active {
+  background: #7f1d1d !important;
+  border-color: #f87171;
+  color: #fff1f2 !important;
+}
+
+:root[data-theme='dark'] .priority-pill.tone-medium.is-active {
+  background: #1e3a8a !important;
+  border-color: #60a5fa;
+  color: #eff6ff !important;
+}
+
+:root[data-theme='dark'] .priority-pill.tone-low.is-active {
+  background: #14532d !important;
+  border-color: #4ade80;
+  color: #f0fdf4 !important;
+}
+
+:root[data-theme='dark'] .board-metric {
+  background: #151d28 !important;
+  border-color: #405065 !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .board-metric span {
+  color: #b8c6d8 !important;
+}
+
+:root[data-theme='dark'] .board-metric strong {
+  color: #ffffff !important;
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+.mobile-side-links {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  /* Navigation is provided by the collapsed header menu on phones. */
+  .home-sidebar {
+    display: none;
+  }
+
+  .home-topbar {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .topbar-left {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .top-tabs {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    margin-left: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 0.42rem;
+    background: var(--field-background);
+    color: var(--strong-text);
+    padding: 0.38rem 0.52rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  .mobile-menu-toggle svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .topbar-right {
+    display: none;
+  }
+
+  .topbar-right.is-mobile-open {
+    position: absolute;
+    z-index: 70;
+    top: calc(100% + 1px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem;
+    background: var(--topbar-background);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 12px 28px rgb(0 0 0 / 25%);
+  }
+
+  .topbar-right.is-mobile-open .project-picker,
+  .topbar-right.is-mobile-open .issue-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .mobile-side-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.1rem 0;
+  }
+
+  .mobile-side-links .sidebar-link {
+    min-height: 38px;
+    justify-content: flex-start;
+    border: 1px solid transparent;
+  }
+
+  .mobile-side-links .sidebar-link.is-active {
+    border-color: #818cf8;
+  }
+
+  .topbar-right.is-mobile-open .filter-btn,
+  .topbar-right.is-mobile-open .create-issue-btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    justify-content: center;
+  }
+
+  .topbar-right.is-mobile-open .topbar-popover {
+    position: fixed;
+    top: 4.1rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
   }
 }

@@ -3,6 +3,18 @@
   background: #ffffff;
 }
 
+:root[data-theme='dark'] .issue-detail,
+:root[data-theme='dark'] .issue-detail-grid > *,
+:root[data-theme='dark'] .issue-comment,
+:root[data-theme='dark'] .issue-comment-form,
+:root[data-theme='dark'] .issue-detail input,
+:root[data-theme='dark'] .issue-detail select,
+:root[data-theme='dark'] .issue-detail textarea {
+  background: var(--surface) !important;
+  border-color: var(--border-color) !important;
+  color: var(--on-surface) !important;
+}
+
 .issue-detail.is-embedded {
   border: 0;
   border-radius: 0;
@@ -468,5 +480,164 @@
 
   .kv dt {
     padding-top: 0;
+  }
+}
+
+/* Keep the issue workspace entirely in the high-contrast dark palette. */
+:root[data-theme='dark'] .issue-detail,
+:root[data-theme='dark'] .issue-detail-main,
+:root[data-theme='dark'] .issue-detail-side,
+:root[data-theme='dark'] .side-block,
+:root[data-theme='dark'] .issue-subtask-card,
+:root[data-theme='dark'] .issue-attachment,
+:root[data-theme='dark'] .issue-comment,
+:root[data-theme='dark'] .issue-activity-item {
+  background: #111a2b !important;
+  border-color: #40516d !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .issue-detail h1,
+:root[data-theme='dark'] .issue-detail h2,
+:root[data-theme='dark'] .issue-detail h3,
+:root[data-theme='dark'] .issue-detail strong,
+:root[data-theme='dark'] .issue-detail-title-input,
+:root[data-theme='dark'] .issue-description-view {
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .issue-detail p,
+:root[data-theme='dark'] .issue-detail dt,
+:root[data-theme='dark'] .issue-detail dd,
+:root[data-theme='dark'] .issue-detail .muted,
+:root[data-theme='dark'] .issue-detail-date,
+:root[data-theme='dark'] .issue-attachment-sub,
+:root[data-theme='dark'] .issue-side-note {
+  color: #d8e2f0 !important;
+}
+
+:root[data-theme='dark'] .issue-detail input,
+:root[data-theme='dark'] .issue-detail select,
+:root[data-theme='dark'] .issue-detail textarea,
+:root[data-theme='dark'] .issue-detail-select,
+:root[data-theme='dark'] .issue-detail-textarea,
+:root[data-theme='dark'] .issue-inline-input,
+:root[data-theme='dark'] .issue-detail-title-input {
+  background: #22314a !important;
+  border-color: #526783 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme='dark'] .issue-detail input::placeholder,
+:root[data-theme='dark'] .issue-detail textarea::placeholder { color: #c4d1e2 !important; }
+
+:root[data-theme='dark'] .issue-count-pill,
+:root[data-theme='dark'] .issue-detail-key,
+:root[data-theme='dark'] .issue-detail-back { color: #93c5fd !important; }
+
+/* Match the detail view to the deep-black workspace palette. */
+:root[data-theme='dark'] .issue-detail,
+:root[data-theme='dark'] .issue-detail-main,
+:root[data-theme='dark'] .issue-detail-side,
+:root[data-theme='dark'] .side-block,
+:root[data-theme='dark'] .issue-subtask-card,
+:root[data-theme='dark'] .issue-attachment,
+:root[data-theme='dark'] .issue-comment,
+:root[data-theme='dark'] .issue-activity-item {
+  background: #0e141d !important;
+  border-color: #354354 !important;
+}
+
+:root[data-theme='dark'] .issue-detail input,
+:root[data-theme='dark'] .issue-detail select,
+:root[data-theme='dark'] .issue-detail textarea,
+:root[data-theme='dark'] .issue-detail-select,
+:root[data-theme='dark'] .issue-detail-textarea,
+:root[data-theme='dark'] .issue-inline-input,
+:root[data-theme='dark'] .issue-detail-title-input {
+  background: #171f2b !important;
+  border-color: #405065 !important;
+}
+
+:root[data-theme='dark'] .issue-count-pill,
+:root[data-theme='dark'] .issue-detail-key,
+:root[data-theme='dark'] .issue-detail-back { color: #a5b4fc !important; }
+
+/* Detail view refinements: a readable dark description and quieter destructive action. */
+:root[data-theme='dark'] .issue-detail-description,
+:root[data-theme='dark'] .issue-description-view {
+  background: #121a25 !important;
+  border-color: #354354 !important;
+}
+
+:root[data-theme='dark'] .issue-detail-description pre,
+:root[data-theme='dark'] .issue-description-view pre {
+  color: #e5edf7 !important;
+}
+
+:root[data-theme='dark'] .issue-description-view:hover {
+  background: #172231 !important;
+  border-color: #64748b !important;
+}
+
+:root[data-theme='dark'] .issue-activity-item p,
+:root[data-theme='dark'] .issue-comment-content {
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme='dark'] .issue-activity-item span:last-child,
+:root[data-theme='dark'] .issue-comment-head,
+:root[data-theme='dark'] .issue-attachment-sub {
+  color: #b8c6d8 !important;
+}
+
+.issue-danger-btn {
+  padding: 0.32rem 0.5rem;
+  gap: 0.28rem;
+  font-size: 0.66rem;
+  line-height: 1.15;
+}
+
+.issue-danger-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .issue-detail {
+    padding: 0.8rem;
+  }
+
+  .issue-detail.is-embedded .issue-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .issue-detail-hero {
+    gap: 0.65rem;
+  }
+
+  .issue-detail-title-input {
+    font-size: 1.12rem;
+  }
+
+  .issue-danger-btn {
+    align-self: flex-end;
+  }
+
+  .issue-detail-section {
+    margin-top: 1rem;
+  }
+
+  .issue-inline-form {
+    gap: 0.45rem;
+  }
+
+  .issue-inline-form > * {
+    width: 100%;
+  }
+
+  .side-block {
+    padding: 0.75rem;
   }
 }

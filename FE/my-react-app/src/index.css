@@ -26,12 +26,60 @@
   --radius-lg: 1rem;
   --ambient-shadow: 0 4px 32px rgb(25 28 29 / 6%);
 
+  --page-background: #edf1f6;
+  --frame-background: #f6f7f9;
+  --topbar-background: #f5f6f8;
+  --field-background: #eef1f5;
+  --border-color: #d7dde7;
+  --muted-border-color: #e2e7ef;
+  --muted-text: #667085;
+  --strong-text: #111827;
+  --interactive-soft: #e8edff;
+
   --font-display: 'Be Vietnam Pro', 'DM Sans', 'Segoe UI', sans-serif;
   --font-body: 'Be Vietnam Pro', 'DM Sans', 'Segoe UI', sans-serif;
 }
 
+:root[data-theme='dark'] {
+  --primary: #a5b4fc;
+  --primary-container: #4f46e5;
+  --primary-fixed: #312e81;
+  --secondary-fixed: #27234d;
+  --on-secondary-fixed: #e0e7ff;
+  --background: #030508;
+  --surface: #0a0e14;
+  --surface-container: #10161f;
+  --surface-container-low: #080c12;
+  --surface-container-lowest: #05070b;
+  --surface-container-high: #18212d;
+  --on-surface: #f8fafc;
+  --on-surface-variant: #d6dee9;
+  --inverse-surface: #e6e9ed;
+  --inverse-on-surface: #202328;
+  --outline: #8c9aad;
+  --outline-variant: rgb(140 154 173 / 34%);
+  --error: #ffb4ab;
+  --ambient-shadow: 0 12px 34px rgb(0 0 0 / 32%);
+  --page-background: #030508;
+  --frame-background: #070b10;
+  --topbar-background: #0b1017;
+  --field-background: #171f2b;
+  --border-color: #354354;
+  --muted-border-color: #263443;
+  --muted-text: #becadb;
+  --strong-text: #ffffff;
+  --interactive-soft: #3730a3;
+}
+
 * {
   box-sizing: border-box;
+}
+
+/* A short palette transition makes theme switching feel intentional, not abrupt. */
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 220ms ease, color 180ms ease, border-color 220ms ease, box-shadow 220ms ease !important;
 }
 
 html,
@@ -44,7 +92,7 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--on-surface-variant);
-  background: #edf1f6;
+  background: var(--page-background);
   background-attachment: fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -71,4 +119,12 @@ h6 {
 
 p {
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: none !important;
+  }
 }
