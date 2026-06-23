@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"it4409/internal/domain"
@@ -44,6 +46,37 @@ type SprintDTO struct {
 	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
+// Sprint dates come from an HTML <input type="date"> in the web app, which
+// sends YYYY-MM-DD.  time.Time's default JSON decoder accepts only RFC3339,
+// so requests use strings here and are normalized before reaching the usecase.
+type sprintCreateRequest struct {
+	Name      string  `json:"name"`
+	Goal      string  `json:"goal"`
+	StartDate *string `json:"startDate"`
+	EndDate   *string `json:"endDate"`
+}
+
+type sprintUpdateRequest struct {
+	Name      *string `json:"name"`
+	Goal      *string `json:"goal"`
+	StartDate *string `json:"startDate"`
+	EndDate   *string `json:"endDate"`
+}
+
+func parseSprintDate(value *string, field string) (*time.Time, error) {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return nil, nil
+	}
+	raw := strings.TrimSpace(*value)
+	if date, err := time.Parse("2006-01-02", raw); err == nil {
+		return &date, nil
+	}
+	if date, err := time.Parse(time.RFC3339, raw); err == nil {
+		return &date, nil
+	}
+	return nil, fmt.Errorf("invalid %s: expected YYYY-MM-DD or RFC3339", field)
+}
+
 func toSprintDTO(s *domain.Sprint) SprintDTO {
 	return SprintDTO{
 		ID: s.ID, ProjectID: s.ProjectID, Name: s.Name, Goal: s.Goal,
@@ -75,11 +108,22 @@ func (h *SprintHandler) CreateSprint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input usecase.CreateSprintInput
-	if err := parseBody(r, &input); err != nil {
+	var body sprintCreateRequest
+	if err := parseBody(r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
+	startDate, err := parseSprintDate(body.StartDate, "startDate")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	endDate, err := parseSprintDate(body.EndDate, "endDate")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	input := usecase.CreateSprintInput{Name: body.Name, Goal: body.Goal, StartDate: startDate, EndDate: endDate}
 
 	sprint, err := h.sprintUC.CreateSprint(r.Context(), userID, projectID, input)
 	if err != nil {
@@ -170,11 +214,22 @@ func (h *SprintHandler) UpdateSprint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var patch domain.SprintPatch
-	if err := parseBody(r, &patch); err != nil {
+	var body sprintUpdateRequest
+	if err := parseBody(r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
+	startDate, err := parseSprintDate(body.StartDate, "startDate")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	endDate, err := parseSprintDate(body.EndDate, "endDate")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	patch := domain.SprintPatch{Name: body.Name, Goal: body.Goal, StartDate: startDate, EndDate: endDate}
 
 	sprint, err := h.sprintUC.UpdateSprint(r.Context(), userID, sprintID, &patch)
 	if err != nil {

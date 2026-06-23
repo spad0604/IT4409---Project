@@ -244,6 +244,10 @@ function Kanban() {
     setNewSprintName,
     newSprintDescription,
     setNewSprintDescription,
+    newSprintStartDate,
+    setNewSprintStartDate,
+    newSprintEndDate,
+    setNewSprintEndDate,
     setBacklogIssues,
     backlogLoading,
     setBacklogLoading,
@@ -319,10 +323,27 @@ function Kanban() {
     [issuesData?.items],
   )
 
-  const boardTaskTotal = useMemo(() => issueItems.length, [issueItems])
+  // Sprint and backlog are Scrum concepts. Keep the two project modes
+  // distinct in the UI instead of exposing Scrum controls on a Kanban board.
+  const isScrumProject = safeLower(activeProject?.type) === 'scrum'
+  const activeSprintDetail = useMemo(
+    () => (Array.isArray(sprints) ? sprints : []).find((sprint) => safeLower(sprint?.status) === 'active') ?? null,
+    [sprints],
+  )
+  const boardIssueItems = useMemo(() => {
+    if (!isScrumProject) return issueItems
+    if (!activeSprintDetail?.id) return []
+    return issueItems.filter((issue) => String(issue?.sprintId || '') === String(activeSprintDetail.id))
+  }, [activeSprintDetail?.id, isScrumProject, issueItems])
+  const visibleTopTabs = useMemo(
+    () => (Array.isArray(topTabs) ? topTabs : []).filter((tab) => tab?.id !== 'backlog' || isScrumProject),
+    [isScrumProject, topTabs],
+  )
+
+  const boardTaskTotal = useMemo(() => boardIssueItems.length, [boardIssueItems])
   const boardDoneCount = useMemo(
-    () => issueItems.filter((i) => safeLower(i?.status) === 'done').length,
-    [issueItems],
+    () => boardIssueItems.filter((i) => safeLower(i?.status) === 'done').length,
+    [boardIssueItems],
   )
 
   const boardCompletion = boardTaskTotal > 0
@@ -346,11 +367,11 @@ function Kanban() {
     return list.map((card) => {
       if (card?.id === 'totalTasks') return { ...card, value: String(issuesData?.total ?? issueItems.length) }
       if (card?.id === 'overdue') return { ...card, value: String(overdueCount) }
-      if (card?.id === 'completed') return { ...card, value: String(boardDoneCount) }
+      if (card?.id === 'completed') return { ...card, value: String(issueItems.filter((issue) => safeLower(issue?.status) === 'done').length) }
       if (card?.id === 'activeProjects') return { ...card, value: String(projects.length) }
       return card
     })
-  }, [t, issuesData?.total, issueItems.length, overdueCount, boardDoneCount, projects.length])
+  }, [t, issuesData?.total, issueItems, overdueCount, projects.length])
 
   const kanbanColumns = useMemo(() => {
     const columns = Array.isArray(boardColumnsMeta) && boardColumnsMeta.length > 0
@@ -363,7 +384,7 @@ function Kanban() {
       ]
 
     const byStatus = new Map()
-    for (const issue of issueItems) {
+    for (const issue of boardIssueItems) {
       const status = safeLower(issue?.status)
       if (!status) continue
       if (!byStatus.has(status)) byStatus.set(status, [])
@@ -382,7 +403,7 @@ function Kanban() {
         items,
       }
     })
-  }, [boardColumnsMeta, issueItems, t])
+  }, [boardColumnsMeta, boardIssueItems, t])
 
   const ensureUsersLoaded = useCallback(async (ids) => {
     const unique = Array.from(new Set((ids ?? []).filter(Boolean).map(String)))
@@ -587,6 +608,8 @@ function Kanban() {
     setEditingSprint(null)
     setNewSprintName('')
     setNewSprintDescription('')
+    setNewSprintStartDate('')
+    setNewSprintEndDate('')
     setShowCreateSprint(true)
     setCreateSprintError('')
   }, [])
@@ -595,6 +618,8 @@ function Kanban() {
     setEditingSprint(sprint || null)
     setNewSprintName(String(sprint?.name || ''))
     setNewSprintDescription(String(sprint?.goal || ''))
+    setNewSprintStartDate(String(sprint?.startDate || '').slice(0, 10))
+    setNewSprintEndDate(String(sprint?.endDate || '').slice(0, 10))
     setShowCreateSprint(true)
     setCreateSprintError('')
   }, [])
@@ -604,6 +629,8 @@ function Kanban() {
     setEditingSprint(null)
     setNewSprintName('')
     setNewSprintDescription('')
+    setNewSprintStartDate('')
+    setNewSprintEndDate('')
     setCreateSprintError('')
   }, [])
 
@@ -624,11 +651,15 @@ function Kanban() {
         await sprintApi.updateSprint(editingSprint.id, {
           name,
           goal: String(newSprintDescription ?? '').trim(),
+          startDate: newSprintStartDate || undefined,
+          endDate: newSprintEndDate || undefined,
         })
       } else {
         await sprintApi.createSprint(activeProjectId, {
           name,
           goal: String(newSprintDescription ?? '').trim(),
+          startDate: newSprintStartDate || undefined,
+          endDate: newSprintEndDate || undefined,
         })
       }
       await refetchSprints(activeProjectId)
@@ -636,12 +667,14 @@ function Kanban() {
       setEditingSprint(null)
       setNewSprintName('')
       setNewSprintDescription('')
+      setNewSprintStartDate('')
+      setNewSprintEndDate('')
     } catch (err) {
       setCreateSprintError(err?.message || t('common.actionFailed'))
     } finally {
       setCreateSprintLoading(false)
     }
-  }, [activeProjectId, editingSprint?.id, newSprintName, newSprintDescription, refetchSprints, t])
+  }, [activeProjectId, editingSprint?.id, newSprintName, newSprintDescription, newSprintStartDate, newSprintEndDate, refetchSprints, t])
 
   const handleStartSprint = useCallback(async (sprintId) => {
     if (!sprintId) return
@@ -841,10 +874,22 @@ function Kanban() {
   }, [inviteSearch, activeTopTab, t])
 
   useEffect(() => {
-    if (!activeProjectId) return
+    if (!activeProjectId || !activeProject) return
+    if (!isScrumProject) {
+      setSprints([])
+      setBacklogIssues([])
+      return
+    }
     refetchSprints(activeProjectId)
     refetchBacklog(activeProjectId)
-  }, [activeProjectId, refetchSprints, refetchBacklog])
+  }, [activeProjectId, activeProject, isScrumProject, refetchSprints, refetchBacklog, setBacklogIssues, setSprints])
+
+  useEffect(() => {
+    const path = location.pathname.replace(/\/+$/, '') || '/home'
+    if (activeProject && !isScrumProject && path === '/home/backlog') {
+      navigate('/home/projects/board', { replace: true })
+    }
+  }, [activeProject, isScrumProject, location.pathname, navigate])
 
   useEffect(() => {
     if (!activeProjectId) return
@@ -1488,19 +1533,22 @@ function Kanban() {
     if (!showCreateSprint) return null
     return createPortal(
       <div className="modal-overlay" role="presentation" onMouseDown={handleCancelCreateSprint}>
-        <div className="modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
-          <header className="modal-head">
-            <div>
+        <div className="modal sprint-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+          <header className="modal-head sprint-modal-head">
+            <div className="sprint-modal-title">
+              <span className="sprint-modal-icon" aria-hidden="true"><FiTarget /></span>
+              <div>
               <h2>{editingSprint ? t('sprints.edit.title', { defaultValue: 'Edit sprint' }) : t('sprints.create.title')}</h2>
               <p>{editingSprint ? t('sprints.edit.subtitle', { defaultValue: 'Update sprint details' }) : t('sprints.create.subtitle')}</p>
+              </div>
             </div>
             <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={handleCancelCreateSprint}>
               <FiX />
             </button>
           </header>
 
-          <form className="modal-body" onSubmit={handleSubmitCreateSprint}>
-            <label className="inline-field modal-span" htmlFor="new-sprint-name">
+          <form className="modal-body sprint-modal-body" onSubmit={handleSubmitCreateSprint}>
+            <label className="inline-field sprint-name-field" htmlFor="new-sprint-name">
               <span className="inline-label">{t('sprints.create.name')}</span>
               <input
                 id="new-sprint-name"
@@ -1513,7 +1561,7 @@ function Kanban() {
               />
             </label>
 
-            <label className="inline-field modal-span" htmlFor="new-sprint-description">
+            <label className="inline-field sprint-goal-field" htmlFor="new-sprint-description">
               <span className="inline-label">{t('sprints.goal', { defaultValue: 'Goal' })}</span>
               <textarea
                 id="new-sprint-description"
@@ -1525,9 +1573,28 @@ function Kanban() {
               />
             </label>
 
+            <section className="sprint-date-section" aria-label={t('sprints.range', { defaultValue: 'Schedule' })}>
+              <div className="sprint-date-section__heading">
+                <span>{t('sprints.range', { defaultValue: 'Schedule' })}</span>
+                <small>{t('sprints.dateHint', { defaultValue: 'Optional — you can update this later.' })}</small>
+              </div>
+              <div className="sprint-date-grid">
+                <label className="inline-field" htmlFor="new-sprint-start-date">
+                  <span className="inline-label">{t('sprints.startDate', { defaultValue: 'Start date' })}</span>
+                  <input id="new-sprint-start-date" type="date" value={newSprintStartDate} onChange={(e) => setNewSprintStartDate(e.target.value)} />
+                </label>
+
+                <label className="inline-field" htmlFor="new-sprint-end-date">
+                  <span className="inline-label">{t('sprints.endDate', { defaultValue: 'End date' })}</span>
+                  <input id="new-sprint-end-date" type="date" min={newSprintStartDate || undefined} value={newSprintEndDate} onChange={(e) => setNewSprintEndDate(e.target.value)} />
+                </label>
+              </div>
+            </section>
+
             {createSprintError ? <p className="inline-error">{createSprintError}</p> : null}
 
             <footer className="modal-actions">
+              <span className="sprint-modal-hint">{t('sprints.create.hint', { defaultValue: 'You can add issues before starting the Sprint.' })}</span>
               <button type="button" className="filter-btn" onClick={handleCancelCreateSprint}>
                 {t('common.cancel')}
               </button>
@@ -1546,6 +1613,8 @@ function Kanban() {
     handleCancelCreateSprint,
     handleSubmitCreateSprint,
     newSprintDescription,
+    newSprintStartDate,
+    newSprintEndDate,
     newSprintName,
     editingSprint,
     showCreateSprint,
@@ -1637,20 +1706,22 @@ function Kanban() {
                 </select>
               </label>
 
-              <label className="inline-field" htmlFor="new-issue-sprint">
-                <span className="inline-label">{t('issues.create.sprint')}</span>
-                <select
-                  id="new-issue-sprint"
-                  className="inline-select"
-                  value={newIssueSprintId}
-                  onChange={(e) => setNewIssueSprintId(e.target.value)}
-                >
-                  <option value="">{t('issues.create.sprintPlaceholder')}</option>
-                  {(Array.isArray(sprints) ? sprints : []).map((sp) => (
-                    <option key={sp?.id} value={sp?.id}>{sp?.name || t('common.unknown')}</option>
-                  ))}
-                </select>
-              </label>
+              {isScrumProject ? (
+                <label className="inline-field" htmlFor="new-issue-sprint">
+                  <span className="inline-label">{t('issues.create.sprint')}</span>
+                  <select
+                    id="new-issue-sprint"
+                    className="inline-select"
+                    value={newIssueSprintId}
+                    onChange={(e) => setNewIssueSprintId(e.target.value)}
+                  >
+                    <option value="">{t('issues.create.sprintPlaceholder')}</option>
+                    {(Array.isArray(sprints) ? sprints : []).map((sp) => (
+                      <option key={sp?.id} value={sp?.id}>{sp?.name || t('common.unknown')}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               <div className="inline-field modal-span">
                 <span className="inline-label">{t('issues.detail.labels', { defaultValue: 'Labels' })}</span>
@@ -1744,6 +1815,7 @@ function Kanban() {
     newIssueLabels,
     projectLabels,
     projects,
+    isScrumProject,
     sprints,
     showCreateIssue,
     t,
@@ -1817,7 +1889,7 @@ function Kanban() {
           <div className="topbar-left">
             <p className="workspace-brand">{t('boardShell.workspaceName')}</p>
             <nav className="top-tabs" aria-label={t('boardShell.topNavLabel')}>
-              {(Array.isArray(topTabs) ? topTabs : []).map((tab) => {
+              {visibleTopTabs.map((tab) => {
                 const TabIcon = TOP_TAB_ICON_MAP[tab.id] || FiGrid
 
                 return (
@@ -2082,7 +2154,7 @@ function Kanban() {
                 onClear={handleClearFilters}
                 members={members}
                 labels={projectLabels}
-                sprints={sprints}
+                sprints={isScrumProject ? sprints : []}
                 usersById={usersById}
               />
             ) : null}
@@ -2108,7 +2180,7 @@ function Kanban() {
               />
             ) : null}
 
-            {isBacklogView && !activeIssueKey ? (
+            {isBacklogView && isScrumProject && !activeIssueKey ? (
               <BacklogView
                 t={t}
                 projectName={activeProject?.name || ''}
@@ -2154,6 +2226,8 @@ function Kanban() {
               <BoardPanel
                 t={t}
                 boardDetail={boardDetail}
+                activeSprint={activeSprintDetail}
+                isScrumProject={isScrumProject}
                 kanbanColumns={kanbanColumns}
                 boardDoneCount={boardDoneCount}
                 boardTaskTotal={boardTaskTotal}
@@ -2172,6 +2246,7 @@ function Kanban() {
                 onEditColumn={handleEditColumn}
                 onDeleteColumn={handleDeleteColumn}
                 onAddCard={handleOpenAddCard}
+                onOpenBacklog={() => navigate('/home/backlog')}
               />
             ) : null}
 

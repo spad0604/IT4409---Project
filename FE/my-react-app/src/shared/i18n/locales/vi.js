@@ -118,6 +118,7 @@ export const vi = {
       completed: 'hoàn thành',
       completion: 'hoàn thành luồng sprint',
       cards: 'thẻ',
+      columnCount: 'cột công việc',
       addCardTo: 'Thêm thẻ vào cột {{column}}',
       editColumn: 'Sửa tên cột',
       deleteColumn: 'Xóa cột',
@@ -498,7 +499,13 @@ export const vi = {
     },
 
     sprints: {
-      title: 'Đợt làm việc', start: 'Bắt đầu đợt làm việc', complete: 'Hoàn thành đợt làm việc', goal: 'Mục tiêu', goalPlaceholder: 'Đợt làm việc này cần đạt điều gì?', range: 'Thời gian', progress: 'Tiến độ',
+      title: 'Đợt làm việc', start: 'Bắt đầu đợt làm việc', complete: 'Hoàn thành đợt làm việc', goal: 'Mục tiêu', goalPlaceholder: 'Đợt làm việc này cần đạt điều gì?', range: 'Thời gian', progress: 'Tiến độ', startDate: 'Ngày bắt đầu', endDate: 'Ngày kết thúc', noActive: 'Chưa có Sprint đang chạy.', dateHint: 'Không bắt buộc — có thể cập nhật sau.',
+      empty: {
+        eyebrow: 'SCRUM BOARD',
+        title: 'Chưa có Sprint đang chạy',
+        description: 'Hãy vào Backlog, tạo Sprint, thêm issue và bắt đầu Sprint để làm việc trên board.',
+        openBacklog: 'Mở Backlog',
+      },
       create: {
         title: 'Tạo Sprint mới',
         subtitle: 'Lên kế hoạch và tổ chức công việc',
@@ -508,6 +515,7 @@ export const vi = {
         descriptionPlaceholder: 'Mục tiêu sprint và chi tiết tùy chọn',
         submit: 'Tạo Sprint',
         creating: 'Đang tạo...',
+        hint: 'Bạn có thể thêm issue trước khi bắt đầu Sprint.',
         cancel: 'Hủy bỏ',
         validationName: 'Vui lòng nhập tên sprint.',
       },

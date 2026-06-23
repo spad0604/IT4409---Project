@@ -12,6 +12,8 @@ const BOARD_STAGE_PROGRESS = {
 export default function BoardPanel({
   t,
   boardDetail,
+  activeSprint,
+  isScrumProject = false,
   kanbanColumns,
   boardDoneCount,
   boardTaskTotal,
@@ -28,7 +30,8 @@ export default function BoardPanel({
   onAddColumn,
   onEditColumn,
   onDeleteColumn,
-  onAddCard
+  onAddCard,
+  onOpenBacklog,
 }) {
   const totalColumns = kanbanColumns.length
 
@@ -37,6 +40,13 @@ export default function BoardPanel({
       <header className="board-hero panel">
         <div className="board-hero-copy">
           <h1>{boardDetail?.name || t('board.title')}</h1>
+          {isScrumProject ? (
+            <p className="board-subtitle">
+              {activeSprint?.name
+                ? `${t('sprints.title', { defaultValue: 'Sprint' })}: ${activeSprint.name}${activeSprint.goal ? ` · ${activeSprint.goal}` : ''}`
+                : t('sprints.noActive', { defaultValue: 'Chưa có Sprint đang chạy.' })}
+            </p>
+          ) : null}
         </div>
 
         <div className="board-hero-meta">
@@ -49,7 +59,7 @@ export default function BoardPanel({
             <strong>{boardDoneCount}</strong>
           </div>
           <div className="board-metric">
-            <span>{t('board.columns.todo')}</span>
+            <span>{t('board.columnCount', { defaultValue: 'Columns' })}</span>
             <strong>{totalColumns}</strong>
           </div>
           <div className="board-hero-actions">
@@ -70,26 +80,37 @@ export default function BoardPanel({
         </div>
       </header>
 
-      <section className="board-flow panel">
-        <div className="flow-header">
-          <h2>{t('board.flowProgress')}</h2>
-          <p>{boardDoneCount}/{boardTaskTotal} {t('board.completed')}</p>
-        </div>
-
-        <div className="flow-track" aria-hidden="true">
-          {kanbanColumns.map((column, index) => (
-            <div key={column.id} className="flow-step-wrap">
-              <div className={`flow-step is-${column.tone}`}>
-                <span>{column.title}</span>
-                <strong>{column.items.length}</strong>
-              </div>
-              {index < kanbanColumns.length - 1 ? <FiChevronRight className="flow-arrow" /> : null}
+      {isScrumProject && !activeSprint ? (
+        <section className="scrum-empty-state panel" aria-live="polite">
+          <span className="scrum-empty-state__eyebrow">{t('sprints.empty.eyebrow', { defaultValue: 'SCRUM BOARD' })}</span>
+          <h2>{t('sprints.empty.title', { defaultValue: 'Chưa có Sprint đang chạy' })}</h2>
+          <p>{t('sprints.empty.description', { defaultValue: 'Hãy vào Backlog, tạo Sprint, thêm issue và bắt đầu Sprint để làm việc trên board.' })}</p>
+          <button type="button" className="create-issue-btn" onClick={onOpenBacklog}>
+            {t('sprints.empty.openBacklog', { defaultValue: 'Mở Backlog' })}
+          </button>
+        </section>
+      ) : (
+        <>
+          <section className="board-flow panel">
+            <div className="flow-header">
+              <h2>{t('board.flowProgress')}</h2>
+              <p>{boardDoneCount}/{boardTaskTotal} {t('board.completed')}</p>
             </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="board-columns" aria-label="Kanban lanes">
+            <div className="flow-track" aria-hidden="true">
+              {kanbanColumns.map((column, index) => (
+                <div key={column.id} className="flow-step-wrap">
+                  <div className={`flow-step is-${column.tone}`}>
+                    <span>{column.title}</span>
+                    <strong>{column.items.length}</strong>
+                  </div>
+                  {index < kanbanColumns.length - 1 ? <FiChevronRight className="flow-arrow" /> : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="board-columns" aria-label="Kanban lanes">
         {kanbanColumns.map((column) => (
           <article
             key={column.id}
@@ -185,7 +206,9 @@ export default function BoardPanel({
             </div>
           </article>
         ))}
-      </section>
+          </section>
+        </>
+      )}
 
       <button type="button" className="quick-action-btn">{t('boardShell.quickActions')}</button>
     </section>

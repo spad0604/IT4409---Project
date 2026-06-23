@@ -65,6 +65,8 @@ export function useKanbanState() {
   const [createSprintError, setCreateSprintError] = useState('')
   const [newSprintName, setNewSprintName] = useState('')
   const [newSprintDescription, setNewSprintDescription] = useState('')
+  const [newSprintStartDate, setNewSprintStartDate] = useState('')
+  const [newSprintEndDate, setNewSprintEndDate] = useState('')
   const [backlogIssues, setBacklogIssues] = useState([])
   const [backlogLoading, setBacklogLoading] = useState(false)
 
@@ -183,6 +185,10 @@ export function useKanbanState() {
     setNewSprintName,
     newSprintDescription,
     setNewSprintDescription,
+    newSprintStartDate,
+    setNewSprintStartDate,
+    newSprintEndDate,
+    setNewSprintEndDate,
     backlogIssues,
     setBacklogIssues,
     backlogLoading,

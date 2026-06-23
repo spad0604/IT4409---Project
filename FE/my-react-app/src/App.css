@@ -988,6 +988,134 @@
   gap: 0.5rem;
 }
 
+.sprint-modal {
+  width: min(640px, 100%);
+}
+
+.sprint-modal-head {
+  padding: 1.1rem 1.2rem 1rem;
+}
+
+.sprint-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.sprint-modal-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 0.65rem;
+  background: #e8edff;
+  color: #2948dc;
+}
+
+.sprint-modal-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.sprint-modal-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.sprint-name-field .inline-input {
+  height: 2.6rem;
+  padding-inline: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.sprint-goal-field {
+  padding: 0.8rem;
+  border: 1px solid #e3e8f5;
+  border-radius: 0.65rem;
+  background: #fafbff;
+}
+
+.sprint-goal-field .modal-textarea {
+  min-height: 88px;
+  margin-top: 0.18rem;
+  background: #fff;
+}
+
+.sprint-date-section {
+  padding: 0.8rem;
+  border: 1px solid #e3e8f5;
+  border-radius: 0.65rem;
+}
+
+.sprint-date-section__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  color: #344054;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.sprint-date-section__heading small {
+  color: #667085;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.sprint-date-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sprint-date-grid input[type='date'] {
+  width: 100%;
+  height: 2.25rem;
+  padding-inline: 0.6rem;
+  border: 1px solid #d6dbe4;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+}
+
+.sprint-date-grid input[type='date']:focus {
+  outline: none;
+  border-color: #1438de;
+  box-shadow: 0 0 0 2px #e3e9ff;
+}
+
+.sprint-modal-hint {
+  margin-right: auto;
+  align-self: center;
+  max-width: 19rem;
+  color: #667085;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+:root[data-theme='dark'] .sprint-goal-field,
+:root[data-theme='dark'] .sprint-date-section {
+  border-color: var(--border-color);
+  background: color-mix(in srgb, var(--surface) 82%, var(--field-background));
+}
+
+:root[data-theme='dark'] .sprint-modal-icon {
+  background: var(--interactive-soft);
+  color: var(--primary);
+}
+
+:root[data-theme='dark'] .sprint-date-grid input[type='date'] {
+  border-color: var(--border-color);
+  background: var(--field-background);
+  color: var(--on-surface);
+}
+
 .project-card {
   border-radius: 0.48rem;
   border: 1px solid #e6e9f0;
@@ -1387,6 +1515,37 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.scrum-empty-state {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.8rem;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  border-style: dashed;
+}
+
+.scrum-empty-state__eyebrow {
+  color: #3458ff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.scrum-empty-state h2 {
+  margin: 0;
+  color: #101828;
+  font-size: 1.35rem;
+}
+
+.scrum-empty-state p {
+  max-width: 34rem;
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
 }
 
 .board-column {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"it4409/internal/domain"
 	"it4409/internal/repository"
@@ -39,8 +40,10 @@ func NewSprintUsecase(
 // ─── Input Types ────────────────────────────────────────────────────────────
 
 type CreateSprintInput struct {
-	Name string `json:"name"`
-	Goal string `json:"goal"`
+	Name      string     `json:"name"`
+	Goal      string     `json:"goal"`
+	StartDate *time.Time `json:"startDate"`
+	EndDate   *time.Time `json:"endDate"`
 }
 
 // ─── Create Sprint ──────────────────────────────────────────────────────────
@@ -54,12 +57,17 @@ func (uc *SprintUsecase) CreateSprint(ctx context.Context, userID, projectID str
 	if name == "" {
 		return nil, fmt.Errorf("%w: sprint name is required", domain.ErrInvalidInput)
 	}
+	if input.StartDate != nil && input.EndDate != nil && input.EndDate.Before(*input.StartDate) {
+		return nil, fmt.Errorf("%w: sprint end date must be on or after start date", domain.ErrInvalidInput)
+	}
 
 	sprint := &domain.Sprint{
 		ProjectID: projectID,
 		Name:      name,
 		Goal:      strings.TrimSpace(input.Goal),
 		Status:    domain.SprintStatusPlanning,
+		StartDate: input.StartDate,
+		EndDate:   input.EndDate,
 		CreatedBy: userID,
 	}
 
@@ -97,6 +105,17 @@ func (uc *SprintUsecase) UpdateSprint(ctx context.Context, userID, sprintID stri
 	}
 	if err := uc.perm.Check(ctx, sprint.ProjectID, userID, "admin"); err != nil {
 		return nil, err
+	}
+	startDate := sprint.StartDate
+	endDate := sprint.EndDate
+	if patch.StartDate != nil {
+		startDate = patch.StartDate
+	}
+	if patch.EndDate != nil {
+		endDate = patch.EndDate
+	}
+	if startDate != nil && endDate != nil && endDate.Before(*startDate) {
+		return nil, fmt.Errorf("%w: sprint end date must be on or after start date", domain.ErrInvalidInput)
 	}
 	return uc.sprintRepo.Update(ctx, sprintID, patch)
 }

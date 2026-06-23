@@ -118,6 +118,7 @@ export const en = {
       completed: 'completed',
       completion: 'sprint flow completion',
       cards: 'cards',
+      columnCount: 'columns',
       addCardTo: 'Add card to {{column}}',
       editColumn: 'Edit Column',
       deleteColumn: 'Delete Column',
@@ -427,6 +428,13 @@ export const en = {
     },
 
     sprints: {
+      title: 'Sprint', start: 'Start sprint', complete: 'Complete sprint', goal: 'Goal', range: 'Schedule', progress: 'Progress', startDate: 'Start date', endDate: 'End date', noActive: 'No active sprint.', dateHint: 'Optional — you can update this later.',
+      empty: {
+        eyebrow: 'SCRUM BOARD',
+        title: 'No active sprint',
+        description: 'Open the Backlog, create a Sprint, add issues, then start it to work on the board.',
+        openBacklog: 'Open Backlog',
+      },
       create: {
         title: 'Create Sprint',
         subtitle: 'Plan and organize your work',
@@ -436,6 +444,7 @@ export const en = {
         descriptionPlaceholder: 'Optional sprint goals and details',
         submit: 'Create Sprint',
         creating: 'Creating…',
+        hint: 'You can add issues before starting the Sprint.',
         cancel: 'Cancel',
         validationName: 'Please enter a sprint name.',
       },
