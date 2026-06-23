@@ -48,7 +48,6 @@ function CardIcon({ icon }) {
 
 function StatsCard({ card }) {
   const cardVariant = card?.variant || 'default'
-  const badgeTone = card?.badgeTone || 'neutral'
 
   return (
     <article className={`stats-card variant-${cardVariant}`}>
@@ -57,7 +56,6 @@ function StatsCard({ card }) {
           <CardIcon icon={card?.icon} />
         </span>
 
-        {card?.badge ? <span className={`card-badge badge-${badgeTone}`}>{card.badge}</span> : null}
       </div>
 
       <p className="card-label">{card?.label}</p>

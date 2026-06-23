@@ -36,9 +36,7 @@ export default function BoardPanel({
     <section className="board-shell" aria-label="Draggable board">
       <header className="board-hero panel">
         <div className="board-hero-copy">
-          <p className="dashboard-kicker">{t('boardShell.contentTitle')}</p>
           <h1>{boardDetail?.name || t('board.title')}</h1>
-          <p className="board-subtitle">{t('boardShell.contentSubtitle')}</p>
         </div>
 
         <div className="board-hero-meta">
@@ -156,7 +154,7 @@ export default function BoardPanel({
                       <span className={`board-card-chip tone-${safeLower(item?.status) || 'todo'}`}>
                         {t(`issue.status.${safeLower(item?.status)}`, { defaultValue: String(item?.status || '-') })}
                       </span>
-                      <span className={`board-card-chip tone-${pr.tone}`}>{t(`priority.${pr.tone}`, { defaultValue: pr.label })}</span>
+                      <span className={`board-card-chip tone-${pr.tone}`}>{t(`priority.${safeLower(item?.priority) || pr.tone}`, { defaultValue: pr.label })}</span>
                     </div>
 
                     {Array.isArray(item?.labels) && item.labels.length > 0 ? (

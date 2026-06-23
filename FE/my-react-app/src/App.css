@@ -271,21 +271,24 @@
 }
 
 .profile-pill {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 0.64rem;
+  overflow: hidden;
+  font-size: 0.67rem;
   font-weight: 700;
-  color: #19486a;
-  background: #dbeafe;
-  border: 0;
+  color: #eff6ff;
+  background: linear-gradient(145deg, #1d4ed8, #0f172a);
+  border: 1px solid rgb(148 163 184 / 28%);
+  box-shadow: 0 6px 14px rgb(15 23 42 / 18%), inset 0 1px 0 rgb(255 255 255 / 12%);
   cursor: pointer;
 }
 
 .profile-pill.is-active {
-  box-shadow: 0 0 0 2px #e3e9ff;
+  box-shadow: 0 0 0 2px #dbeafe, 0 8px 18px rgb(15 23 42 / 24%);
+  transform: translateY(-1px);
 }
 
 .topbar-popover {
@@ -346,8 +349,27 @@
   justify-content: flex-end;
 }
 
-.user-avatar { overflow: hidden; }
-.user-avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.user-avatar {
+  overflow: hidden;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(145deg, rgb(219 234 254 / 90%), rgb(191 219 254 / 90%));
+  color: #1d4ed8;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 9999px;
+}
 
 :root[data-density='compact'] .home-topbar { min-height: 48px; }
 :root[data-density='compact'] .home-body { min-height: 650px; }
@@ -368,6 +390,11 @@
   font-size: 0.68rem;
 }
 
+:root[data-theme='dark'] .topbar-popover .quick-settings label,
+:root[data-theme='dark'] .topbar-popover .quick-settings label span {
+  color: #e2e8f0 !important;
+}
+
 .quick-settings select {
   min-width: 116px;
   padding: 0.35rem 0.45rem;
@@ -375,6 +402,12 @@
   border-radius: 0.35rem;
   background: #fff;
   color: #344054;
+}
+
+:root[data-theme='dark'] .topbar-popover .quick-settings select {
+  background: #162235 !important;
+  border-color: #47607d !important;
+  color: #f8fafc !important;
 }
 
 .quick-settings input {
@@ -1353,15 +1386,15 @@
 .board-columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.82rem;
+  gap: 1rem;
 }
 
 .board-column {
-  border-radius: 0.5rem;
-  border: 1px solid #dde4ee;
+  border-radius: 0.65rem;
+  border: 1px solid #cbd5e1;
   background: #f8fafc;
   min-height: 440px;
-  padding: 0.72rem;
+  padding: 0.9rem;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 0.72rem;
@@ -1410,14 +1443,14 @@
 .board-card-list {
   display: grid;
   align-content: start;
-  gap: 0.65rem;
+  gap: 0.85rem;
 }
 
 .board-card {
-  border-radius: 0.5rem;
-  border: 1px solid #e4e7ec;
+  border-radius: 0.65rem;
+  border: 1px solid #cbd5e1;
   background: #ffffff;
-  padding: 0.72rem;
+  padding: 0.9rem;
   cursor: grab;
   box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease, border-color 120ms ease;
@@ -2246,8 +2279,8 @@
 
 .reports-breakdown-table th {
   background: #f8fafc;
-  color: #475467;
-  font-weight: 700;
+  color: #334155;
+  font-weight: 800;
   font-size: 0.62rem;
   white-space: nowrap;
 }
@@ -2261,6 +2294,16 @@
   background: #f0f4ff;
 }
 
+:root[data-theme='dark'] .reports-breakdown-table tbody tr:hover {
+  background: #1b2942 !important;
+}
+
+:root[data-theme='dark'] .reports-breakdown-table td,
+:root[data-theme='dark'] .reports-breakdown-table th {
+  color: #e5eefb !important;
+  border-color: #40516d !important;
+}
+
 .reports-status-dot {
   display: inline-block;
   width: 0.5rem;
@@ -2268,6 +2311,19 @@
   border-radius: 999px;
   margin-right: 0.3rem;
   vertical-align: middle;
+}
+
+.reports-breakdown-table thead th {
+  color: #1f2937;
+}
+
+:root[data-theme='dark'] .reports-breakdown-table thead th {
+  background: #1a2940 !important;
+  color: #e5eefb !important;
+}
+
+:root[data-theme='dark'] .reports-breakdown-table tbody td {
+  background: #111a2b !important;
 }
 
 .reports-completion-grid {
@@ -2674,6 +2730,47 @@
 :root[data-theme='dark'] a,
 :root[data-theme='dark'] .filter-clear-link {
   color: #a5b4fc !important;
+}
+
+:root:not([data-theme='dark']) .reports-breakdown-table th,
+:root:not([data-theme='dark']) .reports-breakdown-table td {
+  border-color: #c7d1df;
+}
+
+/* Form labels need their own contrast rule: they do not inherit the field text color. */
+:root[data-theme='dark'] .inline-label,
+:root[data-theme='dark'] .inline-checkbox span,
+:root[data-theme='dark'] .field-label {
+  color: #dbeafe !important;
+}
+
+/* Light surfaces use a slightly stronger outline so adjacent areas remain legible. */
+:root:not([data-theme='dark']) .home-frame,
+:root:not([data-theme='dark']) .home-topbar,
+:root:not([data-theme='dark']) .home-sidebar,
+:root:not([data-theme='dark']) .panel,
+:root:not([data-theme='dark']) .modal,
+:root:not([data-theme='dark']) .filter-popover,
+:root:not([data-theme='dark']) .topbar-popover,
+:root:not([data-theme='dark']) .stats-card,
+:root:not([data-theme='dark']) .project-card,
+:root:not([data-theme='dark']) .issues-browser,
+:root:not([data-theme='dark']) .issues-list-pane,
+:root:not([data-theme='dark']) .issues-detail-pane,
+:root:not([data-theme='dark']) .assigned-item,
+:root:not([data-theme='dark']) .flow-step,
+:root:not([data-theme='dark']) .board-column,
+:root:not([data-theme='dark']) .board-card,
+:root:not([data-theme='dark']) .reports-chart-card {
+  border-color: #cbd5e1;
+}
+
+:root:not([data-theme='dark']) .inline-input,
+:root:not([data-theme='dark']) .inline-select,
+:root:not([data-theme='dark']) .modal-textarea,
+:root:not([data-theme='dark']) .issue-search,
+:root:not([data-theme='dark']) .filter-btn {
+  border-color: #b8c5d6;
 }
 
 /* Mobile foundation shared by every feature screen. */

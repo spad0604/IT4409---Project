@@ -95,16 +95,16 @@ export default function IssuesPage({
             <input
               id="issues-browser-search"
               type="search"
-              placeholder={t('issues.searchPlaceholder', { defaultValue: 'Search issues...' })}
+              placeholder={t('issues.searchPlaceholder', { defaultValue: 'Tìm kiếm vấn đề...' })}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
 
           <select className="inline-select" value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
-            <option value="priority">{t('issues.sort.priority', { defaultValue: 'Order by priority' })}</option>
-            <option value="updated">{t('issues.sort.updated', { defaultValue: 'Recently updated' })}</option>
-            <option value="created">{t('issues.sort.created', { defaultValue: 'Recently created' })}</option>
+            <option value="priority">{t('issues.sort.priority', { defaultValue: 'Sắp xếp theo độ ưu tiên' })}</option>
+            <option value="updated">{t('issues.sort.updated', { defaultValue: 'Mới cập nhật' })}</option>
+            <option value="created">{t('issues.sort.created', { defaultValue: 'Mới tạo' })}</option>
           </select>
         </div>
 
@@ -114,8 +114,8 @@ export default function IssuesPage({
         <div className="issues-list">
           {!issuesLoading && filteredIssues.length === 0 ? (
             <article className="issues-empty">
-              <h3>{t('reports.empty', { defaultValue: 'No issues found' })}</h3>
-              <p>{t('reports.emptyHint', { defaultValue: 'Try changing filters or search.' })}</p>
+              <h3>{t('issues.empty', { defaultValue: 'Không tìm thấy vấn đề nào' })}</h3>
+              <p>{t('issues.emptyHint', { defaultValue: 'Hãy đổi bộ lọc hoặc thử tìm kiếm khác.' })}</p>
             </article>
           ) : null}
 
@@ -175,8 +175,8 @@ export default function IssuesPage({
           </>
         ) : (
           <section className="issues-no-selection">
-            <h2>{t('issues.emptySelection', { defaultValue: 'Select an issue' })}</h2>
-            <p>{t('issues.emptySelectionHint', { defaultValue: 'Choose an issue from the list to see details.' })}</p>
+            <h2>{t('issues.emptySelection', { defaultValue: 'Chọn một vấn đề' })}</h2>
+            <p>{t('issues.emptySelectionHint', { defaultValue: 'Chọn một vấn đề trong danh sách để xem chi tiết.' })}</p>
           </section>
         )}
       </main>
