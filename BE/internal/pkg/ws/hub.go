@@ -68,3 +68,36 @@ func (h *Hub) Publish(eventType string, data any) {
 	}
 	h.Broadcast(msg)
 }
+
+// PublishIssue sends an issue-specific event only to explicitly interested
+// users (for example, the assignee) and clients that currently watch it.
+func (h *Hub) PublishIssue(eventType string, data any, issueID string, recipientUserIDs []string) {
+	msg, err := json.Marshal(map[string]any{
+		"type": eventType,
+		"data": data,
+	})
+	if err != nil {
+		log.Printf("[WS] marshal issue event %s: %v", eventType, err)
+		return
+	}
+
+	recipients := make(map[string]struct{}, len(recipientUserIDs))
+	for _, userID := range recipientUserIDs {
+		if userID != "" {
+			recipients[userID] = struct{}{}
+		}
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for client := range h.clients {
+		_, isRecipient := recipients[client.UserID]
+		if !isRecipient && !client.IsWatchingIssue(issueID) {
+			continue
+		}
+		select {
+		case client.Send <- msg:
+		default:
+		}
+	}
+}

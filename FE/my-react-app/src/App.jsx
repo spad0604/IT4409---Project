@@ -910,16 +910,16 @@ function Kanban() {
     wsClientRef.current = ws
     setWsClient(ws)
 
-    ws.on('issue_updated', () => {
-      // Refetch issues when updated via WebSocket
-      if (activeProjectId) {
+    ws.on('issue_updated', (data) => {
+      // The server targets assignees and active issue viewers. Still filter by
+      // the currently selected project before refreshing its list.
+      if (activeProjectId && String(data?.projectId || '') === String(activeProjectId)) {
         refetchIssues(activeProjectId)
       }
     })
 
-    ws.on('comment_added', () => {
-      // Refetch activity log
-      if (activeProjectId) {
+    ws.on('comment_added', (data) => {
+      if (activeProjectId && String(data?.projectId || '') === String(activeProjectId)) {
         refetchProjectActivity(activeProjectId)
       }
     })

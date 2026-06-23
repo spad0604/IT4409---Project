@@ -58,16 +58,22 @@ func (uc *IssueUsecase) logActivity(ctx context.Context, issueID, userID, action
 	}
 }
 
-func (uc *IssueUsecase) publishIssueEvent(issue *domain.Issue, action string) {
+func (uc *IssueUsecase) publishIssueEvent(issue *domain.Issue, action string, extraRecipientIDs ...string) {
 	if uc.events == nil || issue == nil {
 		return
 	}
-	uc.events.Publish("issue_updated", map[string]any{
+	payload := map[string]any{
 		"projectId": issue.ProjectID,
 		"issueId":   issue.ID,
 		"issueKey":  issue.Key,
 		"action":    action,
-	})
+	}
+	recipients := append(extraRecipientIDs, optionalString(issue.AssigneeID), issue.ReporterID)
+	if publisher, ok := uc.events.(IssueEventPublisher); ok {
+		publisher.PublishIssue("issue_updated", payload, issue.ID, recipients)
+		return
+	}
+	uc.events.Publish("issue_updated", payload)
 }
 
 // ─── Input Types ────────────────────────────────────────────────────────────
@@ -210,7 +216,7 @@ func (uc *IssueUsecase) UpdateIssue(ctx context.Context, userID, issueKey string
 	}
 
 	uc.logIssueUpdates(ctx, userID, issue, updated, patch)
-	uc.publishIssueEvent(updated, domain.ActivityUpdated)
+	uc.publishIssueEvent(updated, domain.ActivityUpdated, optionalString(issue.AssigneeID))
 
 	return updated, nil
 }
@@ -298,7 +304,7 @@ func (uc *IssueUsecase) AssignIssue(ctx context.Context, userID, issueKey string
 	}
 
 	uc.logActivity(ctx, issue.ID, userID, domain.ActivityAssigned, "assignee", oldAssignee, newAssignee)
-	uc.publishIssueEvent(updated, domain.ActivityAssigned)
+	uc.publishIssueEvent(updated, domain.ActivityAssigned, oldAssignee)
 
 	return updated, nil
 }

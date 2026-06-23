@@ -161,10 +161,19 @@ func (uc *CommentUsecase) publishCommentEvent(eventType string, issue *domain.Is
 	if uc.events == nil || issue == nil || comment == nil {
 		return
 	}
-	uc.events.Publish(eventType, map[string]any{
+	payload := map[string]any{
 		"projectId": issue.ProjectID,
 		"issueId":   issue.ID,
 		"issueKey":  issue.Key,
 		"commentId": comment.ID,
-	})
+	}
+	if publisher, ok := uc.events.(IssueEventPublisher); ok {
+		publisher.PublishIssue(eventType, payload, issue.ID, []string{
+			optionalString(issue.AssigneeID),
+			issue.ReporterID,
+			comment.UserID,
+		})
+		return
+	}
+	uc.events.Publish(eventType, payload)
 }

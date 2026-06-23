@@ -301,6 +301,21 @@ export default function IssueDetailsPage({
     refetchAll()
   }, [issueKey, refetchAll])
 
+  // Viewing an issue is an ephemeral WebSocket subscription. The hub uses it
+  // to route changes to people who have this detail screen open.
+  useEffect(() => {
+    if (!wsClient || !issue?.id) return undefined
+    const issueId = String(issue.id)
+    const watch = () => wsClient.send('watch_issue', { issueId })
+    watch()
+    const unsubscribeConnected = wsClient.on('connected', watch)
+
+    return () => {
+      wsClient.send('unwatch_issue', { issueId })
+      unsubscribeConnected()
+    }
+  }, [issue?.id, wsClient])
+
   // Keep this view in sync when another project member changes the same issue.
   useEffect(() => {
     if (!wsClient || !issueKey) return undefined
