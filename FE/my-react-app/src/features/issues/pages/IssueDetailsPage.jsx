@@ -95,6 +95,7 @@ export default function IssueDetailsPage({
   const [issue, setIssue] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [permissionDenied, setPermissionDenied] = useState('')
   const [savingField, setSavingField] = useState('')
 
   const [comments, setComments] = useState([])
@@ -126,6 +127,7 @@ export default function IssueDetailsPage({
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [descriptionEditing, setDescriptionEditing] = useState(false)
   const issueLoadVersionRef = useRef(0)
+  const permissionAlertShownRef = useRef(false)
 
   const [userCache, setUserCache] = useState({})
 
@@ -164,6 +166,10 @@ export default function IssueDetailsPage({
     setDescriptionDraft(String(data?.description ?? ''))
     return data || null
   }, [issueKey])
+
+  const getErrorStatus = useCallback((err) => Number(err?.status || err?.response?.status || 0), [])
+
+  const getPermissionMessage = useCallback(() => t('common.noPermission', { defaultValue: 'Bạn không có quyền xem vấn đề này.' }), [t])
 
   const loadComments = useCallback(async () => {
     if (!issueKey) return
@@ -259,6 +265,7 @@ export default function IssueDetailsPage({
     if (!issueKey) return
     setLoading(true)
     setError('')
+    setPermissionDenied('')
     try {
       const data = await loadIssue()
       await Promise.all([
@@ -269,16 +276,30 @@ export default function IssueDetailsPage({
         loadLabels(data?.projectId),
       ])
     } catch (err) {
-      setIssue(null)
-      setError(err?.message || t('common.loadError'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setIssue(null)
+        setError('')
+        setPermissionDenied(message)
+        if (!permissionAlertShownRef.current) {
+          permissionAlertShownRef.current = true
+          window.alert(message)
+        }
+      } else {
+        setIssue(null)
+        setPermissionDenied('')
+        setError(err?.message || t('common.loadError'))
+      }
     } finally {
       setLoading(false)
     }
-  }, [issueKey, loadActivity, loadAttachments, loadComments, loadIssue, loadLabels, loadSubtasks, t])
+  }, [getErrorStatus, getPermissionMessage, issueKey, loadActivity, loadAttachments, loadComments, loadIssue, loadLabels, loadSubtasks, t])
 
   useEffect(() => {
+    permissionAlertShownRef.current = false
+    setPermissionDenied('')
     refetchAll()
-  }, [refetchAll])
+  }, [issueKey, refetchAll])
 
   // Keep this view in sync when another project member changes the same issue.
   useEffect(() => {
@@ -388,12 +409,18 @@ export default function IssueDetailsPage({
       await issueApi.updateIssue(issueKey, { [field]: value })
       await Promise.all([loadIssue(), loadActivity()])
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
       throw err
     } finally {
       setSavingField('')
     }
-  }, [issueKey, loadActivity, loadIssue, t])
+  }, [getErrorStatus, getPermissionMessage, issueKey, loadActivity, loadIssue, t])
 
   const handleTitleSave = useCallback(async () => {
     const next = String(titleDraft ?? '').trim()
@@ -428,11 +455,17 @@ export default function IssueDetailsPage({
       await issueApi.changeIssueStatus(issueKey, value)
       await Promise.all([loadIssue(), loadActivity()])
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
     } finally {
       setSavingField('')
     }
-  }, [issue?.status, issueKey, loadActivity, loadIssue, t])
+  }, [getErrorStatus, getPermissionMessage, issue?.status, issueKey, loadActivity, loadIssue, t])
 
   const handleAssigneeChange = useCallback(async (value) => {
     if (!issueKey) return
@@ -441,11 +474,17 @@ export default function IssueDetailsPage({
       await issueApi.assignIssue(issueKey, value || null)
       await Promise.all([loadIssue(), loadActivity()])
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
     } finally {
       setSavingField('')
     }
-  }, [issueKey, loadActivity, loadIssue, t])
+  }, [getErrorStatus, getPermissionMessage, issueKey, loadActivity, loadIssue, t])
 
   const handleDueDateChange = useCallback(async (value) => {
     if (!value) return
@@ -459,9 +498,15 @@ export default function IssueDetailsPage({
       await issueApi.deleteIssue(issueKey)
       onBack?.()
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
     }
-  }, [issueKey, onBack, t])
+  }, [getErrorStatus, getPermissionMessage, issueKey, onBack, t])
 
   const handleAddComment = useCallback(async (event) => {
     event.preventDefault()
@@ -514,11 +559,17 @@ export default function IssueDetailsPage({
       }
       await Promise.all([loadIssue(), loadActivity()])
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
     } finally {
       setSavingField('')
     }
-  }, [issueKey, loadActivity, loadIssue, selectedLabelIds, t])
+  }, [getErrorStatus, getPermissionMessage, issueKey, loadActivity, loadIssue, selectedLabelIds, t])
 
   const handleCreateSubtask = useCallback(async (event) => {
     event.preventDefault()
@@ -536,11 +587,17 @@ export default function IssueDetailsPage({
       setNewSubtaskTitle('')
       await Promise.all([loadSubtasks(), loadActivity()])
     } catch (err) {
-      setError(err?.message || t('common.actionFailed'))
+      if (getErrorStatus(err) === 403) {
+        const message = getPermissionMessage()
+        setPermissionDenied(message)
+        window.alert(message)
+      } else {
+        setError(err?.message || t('common.actionFailed'))
+      }
     } finally {
       setNewSubtaskLoading(false)
     }
-  }, [issue?.id, issue?.priority, issue?.projectId, issue?.sprintId, loadActivity, loadSubtasks, newSubtaskTitle, t])
+  }, [getErrorStatus, getPermissionMessage, issue?.id, issue?.priority, issue?.projectId, issue?.sprintId, loadActivity, loadSubtasks, newSubtaskTitle, t])
 
   const statusLabel = useMemo(() => {
     const status = safeLower(issue?.status)
@@ -584,6 +641,7 @@ export default function IssueDetailsPage({
 
       {loading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
       {error ? <p className="dashboard-kicker issue-error">{error}</p> : null}
+      {permissionDenied && !issue ? <div className="issue-permission-banner">{permissionDenied}</div> : null}
 
       {!loading && !error && issue ? (
         <div className="issue-detail-grid">
@@ -622,7 +680,7 @@ export default function IssueDetailsPage({
 
             <section className="issue-detail-section">
               <div className="issue-section-head">
-                <h2>{t('issues.detail.description', { defaultValue: 'Description' })}</h2>
+                <h2>{t('issues.detail.description', { defaultValue: 'Mô tả chi tiết' })}</h2>
                 {!descriptionEditing ? (
                   <button type="button" className="link-btn" onClick={() => setDescriptionEditing(true)}>
                     {t('common.edit')}
@@ -656,18 +714,18 @@ export default function IssueDetailsPage({
                 </div>
               ) : (
                 <div className="issue-detail-description issue-description-view" onClick={() => setDescriptionEditing(true)} role="button" tabIndex={0}>
-                  {issue?.description ? (
-                    <pre>{issue.description}</pre>
-                  ) : (
-                    <p className="muted">{t('issues.detail.noDescription', { defaultValue: 'No description. Click to add one.' })}</p>
-                  )}
-                </div>
-              )}
+                    {issue?.description ? (
+                      <pre>{issue.description}</pre>
+                    ) : (
+                    <p className="muted">{t('issues.detail.noDescription', { defaultValue: 'Chưa có mô tả. Bấm để thêm.' })}</p>
+                    )}
+                  </div>
+                )}
             </section>
 
             <section className="issue-detail-section">
               <div className="issue-section-head">
-                <h2>{t('issues.detail.subtasks', { defaultValue: 'Subtasks' })}</h2>
+                <h2>{t('issues.detail.subtasks', { defaultValue: 'Công việc con' })}</h2>
                 <span className="issue-count-pill">{subtasks.length}</span>
               </div>
               {subtasksLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
@@ -680,7 +738,7 @@ export default function IssueDetailsPage({
                   </article>
                 ))}
                 {!subtasksLoading && subtasks.length === 0 ? (
-                  <p className="muted">{t('issues.detail.noSubtasks', { defaultValue: 'No subtasks yet' })}</p>
+                  <p className="muted">{t('issues.detail.noSubtasks', { defaultValue: 'Chưa có công việc con nào' })}</p>
                 ) : null}
               </div>
               <form className="issue-inline-form" onSubmit={handleCreateSubtask}>
@@ -688,22 +746,22 @@ export default function IssueDetailsPage({
                   className="issue-inline-input"
                   value={newSubtaskTitle}
                   onChange={(event) => setNewSubtaskTitle(event.target.value)}
-                  placeholder={t('issues.detail.subtaskPlaceholder', { defaultValue: 'Add subtask title...' })}
+                  placeholder={t('issues.detail.subtaskPlaceholder', { defaultValue: 'Thêm tiêu đề công việc con...' })}
                 />
                 <button type="submit" className="open-btn" disabled={newSubtaskLoading || !newSubtaskTitle.trim()}>
-                  <FiPlus /> {newSubtaskLoading ? t('common.saving') : t('issues.detail.addSubtask', { defaultValue: 'Add subtask' })}
+                  <FiPlus /> {newSubtaskLoading ? t('common.saving') : t('issues.detail.addSubtask', { defaultValue: 'Thêm công việc con' })}
                 </button>
               </form>
             </section>
 
             <section className="issue-detail-section">
               <div className="issue-section-head">
-                <h2>{t('issues.detail.attachments', { defaultValue: 'Attachments' })}</h2>
+                <h2>{t('issues.detail.attachments', { defaultValue: 'Tệp đính kèm' })}</h2>
                 <span className="issue-count-pill">{attachments.length}</span>
               </div>
               {attachmentsLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
               {!attachmentsLoading && attachments.length === 0 ? (
-                <p className="muted">{t('issues.detail.noAttachments', { defaultValue: 'No attachments' })}</p>
+                <p className="muted">{t('issues.detail.noAttachments', { defaultValue: 'Chưa có tệp đính kèm' })}</p>
               ) : null}
               <div className="issue-attachment-list">
                 {attachments.map((att) => (
@@ -717,7 +775,7 @@ export default function IssueDetailsPage({
                     </div>
                     <div className="issue-attachment-actions">
                       <button type="button" className="open-btn" onClick={() => handleDownloadAttachment(att)}>
-                        <FiDownload /> {t('common.download', { defaultValue: 'Download' })}
+                        <FiDownload /> {t('common.download', { defaultValue: 'Tải xuống' })}
                       </button>
                       <button type="button" className="attachment-delete-btn" onClick={() => handleDeleteAttachment(att?.id)}>
                         <FiTrash2 />
@@ -738,9 +796,9 @@ export default function IssueDetailsPage({
                 tabIndex={0}
               >
                 <div className="upload-zone-icon"><FiUploadCloud /></div>
-                <p><strong>{t('issues.detail.uploadClick', { defaultValue: 'Click to upload' })}</strong> {t('issues.detail.uploadDrag', { defaultValue: 'or drag and drop' })}</p>
-                <p className="upload-zone-hint">{t('issues.detail.uploadHint', { defaultValue: 'Max 10MB per file' })}</p>
-                {uploading ? <p className="upload-progress">{t('issues.detail.uploading', { defaultValue: 'Uploading...' })}</p> : null}
+                <p><strong>{t('issues.detail.uploadClick', { defaultValue: 'Bấm để tải lên' })}</strong> {t('issues.detail.uploadDrag', { defaultValue: 'hoặc kéo thả vào đây' })}</p>
+                <p className="upload-zone-hint">{t('issues.detail.uploadHint', { defaultValue: 'Tối đa 10MB mỗi tệp' })}</p>
+                {uploading ? <p className="upload-progress">{t('issues.detail.uploading', { defaultValue: 'Đang tải lên...' })}</p> : null}
                 {uploadError ? <p className="inline-error">{uploadError}</p> : null}
               </div>
               <input
@@ -754,14 +812,14 @@ export default function IssueDetailsPage({
 
             <section className="issue-detail-section">
               <div className="issue-section-head">
-                <h2>{t('issues.detail.activity', { defaultValue: 'Activity & comments' })}</h2>
+                <h2>{t('issues.detail.activity', { defaultValue: 'Hoạt động & bình luận' })}</h2>
                 <span className="issue-count-pill">{commentItems.length + activityItems.length}</span>
               </div>
 
               <div className="issue-activity-list">
                 {activitiesLoading ? <p className="dashboard-kicker">{t('common.loading')}</p> : null}
                 {!activitiesLoading && activityItems.length === 0 ? (
-                  <p className="muted">{t('issues.detail.noActivity', { defaultValue: 'No activity yet' })}</p>
+                  <p className="muted">{t('issues.detail.noActivity', { defaultValue: 'Chưa có hoạt động nào' })}</p>
                 ) : null}
                 {activityItems.map((activity) => {
                   const actor = mergedUsers[String(activity?.userId ?? '')]
@@ -1013,6 +1071,11 @@ export default function IssueDetailsPage({
               </dl>
             </div>
           </aside>
+        </div>
+      ) : !loading && !error && permissionDenied ? (
+        <div className="issue-empty-state">
+          <h2>{permissionDenied}</h2>
+          <p>{t('common.noPermissionHint', { defaultValue: 'Hãy nhờ quản trị viên cấp quyền phù hợp để tiếp tục.' })}</p>
         </div>
       ) : null}
     </section>

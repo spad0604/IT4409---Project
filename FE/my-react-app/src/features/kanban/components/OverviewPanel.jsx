@@ -1,7 +1,7 @@
 import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 import UserAvatar from '../../../shared/components/UserAvatar'
 import { StatsOverview } from '../../../shared/components/stats-overview/StatsOverview.jsx'
-import { formatShortDate, priorityDisplay, toInitials } from '../kanbanUtils'
+import { formatShortDate, priorityDisplay, safeLower } from '../kanbanUtils'
 import { RecentProjects } from '../../../shared/components/recent-projects/RecentProjects.jsx'
 
 export default function OverviewPanel({
@@ -132,7 +132,7 @@ export default function OverviewPanel({
                   <p className="task-code">{task?.key}</p>
                   <h3>{task?.title}</h3>
                   <p>
-                    {due ? `${t('common.due')}: ${due}` : t('common.noDueDate')} · {t(`priority.${pr.tone}`, { defaultValue: pr.label })}
+                    {due ? `${t('common.due')}: ${due}` : t('common.noDueDate')} · {t(`priority.${safeLower(task?.priority) || pr.tone}`, { defaultValue: pr.label })}
                   </p>
                 </div>
                 <button type="button" className="open-btn" onClick={() => onOpenIssueDetails(task?.key)}>

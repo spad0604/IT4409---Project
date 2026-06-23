@@ -54,7 +54,7 @@ export default function ArchivePanel({
                 <p className="task-code">{issue?.key}</p>
                 <h3>{issue?.title}</h3>
                 <p>
-                  {t(`priority.${pr.tone}`, { defaultValue: pr.label })}
+                  {t(`priority.${safeLower(issue?.priority) || pr.tone}`, { defaultValue: pr.label })}
                   {due ? ` · ${t('common.due')}: ${due}` : ''}
                   {initials ? ` · ${t('common.assignee')}: ${initials}` : ''}
                 </p>
